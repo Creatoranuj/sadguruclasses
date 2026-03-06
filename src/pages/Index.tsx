@@ -20,7 +20,7 @@ import {
 import logo from "@/assets/mahima-logo.png"; // TODO: Replace with new Sadguru logo when available
 
 const defaultHeroData: HeroData = {
-  title: "Welcome to Sadguru Coaching Classes",
+  title: "Welcome to Naveen Bharat Prism",
   subtitle: "Quality education for every student",
   cta_text: "Get Started",
 };
@@ -96,7 +96,7 @@ const Navigation = memo(({ isAuthenticated }: { isAuthenticated: boolean }) => {
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
                 <img src={logo} alt="Logo" className="h-8 w-8 rounded-lg" />
-                Sadguru Coaching
+                Naveen Bharat Prism
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-2 mt-6">
