@@ -1,83 +1,96 @@
 
-## Root Cause: Missing `lovable.toml`
+## Security Issues Found — What to Do
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
-
----
-
-## Plan
-
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
-
-```toml
-[run]
-dev = "npm run dev"
-```
-
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+The security scan has **1 Error** and **4 Warnings**. Here's what each one is and how to fix it:
 
 ---
 
-### 2. Visual Polish — CSS & Theme Improvements
+### Issue 1 (Error): User emails/phone numbers exposed via `profiles_public`
+**What's wrong:** The `profiles_public` view pulls from the `profiles` table (which has `email` and `mobile`) but the view itself has **zero RLS policies**. Any authenticated user can query it freely. While the view only exposes `id`, `full_name`, `avatar_url` — the lack of policies makes access undefined/risky.
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
-
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+**Fix:** Add an explicit RLS policy to `profiles_public` allowing only authenticated users to read it (since it only has non-sensitive fields). The view is used by `Messages.tsx` for contact search.
 
 ---
 
-### 3. Landing Page & Navigation Visual Fixes
+### Issue 2 (Warning): Notice `author_id` publicly exposed
+**What's wrong:** The `notices` table has `USING (true)` for SELECT — so any visitor can read all notices including the `author_id` column, which maps a user ID to their actions.
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+**Fix:** This is intentional (notices are meant to be public), but we should ensure the `author_id` isn't a leak concern. Since this is a coaching platform and notices are public, we can keep the SELECT policy but it's acceptable. We'll note this as acknowledged.
 
 ---
 
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
+### Issue 3 (Warning): `profiles_public` no RLS policies
+**Fix:** Same as Issue 1 — adding an authenticated-read RLS policy resolves both issues 1 and 3.
 
 ---
 
-### 5. Branding Consistency
+### Issue 4 (Warning): RLS Policy Always True
+**What's wrong:** The `leads` table has `WITH CHECK (true)` on the INSERT policy — any anonymous visitor can insert a lead (which is actually intentional — it's a public lead capture form).
 
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+**Fix:** This is acceptable behavior for a lead form. We'll acknowledge/mark it as intentional since the landing page lead form needs public INSERT access.
 
 ---
 
-## Files to Modify
+### Issue 5 (Warning): Leaked Password Protection Disabled
+**What's wrong:** Supabase's HaveIBeenPwned integration is disabled — so users can sign up with known-compromised passwords.
+
+**Fix:** Enable it via Supabase dashboard Auth settings (1-click toggle).
+
+---
+
+## Files to Change
 
 | File | Change |
 |------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
-
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+| SQL Migration | Add RLS policies to `profiles_public` view (authenticated read only) |
+| SQL Migration | Add `security_invoker=on` to the `profiles_public` view definition |
+| No code changes | `Messages.tsx` already queries `profiles_public` — this stays the same |
 
 ---
 
-## Note on Visual Editor
+## SQL Migration Plan
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+```sql
+-- 1. Recreate the view with security_invoker so it respects the caller's RLS context
+CREATE OR REPLACE VIEW public.profiles_public
+WITH (security_invoker = on) AS
+  SELECT id, full_name, avatar_url
+  FROM public.profiles;
+
+-- 2. Enable RLS on the view (for Postgres 15+, views inherit base table RLS with security_invoker)
+-- Add explicit policy: only authenticated users can read public profiles
+ALTER VIEW public.profiles_public OWNER TO authenticated;
+
+-- Grant read access to authenticated users
+GRANT SELECT ON public.profiles_public TO authenticated;
+```
+
+This ensures:
+- `profiles_public` uses `security_invoker=on` — it runs with the querying user's permissions, not the definer's
+- The base `profiles` table already has `USING (false)` block policy + individual user + admin policies, so `security_invoker=on` means non-admins only see their own row (which is fine for the Messages contact list — they still see all public profiles because the profiles SELECT policy allows it for admins)
+
+Wait — actually, since `profiles` has `USING (false)` as a "Block public access" policy AND `USING (auth.uid() = id)` for users — a user via `security_invoker=on` view would only see their own profile. That would break `Messages.tsx`.
+
+**Revised approach**: Keep the view without security_invoker, but add an explicit RLS policy on the view itself allowing authenticated users to read it. The view only exposes non-sensitive fields (`id`, `full_name`, `avatar_url`) so this is safe.
+
+```sql
+-- Enable RLS on profiles_public view
+ALTER TABLE public.profiles_public ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can view public profiles"
+ON public.profiles_public
+FOR SELECT
+TO authenticated
+USING (true);
+```
+
+This resolves Issues 1 and 3 with a single clean policy. The view only exposes safe non-PII fields.
+
+For Issue 5 (Leaked Password Protection) — a direct link to the Supabase Auth settings will be provided for the user to toggle it on.
+
+## Summary of Changes
+
+1. **SQL migration**: Add RLS + SELECT policy to `profiles_public` view → fixes Error + Warning 3
+2. **Acknowledge**: `leads` INSERT (Warning 4) is intentional public lead capture
+3. **Acknowledge**: `notices` author_id (Warning 2) is acceptable for public notice board  
+4. **User action needed**: Enable Leaked Password Protection in Supabase Auth dashboard (Warning 5)
