@@ -452,3 +452,60 @@
   0%, 100% { box-shadow: 0 0 0 2px hsl(48 96% 53% / 0.6); }
   50% { box-shadow: 0 0 12px 4px hsl(48 96% 53% / 0.9); }
 }
+
+/* ========== GLOBAL VISUAL POLISH ========== */
+@layer components {
+  /* Card hover lift effect */
+  .card-hover {
+    @apply transition-all duration-200 ease-out;
+  }
+  .card-hover:hover {
+    @apply -translate-y-1 shadow-lg;
+  }
+
+  /* Consistent button primary gradient */
+  .btn-primary-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    @apply text-primary-foreground font-semibold rounded-xl px-6 py-2.5 transition-all duration-200 hover:opacity-90 hover:shadow-md active:scale-95;
+  }
+
+  /* Form input polish */
+  .input-focus {
+    @apply focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:border-primary transition-all duration-150;
+  }
+
+  /* Progress track improved */
+  .progress-touch {
+    @apply h-1.5 cursor-pointer;
+    min-height: 12px;
+    touch-action: none;
+  }
+
+  /* Consistent card border */
+  .course-card {
+    @apply rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 overflow-hidden;
+  }
+  .course-card:hover {
+    @apply -translate-y-1 shadow-md border-primary/20;
+  }
+
+  /* Nav shadow on scroll */
+  .nav-shadow {
+    box-shadow: 0 4px 20px -4px hsl(var(--foreground) / 0.08);
+  }
+
+  /* Section spacing consistency */
+  .section-padding {
+    @apply py-16 md:py-24 px-4;
+  }
+
+  /* Admin panel card */
+  .admin-card {
+    @apply rounded-xl border border-border bg-card p-5 shadow-sm;
+  }
+
+  /* Badge pill */
+  .badge-pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
