@@ -71,12 +71,12 @@ const Navigation = memo(({ isAuthenticated }: { isAuthenticated: boolean }) => {
         <Link to="/" className="flex items-center gap-3">
           <img
             src={logo}
-            alt="Sadguru Coaching Classes"
+            alt="Naveen Bharat Prism"
             className="h-10 w-10 rounded-xl"
             loading="eager"
           />
           <span className="font-bold text-xl text-foreground hidden sm:inline">
-            Sadguru Coaching Classes
+            Naveen Bharat Prism
           </span>
         </Link>
 
