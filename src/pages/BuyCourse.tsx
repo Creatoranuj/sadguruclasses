@@ -205,11 +205,8 @@ const BuyCourse = () => {
           throw uploadError;
         }
         
-        const { data: urlData } = supabase.storage
-          .from('receipts')
-          .getPublicUrl(fileName);
-        
-        screenshotUrl = urlData.publicUrl;
+        // Store the storage path only (bucket is private, signed URLs generated on admin side)
+        screenshotUrl = fileName;
       }
 
       const { error } = await supabase
