@@ -882,7 +882,16 @@ const Admin = () => {
                              {/* Screenshot Button */}
                              {req.screenshot_url ? (
                                <a 
-                                 href={req.screenshot_url} 
+                                 href="#"
+                                 onClick={async (e) => {
+                                   e.preventDefault();
+                                   // Generate a 1-hour signed URL for the private receipts bucket
+                                   const { data, error } = await supabase.storage
+                                     .from('receipts')
+                                     .createSignedUrl(req.screenshot_url, 3600);
+                                   if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                                   else if (error) toast.error('Could not load screenshot');
+                                 }}
                                  target="_blank" 
                                  rel="noopener noreferrer"
                                  className="w-full"
