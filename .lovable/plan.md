@@ -1,46 +1,83 @@
-# Plan: Fix PDF Viewer Full-Page + Download + Archive.org Support
 
-## Problems Found
+## Root Cause: Missing `lovable.toml`
 
-1. **DriveEmbedViewer returns `null` for Archive.org URLs** — Line 56: `if (!isDrive && !isPdf) return null` means Archive.org content never renders through this component
-2. **PdfViewer is never used** — It exists but no component imports it; all PDF/Drive rendering goes through DriveEmbedViewer
-3. **Archive.org download URL assumes `{id}.pdf**` — This may not match the actual filename on Archive.org; needs smarter fallback
-4. **No fullscreen toggle in DriveEmbedViewer** — PdfViewer has it but DriveEmbedViewer doesn't, and DriveEmbedViewer is what's actually used everywhere
-5. Test the PDF viewer with a Google Drive link, Archive.org link, and direct PDF to verify download and fullscreen work correctly
-6.   
-Add a Google Docs document viewer with export-to-PDF download support in DriveEmbedViewer  
-Add a Google Docs document viewer with export-to-PDF download support in DriveEmbedViewer
-7.   
-Ensure the discussion tab in lecture modal shows real comments and allows posting
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-## Changes
+---
 
-### 1. Expand DriveEmbedViewer to handle Archive.org URLs (`src/components/course/DriveEmbedViewer.tsx`)
+## Plan
 
-- Add Archive.org detection: if URL contains `archive.org`, extract identifier, use `archive.org/embed/{id}` for embedding
-- Remove the `if (!isDrive && !isPdf) return null` guard — instead render any URL that matches drive/pdf/archive/docs patterns
-- Add Google Docs detection too (embed via `docs.google.com/document/d/{id}/preview`)
-- Add fullscreen toggle (matching PdfViewer's implementation)
-- Add branding bar at bottom
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-### 2. Improve Archive.org download in fileUtils (`src/utils/fileUtils.ts`)
+```toml
+[run]
+dev = "npm run dev"
+```
 
-- Keep current approach but add a `no-cors` fallback: if blob fetch fails, open `archive.org/download/{id}` directly which shows Archive.org's own download page with all available formats
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-### 3. Update UnifiedVideoPlayer Archive.org handling (`src/components/video/UnifiedVideoPlayer.tsx`)
+---
 
-- For Archive.org URLs that are PDFs/documents (not videos), route to DriveEmbedViewer instead of the video iframe
-- Detect PDF vs video by checking if URL contains `/details/` patterns for books vs videos
+### 2. Visual Polish — CSS & Theme Improvements
 
-### 4. Remove unused PdfViewer or consolidate
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-- Since DriveEmbedViewer will now handle all cases, keep PdfViewer as-is but it remains unused — no changes needed
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
 
 ## Files to Modify
 
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-| File                                          | Change                                                                      |
-| --------------------------------------------- | --------------------------------------------------------------------------- |
-| `src/components/course/DriveEmbedViewer.tsx`  | Add Archive.org + Docs support, fullscreen, branding bar, remove null guard |
-| `src/components/video/UnifiedVideoPlayer.tsx` | Route archive PDFs to DriveEmbedViewer                                      |
-| `src/utils/fileUtils.ts`                      | Minor: improve Archive.org download fallback URL                            |
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
