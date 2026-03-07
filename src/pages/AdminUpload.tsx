@@ -295,6 +295,43 @@ const AdminUpload = () => {
     }
   };
 
+  const handleDeleteChapter = async (chapterId: string, chapterTitle: string) => {
+    if (!confirm(`Delete folder "${chapterTitle}" and ALL its content? This cannot be undone.`)) return;
+    try {
+      // Delete all sub-chapters' lessons first
+      const { data: subChs } = await supabase.from('chapters').select('id').eq('parent_id', chapterId);
+      if (subChs && subChs.length > 0) {
+        for (const sc of subChs) {
+          await supabase.from('lessons').delete().eq('chapter_id', sc.id);
+        }
+        await supabase.from('chapters').delete().eq('parent_id', chapterId);
+      }
+      // Delete direct lessons in this chapter
+      await supabase.from('lessons').delete().eq('chapter_id', chapterId);
+      // Delete the chapter itself
+      const { error } = await supabase.from('chapters').delete().eq('id', chapterId);
+      if (error) throw error;
+      toast.success(`"${chapterTitle}" deleted`);
+      // Refresh lists
+      if (selectedChapterId === chapterId) {
+        setSelectedChapterId(null);
+        setSubChapters([]);
+        setLessons([]);
+      }
+      // Refresh chapters or subchapters depending on level
+      const { data: refreshedChapters } = await supabase.from('chapters').select('*')
+        .eq('course_id', selectedCourseId!).is('parent_id', null).order('position', { ascending: true });
+      setChapters(refreshedChapters || []);
+      if (selectedChapterId && selectedChapterId !== chapterId) {
+        const { data: refreshedSubs } = await supabase.from('chapters').select('*')
+          .eq('parent_id', selectedChapterId).order('position', { ascending: true });
+        setSubChapters(refreshedSubs || []);
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const typeIcon = (type: string) => {
     if (type === "VIDEO") return <Video className="h-4 w-4" />;
     if (type === "TEST") return <ClipboardCheck className="h-4 w-4" />;

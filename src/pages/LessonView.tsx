@@ -184,6 +184,31 @@ const LessonView = () => {
     toast.success("Book removed from lesson resources");
   };
 
+  // Fetch secure video/pdf URL for current lesson via Edge Function
+  const fetchSecureLessonUrl = async (lessonId: string) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) return null;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-lesson-url`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ lesson_id: lessonId }),
+        }
+      );
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
   // --- 1. DATA FETCHING ---
   useEffect(() => {
     const initPage = async () => {
@@ -216,18 +241,31 @@ const LessonView = () => {
         if (courseError) throw courseError;
         setCourse(courseData);
 
-        // Fetch Lessons
+        // Fetch Lessons — strip video_url/class_pdf_url from DB query (fetched via Edge Function)
         const { data: lessonData, error: lessonError } = await supabase
           .from('lessons')
-          .select('*')
+          .select('id, title, is_locked, description, course_id, created_at, like_count')
           .eq('course_id', Number(courseId))
           .order('created_at', { ascending: true });
         if (lessonError) throw lessonError;
+
+        // Map lessons with null URLs (fetched securely per-lesson when selected)
+        const mappedLessons: Lesson[] = (lessonData || []).map((l: any) => ({
+          ...l,
+          video_url: '',
+          class_pdf_url: null,
+        }));
         
-        setLessons(lessonData || []);
+        setLessons(mappedLessons);
         
-        if (lessonData && lessonData.length > 0) {
-          setCurrentLesson(lessonData[0]);
+        if (mappedLessons.length > 0) {
+          // Fetch secure URLs for first lesson
+          const urls = await fetchSecureLessonUrl(mappedLessons[0].id);
+          setCurrentLesson({
+            ...mappedLessons[0],
+            video_url: urls?.video_url || '',
+            class_pdf_url: urls?.class_pdf_url || null,
+          });
         }
 
       } catch (error) {
@@ -253,9 +291,15 @@ const LessonView = () => {
     return !lesson.is_locked || hasPurchased;
   };
 
-  const handleLessonClick = (lesson: Lesson) => {
+  const handleLessonClick = async (lesson: Lesson) => {
     if (canAccessLesson(lesson)) {
-      setCurrentLesson(lesson);
+      // Fetch secure URLs via Edge Function
+      const urls = await fetchSecureLessonUrl(lesson.id);
+      setCurrentLesson({
+        ...lesson,
+        video_url: urls?.video_url || '',
+        class_pdf_url: urls?.class_pdf_url || null,
+      });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       toast.error("Course locked! Please buy to watch.");

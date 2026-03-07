@@ -71,12 +71,12 @@ const Navigation = memo(({ isAuthenticated }: { isAuthenticated: boolean }) => {
         <Link to="/" className="flex items-center gap-3">
           <img
             src={logo}
-            alt="Naveen Bharat Prism"
+            alt="Sadguru Coaching Classes"
             className="h-10 w-10 rounded-xl"
             loading="eager"
           />
           <span className="font-bold text-xl text-foreground hidden sm:inline">
-            Naveen Bharat Prism
+            Sadguru Coaching Classes
           </span>
         </Link>
 
@@ -96,7 +96,7 @@ const Navigation = memo(({ isAuthenticated }: { isAuthenticated: boolean }) => {
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
                 <img src={logo} alt="Logo" className="h-8 w-8 rounded-lg" />
-                Naveen Bharat Prism
+                Sadguru Coaching Classes
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-2 mt-6">
