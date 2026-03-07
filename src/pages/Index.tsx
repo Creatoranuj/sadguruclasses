@@ -20,7 +20,7 @@ import {
 import logo from "@/assets/mahima-logo.png"; // TODO: Replace with new Sadguru logo when available
 
 const defaultHeroData: HeroData = {
-  title: "Welcome to Naveen Bharat Prism",
+  title: "Welcome to Sadguru Coaching Classes",
   subtitle: "Quality education for every student",
   cta_text: "Get Started",
 };
