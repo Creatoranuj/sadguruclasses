@@ -598,21 +598,31 @@ const AdminUpload = () => {
             ) : (
               <div className="space-y-3">
                 {chapters.map(ch => (
-                  <button
+                  <div
                     key={ch.id}
-                    onClick={() => setSelectedChapterId(ch.id)}
-                    className="w-full p-4 border rounded-xl bg-card hover:border-primary hover:shadow-sm transition-all text-left group"
+                    className="w-full p-4 border rounded-xl bg-card hover:border-primary hover:shadow-sm transition-all group flex items-center"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                          {ch.position || "—"}
-                        </div>
-                        <p className="font-medium text-sm">{ch.title}</p>
+                    <button
+                      className="flex items-center gap-3 flex-1 text-left"
+                      onClick={() => setSelectedChapterId(ch.id)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                        {ch.position || "—"}
                       </div>
+                      <p className="font-medium text-sm">{ch.title}</p>
+                    </button>
+                    <div className="flex items-center gap-1 ml-2">
+                      <Button
+                        variant="ghost" size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteChapter(ch.id, ch.title); }}
+                        title="Delete chapter"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                       <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -663,15 +673,29 @@ const AdminUpload = () => {
                 ) : (
                   <div className="space-y-1.5">
                     {subChapters.map(sc => (
-                      <button
+                      <div
                         key={sc.id}
-                        onClick={() => setSelectedChapterId(sc.id)}
-                        className="w-full p-2.5 border rounded-lg bg-card hover:border-primary transition-all text-left group flex items-center gap-2"
+                        className="w-full p-2.5 border rounded-lg bg-card hover:border-primary transition-all group flex items-center gap-2"
                       >
-                        <FolderOpen className="h-4 w-4 text-primary/60" />
-                        <span className="text-sm font-medium flex-1 truncate">{sc.code} : {sc.title}</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                      </button>
+                        <button
+                          className="flex items-center gap-2 flex-1 text-left"
+                          onClick={() => setSelectedChapterId(sc.id)}
+                        >
+                          <FolderOpen className="h-4 w-4 text-primary/60" />
+                          <span className="text-sm font-medium flex-1 truncate">{sc.code} : {sc.title}</span>
+                        </button>
+                        <div className="flex items-center gap-0.5 ml-auto">
+                          <Button
+                            variant="ghost" size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteChapter(sc.id, sc.title); }}
+                            title="Delete sub-folder"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
