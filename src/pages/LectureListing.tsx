@@ -354,19 +354,35 @@ const LectureListing = () => {
             )}>
               {viewMode === "list" && (
                 <div className="space-y-4">
-                  {filteredLessons.map((lesson) => (
-                    <LectureCard
-                      key={lesson.id}
-                      id={lesson.id}
-                      title={lesson.title}
-                      lectureType={lesson.lecture_type as "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST"}
-                      position={lesson.position}
-                      duration={lesson.duration}
-                      createdAt={lesson.created_at}
-                      isLocked={!!lesson.is_locked && !hasPurchased && !isAdminOrTeacher}
-                      onClick={() => handleLectureClick(lesson)}
-                    />
-                  ))}
+                  {filteredLessons.map((lesson) => {
+                    const linkedQuizId = lessonQuizMap[lesson.id];
+                    const isDppOrTest = lesson.lecture_type === "DPP" || lesson.lecture_type === "TEST";
+                    return (
+                      <div key={lesson.id} className="relative">
+                        <LectureCard
+                          id={lesson.id}
+                          title={lesson.title}
+                          lectureType={lesson.lecture_type as "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST"}
+                          position={lesson.position}
+                          duration={lesson.duration}
+                          createdAt={lesson.created_at}
+                          isLocked={!!lesson.is_locked && !hasPurchased && !isAdminOrTeacher}
+                          onClick={() => handleLectureClick(lesson)}
+                        />
+                        {isDppOrTest && linkedQuizId && (
+                          <div className="mt-1 px-1">
+                            <button
+                              onClick={() => navigate(`/quiz/${linkedQuizId}`)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                            >
+                              <ClipboardList className="h-3.5 w-3.5" />
+                              {lesson.lecture_type === "TEST" ? "Take Test" : "Attempt DPP"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
