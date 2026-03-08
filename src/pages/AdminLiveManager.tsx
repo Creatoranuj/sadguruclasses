@@ -30,6 +30,7 @@ interface LiveSession {
   started_at: string | null;
   ended_at: string | null;
   created_at: string;
+  recording_url?: string | null;
 }
 
 const AdminLiveManager = () => {
