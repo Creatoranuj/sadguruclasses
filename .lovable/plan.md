@@ -1,52 +1,83 @@
 
-## Complete Verification & Fix
+## Root Cause: Missing `lovable.toml`
 
-### What I Found
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-**Critical Bug in `score-quiz` edge function:**
-The function uses `userClient.auth.getClaims(token)` on line 36 — this method **does not exist** in `@supabase/supabase-js@2`. Every other edge function in this project correctly uses `auth.getUser()` or `auth.getUser(token)`. This means **every real quiz submission will return 401 Unauthorized** even for properly authenticated users.
+---
 
-**Database state:**
-- 0 quizzes, 0 questions, 0 quiz_attempts in the database
-- The quiz feature cannot be tested end-to-end until an admin creates a published quiz with questions
+## Plan
 
-**`supabase.functions.invoke()` auth behavior:**
-When called from the frontend, `supabase.functions.invoke()` automatically passes the user's auth token in the `Authorization` header. The edge function then tries `getClaims(token)` which fails/returns null → 401.
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-### The Fix
-
-**File: `supabase/functions/score-quiz/index.ts`**
-
-Replace the `getClaims` block (lines 29-43) with the correct `auth.getUser(token)` pattern used by all other edge functions in this project:
-
-```
-// REMOVE: getClaims approach (doesn't exist in supabase-js v2)
-const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-if (claimsError || !claimsData?.claims) { ... }
-const userId = claimsData.claims.sub as string;
-
-// REPLACE WITH: getUser(token) — same pattern as create-zoom-meeting
-const { data: { user }, error: authError } = await userClient.auth.getUser(token);
-if (authError || !user) { return 401 }
-const userId = user.id;
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-Then redeploy the function.
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-### What the Admin Must Do First (No Code Change)
+---
 
-Because the database has 0 quizzes and 0 questions, the end-to-end test requires:
-1. Admin logs in → goes to `/admin/quiz`
-2. Creates a quiz (e.g. "Test Quiz"), sets total_marks, pass_percentage, publishes it
-3. Adds at least 3-4 MCQ questions with correct_answer set and marks/negative_marks
-4. Publishes the quiz
+### 2. Visual Polish — CSS & Theme Improvements
 
-Only then can a student navigate to the quiz and test the full submit → score flow.
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-### Files to Change
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/score-quiz/index.ts` | Fix `getClaims` → `getUser(token)` on lines 29-43 |
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-One-line fix, then redeploy. The rest of the system (QuizAttempt.tsx, QuizResult.tsx, RLS policies) is all correct.
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
