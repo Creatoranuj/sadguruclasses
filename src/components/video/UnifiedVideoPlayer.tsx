@@ -42,7 +42,7 @@ const isArchiveDocument = (url: string): boolean => {
 
 const getVimeoId = (url: string) => url.match(/vimeo\.com\/(\d+)/)?.[1] || "";
 
-const UnifiedVideoPlayer = ({ url, title, onEnded, onReady, onProgress }: UnifiedVideoPlayerProps) => {
+const UnifiedVideoPlayer = ({ url, title, lessonId, onEnded, onReady, onProgress, onNextVideo, nextVideoTitle }: UnifiedVideoPlayerProps) => {
   const platform = detectPlatform(url);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +54,16 @@ const UnifiedVideoPlayer = ({ url, title, onEnded, onReady, onProgress }: Unifie
   // YouTube — delegate to MahimaGhostPlayer
   if (platform === "youtube") {
     return (
-      <MahimaGhostPlayer videoUrl={url} title={title} onEnded={onEnded} onReady={onReady} onTimeUpdate={handleTimeUpdate} />
+      <MahimaGhostPlayer
+        videoUrl={url}
+        title={title}
+        lessonId={lessonId}
+        onEnded={onEnded}
+        onReady={onReady}
+        onTimeUpdate={handleTimeUpdate}
+        onNextVideo={onNextVideo}
+        nextVideoTitle={nextVideoTitle}
+      />
     );
   }
 
