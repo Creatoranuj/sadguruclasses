@@ -488,6 +488,7 @@ const Messages = () => {
         </div>
       </div>
     </div>
+      <BottomNav />
   );
 };
 
