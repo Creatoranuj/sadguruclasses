@@ -328,6 +328,40 @@ const AdminQuizManager = () => {
     fetchQuizzes();
   };
 
+  const openAttempts = async (quiz: Quiz) => {
+    setAttemptsQuizId(quiz.id);
+    setAttemptsQuizTitle(quiz.title);
+    setAttempts([]);
+    setLoadingAttempts(true);
+    const { data, error } = await supabase
+      .from("quiz_attempts")
+      .select("id, score, percentage, passed, submitted_at, time_taken_seconds, user_id")
+      .eq("quiz_id", quiz.id)
+      .not("submitted_at", "is", null)
+      .order("submitted_at", { ascending: false });
+    if (error) { toast.error(error.message); setLoadingAttempts(false); return; }
+
+    // Fetch profile names for each unique user
+    const userIds = [...new Set((data || []).map((a: any) => a.user_id))];
+    let profileMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      (profiles || []).forEach((p: any) => {
+        profileMap[p.id] = p.full_name || p.email || "Unknown";
+      });
+    }
+
+    const enriched = (data || []).map((a: any) => ({
+      ...a,
+      student_name: profileMap[a.user_id] || "Unknown",
+    }));
+    setAttempts(enriched);
+    setLoadingAttempts(false);
+  };
+
   const updateQuestionForm = (idx: number, field: keyof QuestionForm, value: any) => {
     setQuestionForms(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
   };
