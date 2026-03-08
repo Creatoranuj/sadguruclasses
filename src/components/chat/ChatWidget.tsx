@@ -193,7 +193,7 @@ const ChatWidget = () => {
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b bg-primary/5 shrink-0">
             <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center relative shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <img src={logoIcon} className="w-5 h-5 object-contain" alt="Sarthi" />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-chart-2 rounded-full border-2 border-card" />
             </div>
             <div className="flex-1 min-w-0">
