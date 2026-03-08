@@ -82,6 +82,11 @@ const MahimaGhostPlayer = memo(({
   const swipeTouchRef = useRef<{ startY: number; startX: number; startVal: number; side: 'left' | 'right'; locked: boolean } | null>(null);
   const swipeIndicatorTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  // Double-tap state
+  const [doubleTapRipple, setDoubleTapRipple] = useState<{ side: 'left' | 'right'; key: number } | null>(null);
+  const doubleTapTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const lastTapRef = useRef<{ time: number; side: 'left' | 'right' } | null>(null);
+
   // Rotation state — supports 0, 90, 180, 270 degrees
   const [rotation, setRotation] = useState(0);
 
