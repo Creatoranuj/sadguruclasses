@@ -530,7 +530,7 @@ function BannerForm({
                 key={g}
                 type="button"
                 onClick={() => onChange({ bg_color: g })}
-                className="w-6 h-6 rounded border-2 border-white shadow hover:scale-110 transition-transform"
+            className="w-6 h-6 rounded border-2 border-background shadow hover:scale-110 transition-transform"
                 style={{ backgroundImage: g }}
                 title={g}
               />
@@ -610,7 +610,7 @@ function BannerPreview({ banner }: { banner: HeroBanner }) {
         {banner.subtitle && (
           <p className="text-white/90 text-xs">{banner.subtitle}</p>
         )}
-        <button className="mt-1 inline-flex items-center bg-white text-gray-900 font-bold text-xs px-3 py-1.5 rounded-full shadow">
+        <button className="mt-1 inline-flex items-center bg-background text-foreground font-bold text-xs px-3 py-1.5 rounded-full shadow">
           {banner.cta_text}
         </button>
       </div>

@@ -239,7 +239,7 @@ function BannerSlide({
         {/* CTA Button */}
         <button
           onClick={() => onCTA(banner)}
-          className="mt-1 inline-flex items-center gap-1.5 bg-white text-gray-900 hover:bg-white/90 font-bold text-sm px-4 py-2 rounded-full transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+        className="mt-1 inline-flex items-center gap-1.5 bg-background text-foreground hover:bg-background/90 font-bold text-sm px-4 py-2 rounded-full transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
         >
           {banner.cta_text}
         </button>
