@@ -336,6 +336,22 @@ const AdminQuizManager = () => {
     setView("edit-questions");
   };
 
+  const handleBulkImport = () => {
+    const urls = bulkImageUrls.split("\n").map(u => u.trim()).filter(Boolean);
+    if (!urls.length) return toast.error("Paste at least one image URL");
+    const startIdx = questionForms.length;
+    const newQs = urls.map(url => ({ ...defaultQuestion(), image_url: url }));
+    setQuestionForms(prev => [...prev, ...newQs]);
+    setExpandedQuestions(prev => {
+      const next = { ...prev };
+      newQs.forEach((_, i) => { next[startIdx + i] = true; });
+      return next;
+    });
+    setBulkImageUrls("");
+    setShowBulkImport(false);
+    toast.success(`${urls.length} question${urls.length > 1 ? "s" : ""} added from image URLs`);
+  };
+
   const togglePublish = async (quiz: Quiz) => {
     const { error } = await supabase.from("quizzes")
       .update({ is_published: !quiz.is_published }).eq("id", quiz.id);
