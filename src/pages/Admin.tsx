@@ -307,6 +307,18 @@ const Admin = () => {
     });
   }, [usersList, userSearch, userRoleFilter]);
 
+  // Teacher management computed lists
+  const activeTeachers = useMemo(() =>
+    usersList.filter(u => u.role === 'teacher'),
+  [usersList]);
+
+  const promotableStudents = useMemo(() =>
+    usersList.filter(u => (u.role === 'student' || !u.role) &&
+      (u.full_name?.toLowerCase().includes(teacherSearch.toLowerCase()) ||
+       u.email?.toLowerCase().includes(teacherSearch.toLowerCase()))
+    ),
+  [usersList, teacherSearch]);
+
   // --- EXPORT TO CSV ---
   const exportToCSV = (data: any[], filename: string) => {
     if (data.length === 0) {
