@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, PackageOpen, FolderOpen } from "lucide-react";
+import { ChevronLeft, PackageOpen, FolderOpen, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Breadcrumbs, LectureCard, LectureModal } from "@/components/course";
