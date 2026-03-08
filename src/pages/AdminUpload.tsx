@@ -112,6 +112,15 @@ const AdminUpload = () => {
   const [classPdfFile, setClassPdfFile] = useState<File | null>(null);
   const [classPdfUrl, setClassPdfUrl] = useState("");
 
+  // Edit lesson state
+  const [editingLesson, setEditingLesson] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editVideoUrl, setEditVideoUrl] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editOverview, setEditOverview] = useState("");
+  const [editClassPdfUrl, setEditClassPdfUrl] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   // Recent lessons for selected chapter
   const [lessons, setLessons] = useState<any[]>([]);
 

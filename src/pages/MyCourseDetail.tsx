@@ -206,12 +206,16 @@ const MyCourseDetail = () => {
         if (user?.id) {
           const { data: progressData } = await supabase
             .from("user_progress")
-            .select("lesson_id")
+            .select("lesson_id, last_watched_at")
             .eq("user_id", user.id)
             .eq("course_id", Number(courseId))
-            .eq("completed", true);
+            .eq("completed", true)
+            .order("last_watched_at", { ascending: false });
           completedSet = new Set((progressData || []).map((p: any) => p.lesson_id));
           setCompletedLessonIds(completedSet);
+          if (progressData && progressData.length > 0) {
+            setLastWatchedLessonId(progressData[0].lesson_id);
+          }
         }
 
         const lessonCountMap: Record<string, number> = {};
