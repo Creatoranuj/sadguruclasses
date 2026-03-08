@@ -47,6 +47,7 @@ const Admin = () => {
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(false);
+  const [roleChanging, setRoleChanging] = useState<Record<string, boolean>>({});
   const [statsData, setStatsData] = useState({
     totalStudents: 0,
     totalCourses: 0,
