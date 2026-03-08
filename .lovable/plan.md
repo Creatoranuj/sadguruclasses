@@ -1,46 +1,83 @@
 
-## What Needs to Change
+## Root Cause: Missing `lovable.toml`
 
-From the screenshot, the center overlay currently shows:
-`[⏪10s] [▶ PLAY] [⏩10s] [⟳ rotate]`
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-The user wants the skip-10 buttons AND rotate button to be **away from the play button**, not clustered right next to it. The rotate icon is currently at position 4 in the center row, sitting right next to the forward-10 button.
+---
 
-The intended layout:
-- **Center overlay**: Only `[▶ PLAY]` — large play/pause button alone in the center
-- **Left side of center**: `[⏪10s]` — skip back, positioned further left
-- **Right side of center**: `[⏩10s]` — skip forward, positioned further right  
-- **Far right of center or bottom bar**: `[⟳ rotate]` — custom rotation icon, clearly separated
+## Plan
 
-### Implementation
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-**File: `src/components/video/MahimaGhostPlayer.tsx`** (lines 641–702)
+```toml
+[run]
+dev = "npm run dev"
+```
 
-Change the center controls layout from a single `flex-row gap-6` row to a 3-column or spaced absolute layout:
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-**Option A — Absolute positioning (cleanest)**:
-- Skip back: `absolute left-[15%] top-50%`
-- Play: `absolute center`
-- Skip forward: `absolute right-[15%] top-50%`  
-- Rotate: Move to bottom controls bar right group (between the next-video button and settings)
+---
 
-**Option B — Use wider gap with justify-between**:
-- Outer div: `flex justify-between items-center w-full px-8`
-- Left: skip-back
-- Center: play button
-- Right: skip-forward
-- Rotate: moved to bottom bar right side
+### 2. Visual Polish — CSS & Theme Improvements
 
-**Best approach**: Use `justify-between` with wide padding so the skip buttons are at the edges, play in the middle. Move rotate icon to bottom controls right group (before settings gear).
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-### Exact Changes
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-1. **Center row** (lines 641–702): Change from `gap-6 md:gap-10 justify-center` to `justify-between px-8 md:px-16` — skip-back goes left, play center, skip-forward goes right. **Remove rotate button from here.**
+---
 
-2. **Bottom controls right group** (lines 797–831): Add the rotate button icon between the next-video button and the settings gear button.
+### 3. Landing Page & Navigation Visual Fixes
 
-This way:
-- Center: `[         ⏪10s         ▶         ⏩10s         ]` — well spaced
-- Bottom right: `[💬] [⏭] [⟳] [⚙]`
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
 
-All existing logic (back-button intercept, rotateCW function) stays intact.
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

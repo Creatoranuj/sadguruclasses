@@ -638,8 +638,8 @@ const MahimaGhostPlayer = memo(({
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
-            {/* Center controls: [⏪10s] [▶ PLAY] [⏩10s] [⟳ rotate] */}
-            <div className="absolute inset-0 flex flex-row items-center justify-center gap-6 md:gap-10">
+            {/* Center controls: [⏪10s]          [▶ PLAY]          [⏩10s] */}
+            <div className="absolute inset-0 flex flex-row items-center justify-between px-10 md:px-20">
               {/* Skip back 10s */}
               <button
                 className={cn(
@@ -684,20 +684,6 @@ const MahimaGhostPlayer = memo(({
                 aria-label="Forward 10s"
               >
                 <img src={skipForward10Icon} alt="Forward 10s" className="w-12 h-12 md:w-14 md:h-14" style={{ filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.9))' }} />
-              </button>
-
-              {/* Rotate (single custom icon, cycles CW: 0→90→180→270→0) */}
-              <button
-                className={cn(
-                  "flex items-center justify-center bg-transparent border-none",
-                  "transition-transform duration-200 pointer-events-auto active:scale-90",
-                  showControls ? "opacity-100 scale-100" : "opacity-0 scale-90"
-                )}
-                onClick={(e) => { e.stopPropagation(); rotateCW(); }}
-                title="Rotate screen"
-                aria-label="Rotate screen"
-              >
-                <img src={rotationIcon} alt="Rotate" className="w-12 h-12 md:w-14 md:h-14" style={{ filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.9))' }} />
               </button>
             </div>
           </div>
@@ -819,6 +805,16 @@ const MahimaGhostPlayer = memo(({
                   <SkipForward className="h-4 w-4" />
                 </Button>
               )}
+
+              {/* Rotate button — custom icon, cycles CW: 0→90→180→270→0 */}
+              <button
+                className="h-8 w-8 md:h-9 md:w-9 flex items-center justify-center outline-none focus:outline-none pointer-events-auto active:scale-90 transition-transform"
+                onClick={(e) => { e.stopPropagation(); rotateCW(); }}
+                title="Rotate screen"
+                aria-label="Rotate screen"
+              >
+                <img src={rotationIcon} alt="Rotate" className="h-6 w-6 md:h-7 md:w-7" draggable={false} style={{ filter: 'drop-shadow(0px 2px 6px rgba(0,0,0,0.8))' }} />
+              </button>
 
               {/* Settings gear — custom icon */}
               <div className="relative">
