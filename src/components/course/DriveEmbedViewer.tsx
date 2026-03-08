@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useEffect } from "react";
 import { ExternalLink, Download, Maximize, Minimize, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadFile, extractArchiveId, extractDocsId, getArchiveDownloadUrl } from "@/utils/fileUtils";
