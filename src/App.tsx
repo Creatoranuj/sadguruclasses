@@ -78,7 +78,7 @@ const PageLoader = memo(() => {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4">
         <div className="relative">
-          <img src={refreshLogo} alt="Loading" className="h-16 w-16 rounded-2xl mahima-loader-logo" />
+          <img src={sadguruLogo} alt="Loading" className="h-16 w-16 rounded-2xl mahima-loader-logo" />
           <div className="absolute inset-0 rounded-2xl border-2 border-primary/40 mahima-loader-ring" />
         </div>
         <p className="text-muted-foreground text-sm">

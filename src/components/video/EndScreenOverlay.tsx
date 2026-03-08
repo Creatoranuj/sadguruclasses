@@ -43,7 +43,7 @@ const EndScreenOverlay = ({
        {/* Sadguru Coaching Classes Branding */}
        <div className="flex items-center gap-3 mb-8">
          <img 
-           src={mahimaLogo} 
+           src={sadguruLogo} 
            alt="Sadguru Coaching Classes" 
            className="h-12 w-12 rounded-lg shadow-lg"
            draggable={false}

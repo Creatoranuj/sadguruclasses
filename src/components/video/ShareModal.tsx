@@ -52,7 +52,7 @@ const ShareModal = ({ open, onOpenChange, title = "Share this lesson" }: ShareMo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <img src={mahimaLogo} alt="Sadguru Coaching Classes" className="h-8 w-8 rounded" />
+            <img src={sadguruLogo} alt="Sadguru Coaching Classes" className="h-8 w-8 rounded" />
             {title}
           </DialogTitle>
         </DialogHeader>

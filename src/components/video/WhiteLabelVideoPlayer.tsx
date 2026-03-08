@@ -241,7 +241,7 @@ const WhiteLabelVideoPlayer = ({
            }}
          >
            <img 
-             src={mahimaLogo} 
+             src={sadguruLogo} 
              alt="" 
              className="h-8 w-8 rounded"
              draggable={false}

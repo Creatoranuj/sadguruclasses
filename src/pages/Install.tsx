@@ -30,7 +30,7 @@ const Install = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <img src={refreshLogo} alt="Sadguru Coaching Classes" className="h-8 w-8 rounded-lg" />
+          <img src={sadguruLogo} alt="Sadguru Coaching Classes" className="h-8 w-8 rounded-lg" />
           <h1 className="text-lg font-bold text-foreground">Install App</h1>
         </div>
       </div>
