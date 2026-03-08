@@ -213,7 +213,7 @@ const MahimaGhostPlayer = memo(({
 
   // Derived watermark visibility: hidden first 10s, always visible last 10s or end screen
   const isInLastTenSeconds = duration > 0 && (duration - currentTime) <= 10;
-  const watermarkVisible = (currentTime >= 10 || showEndScreen || isInLastTenSeconds) && (showControls || isInLastTenSeconds || showEndScreen || watermarkForceVisible);
+  const watermarkVisible = currentTime >= 10 || showEndScreen || isInLastTenSeconds;
 
   // Show/hide controls — prevent auto-hide in last 10 seconds
   const handleMouseMove = useCallback(() => {

@@ -1,5 +1,37 @@
 # Memorywork – Changes Log
 
+## Date: 2026-03-08 (Session 2 – Final Polish: Watermark Fix, profiles_public RLS, Quiz Integrity)
+
+### Changes Made
+
+| File | Changes |
+|------|---------|
+| `src/components/video/MahimaGhostPlayer.tsx` | Fixed `watermarkVisible` — removed `showControls` gating so watermark is **always visible** from 10s onwards (not just when controls are showing). Before: `(currentTime >= 10 || ...) && (showControls || ...)`. After: `currentTime >= 10 || showEndScreen || isInLastTenSeconds`. |
+| `src/pages/QuizAttempt.tsx` | Removed on-mount attempt insert (orphan row bug). Attempt record now only created on submission. |
+| `src/pages/Dashboard.tsx` | Added `.not('submitted_at', 'is', null)` filter to quiz_attempts query so only completed quizzes appear in history. Expanded mobile bottom nav from 3 → 5 tabs (added Messages + Profile). |
+| DB migration | Added `profiles_public` RLS SELECT policy: `auth.role() = 'authenticated'` — closes the zero-policy security gap on the public profiles view. |
+
+### Verification Checklist (2026-03-08)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Watermark always visible after 10s (not tied to showControls) | ✅ Fixed |
+| 2 | No orphan quiz_attempts rows on page load | ✅ Fixed |
+| 3 | Dashboard quiz history shows only submitted attempts | ✅ Fixed |
+| 4 | Mobile bottom nav has 5 tabs (Home/Courses/My Courses/Messages/Profile) | ✅ Done |
+| 5 | profiles_public view has RLS SELECT policy for authenticated users | ✅ Done |
+| 6 | All storage buckets exist (8 total) | ✅ Confirmed |
+| 7 | All RLS policies on profiles table are correct (block public + own-row) | ✅ Confirmed |
+| 8 | Quiz orphan fix – attempt only inserted on submit | ✅ Done |
+| 9 | APK build — Capacitor config correct, docs/APK-BUILD-GUIDE.md complete | ✅ No code changes needed |
+| 10 | PWA manifest — correct branding, icons, standalone | ✅ Confirmed |
+
+### Remaining Manual Actions
+- **Leaked Password Protection**: Enable in Supabase Dashboard → Authentication → Settings → Security (HaveIBeenPwned integration — Pro/paid feature)
+- **APK Build**: Export to GitHub, then follow `docs/APK-BUILD-GUIDE.md` — run `npm run build && npx cap sync && npx cap open android` in Android Studio
+
+---
+
 ## Date: 2026-03-08 (Quiz Engine + Knowledge Hub Duplicate Fix)
 
 ### Knowledge Hub Duplicate Fix

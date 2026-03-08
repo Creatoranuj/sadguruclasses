@@ -1,75 +1,83 @@
 
-## Comprehensive assessment of what's already done vs. what needs work
+## Root Cause: Missing `lovable.toml`
 
-### Already implemented (no changes needed):
-1. **RLS on profiles** — "Block public access" + user-own-row policies all confirmed in schema ✓
-2. **Storage buckets** — All 8 buckets exist: `content`, `comment-images`, `course-videos`, `course-materials`, `receipts`, `chat-attachments`, `notices`, `book-covers` ✓
-3. **Video player watermark timing** — hidden first 10s, fade-in, pulsing border last 10s (`pulse-border` keyframe in index.css + `isInLastTenSeconds` logic) ✓
-4. **Tap-to-toggle controls** — `handleOverlayTap` toggles `showControls`, auto-hide 3s timer ✓
-5. **End screen suppression** — `stopVideo` + custom `EndScreenOverlay` on state=0 ✓
-6. **Progress bar** — mouse+touch seeking, hover preview time, buffered indicator ✓
-7. **Arrow spacing** — `gap-16 md:gap-20` already in center controls row ✓
-8. **MIME type validation** — `BLOCKED_EXTS` + `ALLOWED_MIME_TYPES` in AdminUpload ✓
-9. **Real progress tracking** — `completedLessonIds` fetched from `user_progress`, 80% auto-complete threshold ✓
-10. **Real-time subscriptions** — both `useComments` and `useMessages` have Supabase realtime channels ✓
-11. **PWA manifest** — correct branding, icons, standalone display ✓
-12. **My Quiz Attempts dashboard section** — implemented ✓
-13. **Admin inline role management** — Users tab has Select dropdown ✓
-14. **Quiz orphan fix** — removed on-mount attempt insert, now only on submit ✓
-15. **Mobile bottom nav** — 5 tabs (Home, Courses, My Courses, Messages, Profile) ✓
-16. **AllClasses duplicate fix** — BatchSelector removed, filter badge in place ✓
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-### What genuinely needs to be done:
+---
 
-**Issue 1: `profiles_public` view has NO RLS policies**
-The `profiles_public` table/view currently has zero policies. Other tables reference it for displaying comment author names. Authenticated users need SELECT access. This is a security gap.
+## Plan
 
-**Issue 2: Watermark visibility condition is too restrictive**
-Line 216: `watermarkVisible = (currentTime >= 10 || showEndScreen || isInLastTenSeconds) && (showControls || isInLastTenSeconds || showEndScreen || watermarkForceVisible)`
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-The second half ties watermark to `showControls` — when controls hide after 3s, the watermark also hides during playback (between 10s and last-10s). This is wrong. The watermark should remain **always visible** once past 10 seconds, not just when controls are shown. Fix: remove the `showControls` dependency from the watermark condition.
+```toml
+[run]
+dev = "npm run dev"
+```
 
-**Issue 3: `memorywork.md` needs updating** with the recent changes (quiz orphan fix, 5-tab mobile nav, role management, dashboard quiz history).
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-### File changes needed:
+---
+
+### 2. Visual Polish — CSS & Theme Improvements
+
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/video/MahimaGhostPlayer.tsx` | Fix watermark visibility: always visible after 10s, not gated on `showControls` |
-| `memorywork.md` | Append session summary (quiz fixes, mobile nav, role management) |
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-**DB migration needed:**
-Add RLS policy to `profiles_public` to allow authenticated users to SELECT:
-```sql
-CREATE POLICY "Authenticated users can view public profiles"
-ON public.profiles_public
-FOR SELECT
-USING (auth.role() = 'authenticated');
-```
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
 
-### Watermark fix — exact line change
+---
 
-**Current (line 216):**
-```typescript
-const watermarkVisible = (currentTime >= 10 || showEndScreen || isInLastTenSeconds) && (showControls || isInLastTenSeconds || showEndScreen || watermarkForceVisible);
-```
+## Note on Visual Editor
 
-**Fixed:**
-```typescript
-const watermarkVisible = currentTime >= 10 || showEndScreen || isInLastTenSeconds;
-```
-
-This makes the watermark:
-- Hidden for first 10 seconds (clean intro)
-- Always visible from 10s onwards (no hide/show with controls)
-- Always visible on end screen and last 10 seconds
-
-### APK / GitHub Release note
-
-Lovable cannot run shell commands (`npx cap sync`, Android Studio builds). The `docs/APK-BUILD-GUIDE.md` already has step-by-step instructions. `capacitor.config.ts` already has the correct config. There is nothing to change in code for the APK — the user exports to GitHub and follows the build guide.
-
-### Summary — 3 actual changes:
-
-1. **`src/components/video/MahimaGhostPlayer.tsx`** — 1-line watermark visibility fix (remove `showControls` gating)
-2. **DB migration** — Add RLS SELECT policy on `profiles_public` for authenticated users
-3. **`memorywork.md`** — Append 2026-03-08 session summary
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
