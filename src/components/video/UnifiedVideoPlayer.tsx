@@ -10,6 +10,7 @@ interface UnifiedVideoPlayerProps {
   title?: string;
   onEnded?: () => void;
   onReady?: () => void;
+  onProgress?: (state: { played: number; playedSeconds: number }) => void;
 }
 
 type Platform = "youtube" | "drive" | "docs" | "vimeo" | "archive" | "direct" | "unknown";
