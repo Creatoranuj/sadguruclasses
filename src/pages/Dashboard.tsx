@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
+import HeroCarousel from "@/components/dashboard/HeroCarousel";
 import UpcomingSchedule from "@/components/dashboard/UpcomingSchedule";
 import LiveBadge from "@/components/live/LiveBadge";
 
