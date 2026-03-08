@@ -82,6 +82,8 @@ const MyCourseDetail = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [courseSidebarOpen, setCourseSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarSearch, setSidebarSearch] = useState("");
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
