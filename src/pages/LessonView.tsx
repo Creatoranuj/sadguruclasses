@@ -549,7 +549,15 @@ const LessonView = () => {
                             </div>
                         </TabsContent>
 
-                        {/* Resources Tab - Archive.org Books */}
+                        {/* PDF Tab — inline Archive.org / Drive / direct PDF embed */}
+                        {currentLesson?.class_pdf_url && (
+                          <TabsContent value="pdf" className="rounded-xl overflow-hidden">
+                            <DriveEmbedViewer
+                              url={currentLesson.class_pdf_url}
+                              title={currentLesson.title}
+                            />
+                          </TabsContent>
+                        )}
                         <TabsContent value="resources" className="bg-white p-6 rounded-xl border shadow-sm">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 mb-4">
