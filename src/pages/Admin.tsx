@@ -278,18 +278,46 @@ const Admin = () => {
   };
 
   // --- FILTERED DATA (Notion-like search) ---
+  // Unified payments: merge manual UPI + Razorpay into one list
+  const allPaymentsUnified = useMemo(() => {
+    const manual = payments.map(p => ({
+      ...p,
+      _method: 'upi' as const,
+      _key: `upi-${p.id}`,
+      _displayName: p.profiles?.full_name || p.sender_name || p.user_name || 'Unknown',
+      _email: p.profiles?.email || '',
+      _course: p.courses?.title || 'Unknown Course',
+      _amount: p.amount,
+      _status: p.status,
+      _date: p.created_at,
+    }));
+    const rzp = razorpayPayments.map(p => ({
+      ...p,
+      _method: 'razorpay' as const,
+      _key: `rzp-${p.id}`,
+      _displayName: 'Online Payment',
+      _email: '',
+      _course: p.courses?.title || 'Unknown Course',
+      _amount: p.amount,
+      _status: p.status,
+      _date: p.created_at,
+    }));
+    return [...manual, ...rzp].sort((a, b) => new Date(b._date).getTime() - new Date(a._date).getTime());
+  }, [payments, razorpayPayments]);
+
   const filteredPayments = useMemo(() => {
-    return payments.filter(p => {
-      const searchLower = paymentSearch.toLowerCase();
-      return (
-        (p.sender_name?.toLowerCase().includes(searchLower) || "") ||
-        (p.transaction_id?.toLowerCase().includes(searchLower) || "") ||
-        (p.profiles?.full_name?.toLowerCase().includes(searchLower) || "") ||
-        (p.profiles?.email?.toLowerCase().includes(searchLower) || "") ||
-        (p.courses?.title?.toLowerCase().includes(searchLower) || "")
-      );
+    const searchLower = paymentSearch.toLowerCase();
+    return allPaymentsUnified.filter(p => {
+      const matchesSearch = !searchLower || 
+        p._displayName.toLowerCase().includes(searchLower) ||
+        p._email.toLowerCase().includes(searchLower) ||
+        p._course.toLowerCase().includes(searchLower) ||
+        (p.transaction_id?.toLowerCase().includes(searchLower)) ||
+        (p.razorpay_payment_id?.toLowerCase().includes(searchLower));
+      const matchesStatus = paymentStatusFilter === "all" || p._status === paymentStatusFilter;
+      return matchesSearch && matchesStatus;
     });
-  }, [payments, paymentSearch]);
+  }, [allPaymentsUnified, paymentSearch, paymentStatusFilter]);
 
   const filteredCourses = useMemo(() => {
     return coursesList.filter(c => 
