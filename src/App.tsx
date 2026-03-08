@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BatchProvider } from "@/contexts/BatchContext";
 
@@ -109,6 +109,14 @@ const PageLoader = memo(() => {
 
 PageLoader.displayName = "PageLoader";
 
+// AdminRoute: only accessible to users with admin role
+const AdminRoute = ({ element }: { element: React.ReactElement }) => {
+  const { isAdmin, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!isAdmin) return <Navigate to="/login" replace />;
+  return element;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -128,15 +136,18 @@ const App = () => (
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/install" element={<Install />} />
                   
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<Admin />} />
+                  {/* Admin Login/Register — public */}
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/register" element={<AdminRegister />} />
-                  <Route path="/admin/upload" element={<AdminUpload />} />
-                  <Route path="/admin/cms" element={<AdminCMS />} />
-                  <Route path="/admin/schedule" element={<AdminSchedule />} />
-                   <Route path="/admin/quiz" element={<AdminQuizManager />} />
-                   <Route path="/admin/live" element={<AdminLiveManager />} />
+
+                  {/* Admin Routes — role-guarded */}
+                  <Route path="/admin" element={<AdminRoute element={<Admin />} />} />
+                  <Route path="/admin/upload" element={<AdminRoute element={<AdminUpload />} />} />
+                  <Route path="/admin/cms" element={<AdminRoute element={<AdminCMS />} />} />
+                  <Route path="/admin/schedule" element={<AdminRoute element={<AdminSchedule />} />} />
+                  <Route path="/admin/quiz" element={<AdminRoute element={<AdminQuizManager />} />} />
+                  <Route path="/admin/live" element={<AdminRoute element={<AdminLiveManager />} />} />
+                  <Route path="/admin/chatbot" element={<AdminRoute element={<AdminChatbotSettings />} />} />
                   
                   {/* Protected Routes */}
                   <Route path="/dashboard" element={<Dashboard />} />
@@ -175,7 +186,6 @@ const App = () => (
                   <Route path="/materials" element={<Materials />} />
                   <Route path="/syllabus" element={<Syllabus />} />
                   
-                   <Route path="/admin/chatbot" element={<AdminChatbotSettings />} />
                    <Route path="/downloads" element={<Downloads />} />
                    <Route path="/doubts" element={<Doubts />} />
                    <Route path="*" element={<NotFound />} />

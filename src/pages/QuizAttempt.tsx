@@ -78,7 +78,7 @@ const QuizAttempt = () => {
       try {
         const [quizRes, questionsRes] = await Promise.all([
           supabase.from("quizzes").select("*").eq("id", quizId).single(),
-          supabase.from("questions").select("*").eq("quiz_id", quizId).order("order_index"),
+          supabase.from("questions_for_students").select("*").eq("quiz_id", quizId).order("order_index"),
         ]);
         if (quizRes.error) throw quizRes.error;
         if (questionsRes.error) throw questionsRes.error;
