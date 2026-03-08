@@ -103,6 +103,11 @@ const MyCourseDetail = () => {
   const [comments, setComments] = useState<any[]>([]);
   const [selectedNoteUrl, setSelectedNoteUrl] = useState<{ url: string; title: string } | null>(null);
   const [inlineViewer, setInlineViewer] = useState<{ url: string; title: string } | null>(null);
+  const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
+  const [activeDiscussionTab, setActiveDiscussionTab] = useState("overview");
+
+  // Lesson likes — keyed to the selected lesson
+  const { likeCount, hasLiked, toggleLike, loading: likesLoading } = useLessonLikes(selectedLesson?.id);
 
   useEffect(() => {
     const fetchComments = async () => {
