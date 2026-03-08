@@ -83,7 +83,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
-        const [enrollmentsRes, attemptsRes, doubtsRes] = await Promise.all([
+        const [enrollmentsRes, attemptsRes, doubtsRes, progressRes] = await Promise.all([
           supabase
             .from('enrollments')
             .select('*, courses(*)')
@@ -103,6 +103,10 @@ const Dashboard = () => {
             .in('status', ['scheduled', 'active'])
             .order('scheduled_at', { ascending: true })
             .limit(3),
+          supabase
+            .from('user_progress')
+            .select('lesson_id, completed, course_id')
+            .eq('user_id', user!.id),
         ]);
 
         if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {
