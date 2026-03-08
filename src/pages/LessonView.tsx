@@ -9,9 +9,11 @@ import { MahimaGhostPlayer } from "@/components/video";
 import { formatDuration } from "@/components/video/MahimaVideoPlayer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  ArrowLeft, Play, Lock, Clock, BookOpen, 
+  ArrowLeft, Play, Lock, Clock,
   Loader2, FileText, MessageCircle, Star, CheckCircle, Send, Library, ImageIcon, X
 } from "lucide-react";
+import DriveEmbedViewer from "@/components/course/DriveEmbedViewer";
+import { extractArchiveId } from "@/utils/fileUtils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useComments } from "@/hooks/useComments";

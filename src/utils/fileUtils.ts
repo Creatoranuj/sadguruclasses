@@ -20,7 +20,34 @@ export const extractArchiveId = (url: string): string | null => {
   return match?.[1] || null;
 };
 
-/** Get a direct download URL for various sources */
+/**
+ * Async: fetch Archive.org metadata API to find the best direct PDF download URL.
+ * Falls back to the {id}.pdf pattern, then the download listing page.
+ */
+export const getArchiveDownloadUrl = async (identifier: string): Promise<string> => {
+  try {
+    const res = await fetch(`https://archive.org/metadata/${identifier}`, { mode: "cors" });
+    if (res.ok) {
+      const meta = await res.json();
+      const files: Array<{ name: string; format: string }> = meta?.files ?? [];
+      // Prefer a file whose format is "Text PDF" or contains "pdf"
+      const pdf = files.find(
+        (f) =>
+          /text pdf/i.test(f.format) ||
+          (/pdf/i.test(f.format) && f.name.toLowerCase().endsWith(".pdf"))
+      ) || files.find((f) => f.name.toLowerCase().endsWith(".pdf"));
+      if (pdf) {
+        return `https://archive.org/download/${identifier}/${encodeURIComponent(pdf.name)}`;
+      }
+    }
+  } catch {
+    // metadata fetch failed — fall through
+  }
+  // Fallback: common {id}.pdf pattern
+  return `https://archive.org/download/${identifier}/${identifier}.pdf`;
+};
+
+/** Get a direct download URL for various sources (synchronous fallback) */
 export const getDownloadUrl = (url: string): string => {
   // Google Drive
   const driveId = extractDriveFileId(url);
@@ -34,10 +61,10 @@ export const getDownloadUrl = (url: string): string => {
     return `https://docs.google.com/document/d/${docsId}/export?format=pdf`;
   }
 
-  // Archive.org — fallback to download listing page (shows all formats)
+  // Archive.org — sync fallback uses {id}.pdf pattern (async version preferred in components)
   const archiveId = extractArchiveId(url);
   if (archiveId) {
-    return `https://archive.org/download/${archiveId}`;
+    return `https://archive.org/download/${archiveId}/${archiveId}.pdf`;
   }
 
   // Direct URL — return as-is
