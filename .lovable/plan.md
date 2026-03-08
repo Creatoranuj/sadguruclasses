@@ -1,83 +1,83 @@
 
-## What The User Is Asking
+## Root Cause: Missing `lovable.toml`
 
-"Ab aap batao kya prompt likhein" — They already have a list of 5 suggested next prompts (from my previous message). They uploaded a file with past prompts. They're NOT asking me to re-audit — they're asking me to **pick one feature and plan it**.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-Given:
-1. `lecture_notes` table already exists in DB with full RLS (SELECT/INSERT/UPDATE/DELETE for own rows, `lesson_id` + `user_id` columns)
-2. `ObsidianNotes.tsx` component already exists (350 lines) — full markdown editor with toolbar, bold/italic/headings/lists, edit+preview toggle, DOMPurify sanitization, and `saveNotes()` function that correctly does `upsert` to `lecture_notes` on conflict `(lesson_id, user_id)`
-3. BUT: The Notes tab in `MyCourseDetail.tsx` (lines 936–974) currently only shows **admin-uploaded NOTES-type lesson PDFs** — it does NOT show `ObsidianNotes` for personal student notes at all
-4. The `ObsidianNotes` component has **manual save only** (Save button) — no auto-save / debounce
-5. The DB `lecture_notes` table has a unique constraint needed for upsert on `(lesson_id, user_id)` — already set up
+---
 
 ## Plan
 
-The feature to implement: **Personal Student Notes** — wire up `ObsidianNotes` into the Notes tab of the lesson player, add debounced auto-save with "Saving..." → "Saved ✓" status indicator.
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-### What needs to change
-
-**1. Add debounce auto-save to `ObsidianNotes.tsx`**
-- Import `useCallback` + `useRef`
-- After each `setMarkdown`, fire a debounced save (1.5s delay)
-- Show `saveStatus`: `"idle"` | `"saving"` | `"saved"` | `"error"`
-- Display status in header: nothing when idle, spinning icon + "Saving..." when saving, green checkmark + "Saved ✓" when done
-- Keep the manual Save button for explicit saves
-- The existing `saveNotes()` function is already correct — just needs to be called from debounce too
-
-**2. Update Notes tab in `MyCourseDetail.tsx` (lines 936–974)**
-- The tab currently shows ONLY admin-uploaded NOTES-type PDFs
-- Split the Notes tab into two sections:
-  - Top: "My Notes" — renders `ObsidianNotes` with `lessonId={selectedLesson.id}` and `userId={user?.id}`
-  - Bottom: "Class Notes" (existing PDFs from admin) — show as before if any exist
-- OR: Show `ObsidianNotes` always (even when no admin notes exist), so the tab is never empty
-- Import `ObsidianNotes` into `MyCourseDetail.tsx`
-
-**3. Ensure unique constraint exists for upsert**
-- The `ObsidianNotes.saveNotes()` calls `.upsert({...}, { onConflict: 'lesson_id,user_id' })`
-- The DB table schema shows `lesson_id` + `user_id` columns but doesn't show a unique constraint explicitly
-- Need a migration to add: `ALTER TABLE lecture_notes ADD CONSTRAINT lecture_notes_lesson_user_unique UNIQUE (lesson_id, user_id);` if it doesn't exist
-- Without this, the upsert will fail silently or create duplicates
-
-### Files to change
-1. `src/components/lecture/ObsidianNotes.tsx` — add debounced auto-save + status indicator
-2. `src/pages/MyCourseDetail.tsx` — import + render `ObsidianNotes` in the Notes tab
-3. New migration — add unique constraint on `lecture_notes(lesson_id, user_id)`
-
-### Layout of Notes tab after change
-```
-┌────────────────────────────────────────────┐
-│ Notes                        [Saving... ✓]  │
-├────────────────────────────────────────────┤
-│  MY PERSONAL NOTES                          │
-│  [ObsidianNotes editor — always visible]   │
-│  Toolbar: B I H1 H2 H3 List Quote Code     │
-│  [Edit] [Preview]                          │
-│  Textarea (min 300px)                      │
-├────────────────────────────────────────────┤
-│  CLASS NOTES (if admin uploaded any)        │
-│  [PDF pill buttons]                        │
-│  [PdfViewer]                               │
-└────────────────────────────────────────────┘
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-### Auto-save status indicator (in ObsidianNotes header)
-```
-idle:    (nothing shown)
-saving:  🔄 "Saving..."   (gray text, spinning icon)
-saved:   ✓  "Saved"       (green text, checkmark, fades after 3s)
-error:   ✗  "Save failed" (red text)
-```
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-### DB Migration needed
-```sql
-ALTER TABLE public.lecture_notes 
-ADD CONSTRAINT IF NOT EXISTS lecture_notes_lesson_user_unique 
-UNIQUE (lesson_id, user_id);
-```
+---
 
-This is safe to run even if data exists since each user should only have one note per lesson. If duplicates exist they'd need cleanup first, but since this is fresh data that's not an issue.
+### 2. Visual Polish — CSS & Theme Improvements
 
-### Summary of all files
-- `supabase/migrations/[timestamp]_lecture_notes_unique.sql` — unique constraint
-- `src/components/lecture/ObsidianNotes.tsx` — debounce auto-save + status display
-- `src/pages/MyCourseDetail.tsx` — integrate ObsidianNotes into Notes tab (lines 936–974)
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

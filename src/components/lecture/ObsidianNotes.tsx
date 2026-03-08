@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +15,10 @@ import {
   Link,
   Save,
   FileText,
-  Sparkles
+  Sparkles,
+  Loader2,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,15 +30,8 @@ interface ObsidianNotesProps {
   lessonTitle?: string;
 }
 
-/**
- * Obsidian-style Notes Component
- * 
- * Features:
- * - Markdown editing with toolbar
- * - Auto-generate bullets, headings, callouts
- * - Backlinks support
- * - Saves to Supabase lecture_notes table
- */
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
   lessonId,
   userId,
@@ -43,15 +39,18 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
 }) => {
   const [markdown, setMarkdown] = useState('');
   const [isEditing, setIsEditing] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const { toast } = useToast();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstLoad = useRef(true);
 
   // Load existing notes
   useEffect(() => {
     const loadNotes = async () => {
       if (!userId || !lessonId) return;
       
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('lecture_notes')
         .select('markdown')
         .eq('lesson_id', lessonId)
@@ -61,11 +60,12 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
       if (data) {
         setMarkdown(data.markdown);
       } else {
-        // Initialize with template
         setMarkdown(generateTemplate(lessonTitle));
       }
+      isFirstLoad.current = false;
     };
 
+    isFirstLoad.current = true;
     loadNotes();
   }, [lessonId, userId, lessonTitle]);
 
@@ -94,6 +94,46 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
 `;
   };
 
+  const performSave = useCallback(async (text: string) => {
+    if (!userId) return;
+    setSaveStatus('saving');
+
+    const { error } = await supabase
+      .from('lecture_notes')
+      .upsert({
+        lesson_id: lessonId,
+        user_id: userId,
+        markdown: text,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'lesson_id,user_id',
+      });
+
+    if (error) {
+      setSaveStatus('error');
+    } else {
+      setSaveStatus('saved');
+      // Auto-reset "Saved ✓" after 3 seconds
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+  }, [lessonId, userId]);
+
+  const handleMarkdownChange = (value: string) => {
+    setMarkdown(value);
+
+    // Skip debounce on initial load
+    if (isFirstLoad.current) return;
+    if (!userId) return;
+
+    // Debounce auto-save: 1.5s after last keystroke
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSaveStatus('saving');
+    debounceRef.current = setTimeout(() => {
+      performSave(value);
+    }, 1500);
+  };
+
   const insertMarkdown = (before: string, after: string = '') => {
     const textarea = document.getElementById('notes-textarea') as HTMLTextAreaElement;
     if (!textarea) return;
@@ -103,9 +143,8 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
     const selectedText = markdown.substring(start, end);
     const newText = markdown.substring(0, start) + before + selectedText + after + markdown.substring(end);
     
-    setMarkdown(newText);
+    handleMarkdownChange(newText);
     
-    // Restore cursor position
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
@@ -121,34 +160,9 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
       });
       return;
     }
-
-    setIsSaving(true);
-    
-    const { error } = await supabase
-      .from('lecture_notes')
-      .upsert({
-        lesson_id: lessonId,
-        user_id: userId,
-        markdown: markdown,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'lesson_id,user_id',
-      });
-
-    setIsSaving(false);
-
-    if (error) {
-      toast({
-        title: 'Error saving notes',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Notes saved!',
-        description: 'Your notes have been saved successfully',
-      });
-    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    await performSave(markdown);
+    toast({ title: 'Notes saved!', description: 'Your notes have been saved successfully' });
   };
 
   const autoGenerateNotes = () => {
@@ -197,62 +211,71 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
 📅 Date: ${new Date().toLocaleDateString()}
 ⏱️ Duration: See video player
 `;
-    setMarkdown(template);
+    handleMarkdownChange(template);
     toast({
       title: 'Template Generated',
       description: 'Obsidian-style notes template has been created',
     });
   };
 
-  // Sanitized markdown to HTML renderer using DOMPurify
   const renderMarkdown = (text: string): string => {
-    // First sanitize raw text to strip any HTML tags before markdown processing
     const sanitizedInput = DOMPurify.sanitize(text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
     
-    // Then do markdown transformations on sanitized text
     let html = sanitizedInput
-      // Headers
       .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
       .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>')
       .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-6 mb-4">$1</h1>')
-      // Bold and Italic
       .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      // Callouts
       .replace(/>\s*\[!(\w+)\]\s*(.*)/g, '<div class="p-3 my-2 rounded-lg bg-primary/10 border-l-4 border-primary"><span class="font-semibold text-primary">$1:</span> $2</div>')
-      // Blockquotes
       .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-muted-foreground/30 pl-4 italic my-2">$1</blockquote>')
-      // Unordered lists
       .replace(/^- (.*$)/gm, '<li class="ml-4 list-disc">$1</li>')
-      // Ordered lists
       .replace(/^\d+\. (.*$)/gm, '<li class="ml-4 list-decimal">$1</li>')
-      // Backlinks [[link]]
       .replace(/\[\[(.*?)\]\]/g, '<span class="text-primary bg-primary/10 px-1 rounded cursor-pointer hover:underline">[[$1]]</span>')
-      // Code blocks
       .replace(/`(.*?)`/g, '<code class="bg-muted px-1 rounded text-sm">$1</code>')
-      // Horizontal rule
       .replace(/^---$/gm, '<hr class="my-4 border-border">')
-      // Line breaks
       .replace(/\n/g, '<br>');
 
-    // Final sanitize pass to ensure no XSS
     return DOMPurify.sanitize(html, {
       ALLOWED_TAGS: ['h1', 'h2', 'h3', 'strong', 'em', 'div', 'span', 'blockquote', 'li', 'code', 'hr', 'br'],
       ALLOWED_ATTR: ['class'],
     });
   };
 
+  const SaveStatusIndicator = () => {
+    if (saveStatus === 'idle') return null;
+    if (saveStatus === 'saving') return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Loader2 className="w-3 h-3 animate-spin" />
+        Saving...
+      </span>
+    );
+    if (saveStatus === 'saved') return (
+      <span className="flex items-center gap-1 text-xs text-primary">
+        <CheckCircle className="w-3 h-3" />
+        Saved ✓
+      </span>
+    );
+    if (saveStatus === 'error') return (
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <AlertCircle className="w-3 h-3" />
+        Save failed
+      </span>
+    );
+    return null;
+  };
+
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
       <Card className="border-border">
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Lecture Notes
+            My Notes
           </CardTitle>
           <div className="flex items-center gap-2">
+            <SaveStatusIndicator />
             <Button
               variant="outline"
               size="sm"
@@ -260,16 +283,16 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
               className="gap-1"
             >
               <Sparkles className="w-4 h-4" />
-              Auto-Generate
+              <span className="hidden sm:inline">Template</span>
             </Button>
             <Button
               size="sm"
               onClick={saveNotes}
-              disabled={isSaving}
+              disabled={saveStatus === 'saving'}
               className="gap-1"
             >
               <Save className="w-4 h-4" />
-              {isSaving ? 'Saving...' : 'Save'}
+              Save
             </Button>
           </div>
         </CardHeader>
@@ -333,13 +356,13 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
             <Textarea
               id="notes-textarea"
               value={markdown}
-              onChange={(e) => setMarkdown(e.target.value)}
+              onChange={(e) => handleMarkdownChange(e.target.value)}
               placeholder="Start taking notes... Use Markdown formatting"
-              className="min-h-[400px] font-mono text-sm resize-y"
+              className="min-h-[300px] font-mono text-sm resize-y"
             />
           ) : (
             <div 
-              className="min-h-[400px] p-4 bg-muted/30 rounded-lg prose prose-sm dark:prose-invert max-w-none"
+              className="min-h-[300px] p-4 bg-muted/30 rounded-lg prose prose-sm dark:prose-invert max-w-none"
               dangerouslySetInnerHTML={{ __html: renderMarkdown(markdown) }}
             />
           )}

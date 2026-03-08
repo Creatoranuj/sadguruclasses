@@ -22,6 +22,7 @@ import { LectureCard } from "@/components/course";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LessonActionBar from "@/components/video/LessonActionBar";
 import CourseContent from "@/components/lecture/CourseContent";
+import ObsidianNotes from "@/components/lecture/ObsidianNotes";
 import { useLessonLikes } from "@/hooks/useLessonLikes";
 
 interface Lesson {
@@ -935,42 +936,51 @@ const MyCourseDetail = () => {
 
                 {/* Notes */}
                 <TabsContent value="notes" className="mt-0">
-                  {(() => {
-                    const notesList = lessons.filter(l =>
-                      l.lectureType === "NOTES" && l.chapterId === selectedLesson.chapterId
-                    );
-                    if (notesList.length === 0) return (
-                      <div className="p-4">
-                        <p className="text-muted-foreground text-sm">No notes available for this lesson.</p>
-                      </div>
-                    );
-                    const activeNote = selectedNoteUrl || { url: notesList[0].videoUrl, title: notesList[0].title };
-                    return (
-                      <div className="flex flex-col">
-                        {notesList.length > 1 && (
-                          <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
-                            {notesList.map(note => (
-                              <button
-                                key={note.id}
-                                onClick={() => setSelectedNoteUrl({ url: note.videoUrl, title: note.title })}
-                                className={cn(
-                                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
-                                  activeNote.url === note.videoUrl
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-card text-muted-foreground border-border hover:border-primary"
-                                )}
-                              >
-                                {note.title}
-                              </button>
-                            ))}
+                  <div className="p-4 space-y-6">
+                    {/* Personal student notes (auto-save) */}
+                    <ObsidianNotes
+                      lessonId={selectedLesson.id}
+                      userId={user?.id}
+                      lessonTitle={selectedLesson.title}
+                    />
+
+                    {/* Class Notes (admin-uploaded PDFs) */}
+                    {(() => {
+                      const notesList = lessons.filter(l =>
+                        l.lectureType === "NOTES" && l.chapterId === selectedLesson.chapterId
+                      );
+                      if (notesList.length === 0) return null;
+                      const activeNote = selectedNoteUrl || { url: notesList[0].videoUrl, title: notesList[0].title };
+                      return (
+                        <div className="border border-border rounded-lg overflow-hidden">
+                          <div className="px-4 py-2 bg-muted/40 border-b border-border">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Class Notes</p>
                           </div>
-                        )}
-                        <div className="px-3 pb-3 pt-2">
-                          <PdfViewer url={activeNote.url} title={activeNote.title} />
+                          {notesList.length > 1 && (
+                            <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
+                              {notesList.map(note => (
+                                <button
+                                  key={note.id}
+                                  onClick={() => setSelectedNoteUrl({ url: note.videoUrl, title: note.title })}
+                                  className={cn(
+                                    "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                                    activeNote.url === note.videoUrl
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "bg-card text-muted-foreground border-border hover:border-primary"
+                                  )}
+                                >
+                                  {note.title}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          <div className="px-3 pb-3 pt-2">
+                            <PdfViewer url={activeNote.url} title={activeNote.title} />
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })()}
+                      );
+                    })()}
+                  </div>
                 </TabsContent>
 
                 {/* Discussion */}
