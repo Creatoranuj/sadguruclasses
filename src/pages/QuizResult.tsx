@@ -237,10 +237,10 @@ const QuizResult = () => {
       </header>
 
       {/* ── Announcement Banner ── */}
-      <div className="bg-amber-500/10 border-b border-amber-500/20">
+      <div className="bg-yellow-500/10 border-b border-yellow-500/20">
         <div className="max-w-3xl mx-auto px-4 py-2.5 flex items-center gap-2.5">
-          <Bell className="h-4 w-4 text-amber-500 shrink-0" />
-          <p className="text-xs text-amber-700 dark:text-amber-400">
+          <Bell className="h-4 w-4 text-yellow-500 shrink-0" />
+          <p className="text-xs text-yellow-700 dark:text-yellow-400">
             Rank &amp; Percentile analysis will be available once the result window closes. Leaderboard coming soon.
           </p>
         </div>
