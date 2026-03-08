@@ -101,7 +101,7 @@ const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
           src={embedUrl}
           className="w-full h-full border-0"
           title={title || "PDF Document"}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           loading="lazy"
         />
 

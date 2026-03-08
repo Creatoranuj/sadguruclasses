@@ -169,7 +169,7 @@ const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerPro
             src={isArchive ? `${iframeSrc}#toolbar=0&navpanes=0` : iframeSrc}
             className="absolute inset-0 w-full h-full border-0"
             title={title || "Document Preview"}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             loading="eager"
             allowFullScreen
           />
