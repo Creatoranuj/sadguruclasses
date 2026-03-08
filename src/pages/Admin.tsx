@@ -1910,6 +1910,11 @@ const Admin = () => {
             </div>
           </TabsContent>
 
+          {/* --- TAB: HERO BANNERS --- */}
+          <TabsContent value="banners">
+            <HeroBannerManager />
+          </TabsContent>
+
         </Tabs>
       </main>
     </div>
