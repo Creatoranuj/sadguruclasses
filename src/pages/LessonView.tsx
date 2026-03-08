@@ -10,7 +10,8 @@ import { formatDuration } from "@/components/video/MahimaVideoPlayer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, Play, Lock, Clock,
-  Loader2, FileText, MessageCircle, Star, CheckCircle, Send, Library, ImageIcon, X
+  Loader2, FileText, MessageCircle, CheckCircle, Send, Library, ImageIcon, X,
+  BookOpen, HelpCircle, ChevronRight, ChevronDown, ChevronUp, Edit2, Save
 } from "lucide-react";
 import DriveEmbedViewer from "@/components/course/DriveEmbedViewer";
 import { extractArchiveId } from "@/utils/fileUtils";
