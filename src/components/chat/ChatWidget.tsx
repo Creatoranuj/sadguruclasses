@@ -194,7 +194,7 @@ const ChatWidget = () => {
           <div className="flex items-center gap-3 px-4 py-3 border-b bg-primary/5 shrink-0">
             <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center relative shrink-0">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-chart-2 rounded-full border-2 border-card" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm text-foreground">Sadguru Sarthi 2.0 🎓</p>
