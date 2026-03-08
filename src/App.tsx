@@ -58,6 +58,7 @@ const AdminLiveManager = lazy(() => import("./pages/AdminLiveManager"));
 const TeacherLiveView = lazy(() => import("./pages/TeacherLiveView"));
 const AdminChatbotSettings = lazy(() => import("./pages/AdminChatbotSettings"));
 const Downloads = lazy(() => import("./pages/Downloads"));
+const Doubts = lazy(() => import("./pages/Doubts"));
 import ChatWidget from "./components/chat/ChatWidget";
 
 // Optimized QueryClient with better caching
@@ -176,6 +177,7 @@ const App = () => (
                   
                    <Route path="/admin/chatbot" element={<AdminChatbotSettings />} />
                    <Route path="/downloads" element={<Downloads />} />
+                   <Route path="/doubts" element={<Doubts />} />
                    <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
