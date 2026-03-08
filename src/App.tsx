@@ -53,6 +53,8 @@ const Install = lazy(() => import("./pages/Install"));
 const QuizAttempt = lazy(() => import("./pages/QuizAttempt"));
 const QuizResult = lazy(() => import("./pages/QuizResult"));
 const AdminQuizManager = lazy(() => import("./pages/AdminQuizManager"));
+const LiveClass = lazy(() => import("./pages/LiveClass"));
+const AdminLiveManager = lazy(() => import("./pages/AdminLiveManager"));
 
 // Optimized QueryClient with better caching
 const queryClient = new QueryClient({
