@@ -131,8 +131,11 @@ const CourseCard = memo(({ course, onNavigate, onDelete, formatDate }: {
             className="gap-1 text-primary"
             onClick={() => onNavigate(course.id)}
           >
-            {course.progressPercent > 0 ? "Continue" : "Start"}
-            <ChevronRight className="h-4 w-4" />
+            {course.progressPercent > 0 ? (
+              <>Continue <ChevronRight className="h-4 w-4" /></>
+            ) : (
+              "🚀 Enroll Now"
+            )}
           </Button>
         </div>
       </div>
