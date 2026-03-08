@@ -1,83 +1,47 @@
 
-## Root Cause: Missing `lovable.toml`
+## Plan: Sadguru Sarthi – Complete Rebrand & Enhancement
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+### What the user wants
+The user has written a detailed spec for "Sadguru Sarthi" (सद्गुरु सारथी). This is primarily a **rebrand + behavior upgrade** of the existing chatbot. Key changes needed:
 
----
+1. **Name change**: "Sadguru Chatbot" → "Sadguru Sarthi" everywhere
+2. **System prompt upgrade**: Stronger identity rules — always introduce as "Sadguru Sarthi", refuse off-topic with a polite Hindi message, mock test guidance mode (hints, not direct answers), abuse handling
+3. **UI tweaks**: Update all display text in ChatWidget and AdminChatbotSettings
+4. **Edge function enhancement**: Update base system prompt in the DB default + edge function fallback, add mock test guidance logic, add abuse detection response
+5. **Quick prompts update**: Add Hindi quick prompts too for better UX
 
-## Plan
+### Files to change
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+**1. `src/components/chat/ChatWidget.tsx`**
+- Change all "Sadguru Chatbot" references to "Sadguru Sarthi"  
+- Update welcome message: "👋 नमस्ते! मैं **Sadguru Sarthi** हूँ..."
+- Update reset message
+- Update placeholder text: "Sarthi se kuch poochein..."
+- Update quick prompts — add Hindi options like "Mock test mein help chahiye", "Course kaunsa lun?"
+- Update aria-label and title attributes
 
-```toml
-[run]
-dev = "npm run dev"
+**2. `supabase/functions/chatbot/index.ts`**
+- Update fallback system prompt to "Sadguru Sarthi" identity
+- Add stronger identity enforcement rules in `formattingInstructions`:
+  - Never reveal it's powered by Gemini/OpenAI
+  - Refuse off-topic: "मैं यहाँ आपकी पढ़ाई में मदद के लिए हूँ।"
+  - Mock test guidance: give hints/steps, NOT direct answers
+  - Abuse handling: "बातचीत को सम्मानजनक रखें।"
+  - Always introduce as "Sadguru Sarthi"
+
+**3. `src/pages/AdminChatbotSettings.tsx`**
+- Change heading "Sadguru Chatbot Settings" → "Sadguru Sarthi Settings"
+- Update subtitle: "Configure your AI learning companion"
+- Update the default system prompt placeholder text
+
+### No DB migration needed
+The system_prompt is stored in `chatbot_settings` table and editable by admin. We update the edge function's fallback prompt and redeploy. The admin can update the DB value via the settings page.
+
+### Changes summary
+```text
+ChatWidget.tsx         — Rebrand name + welcome + quick prompts
+chatbot/index.ts       — Stronger system prompt rules + Sarthi identity
+AdminChatbotSettings   — Heading update only
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
-
----
-
-### 2. Visual Polish — CSS & Theme Improvements
-
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
-
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
-
----
-
-### 3. Landing Page & Navigation Visual Fixes
-
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
-
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
-
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
-
----
-
-## Note on Visual Editor
-
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+3 files, purely text/logic changes. No schema changes needed.
