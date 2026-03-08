@@ -113,6 +113,7 @@ const Admin = () => {
   const [editMaterialData, setEditMaterialData] = useState({ title: "", description: "", file_url: "" });
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editNoteData, setEditNoteData] = useState({ title: "", pdf_url: "" });
+  const [noteFile, setNoteFile] = useState<File | null>(null);
 
   // Admin access protection with email verification
   useEffect(() => {
