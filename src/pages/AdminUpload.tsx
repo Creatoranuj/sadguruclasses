@@ -14,14 +14,57 @@ import { toast } from "sonner";
 import {
   Upload, Video, FileText, LogOut, Trash2,
   BookOpen, Shield, Loader2, FileUp, Link as LinkIcon,
-  ChevronRight, ClipboardCheck, Plus, FolderPlus, FolderOpen,
+  ChevronRight, ClipboardCheck, Plus, FolderPlus, FolderOpen, GripVertical, Camera,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import MediaPreview from "@/components/admin/MediaPreview";
-
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 
 type UploadType = "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST";
+
+// ─── Sortable Item wrapper ──────────────────────────────────────────
+const SortableItem = ({ id, children }: { id: string; children: (handle: React.ReactNode) => React.ReactNode }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+  const handle = (
+    <button
+      {...attributes}
+      {...listeners}
+      className="touch-none cursor-grab active:cursor-grabbing p-2 text-muted-foreground hover:text-foreground rounded"
+      aria-label="Drag to reorder"
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children(handle)}
+    </div>
+  );
+};
 
 const AdminUpload = () => {
   const navigate = useNavigate();
@@ -34,6 +77,8 @@ const AdminUpload = () => {
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [chaptersLoading, setChaptersLoading] = useState(false);
+  const [reorderingChapters, setReorderingChapters] = useState(false);
+  const [reorderingLessons, setReorderingLessons] = useState(false);
 
   // Chapter creation state
   const [showCreateChapter, setShowCreateChapter] = useState(false);
@@ -69,7 +114,15 @@ const AdminUpload = () => {
   const [lessons, setLessons] = useState<any[]>([]);
 
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
-  const selectedChapter = chapters.find(c => c.id === selectedChapterId);
+  const selectedChapter = chapters.find(c => c.id === selectedChapterId) ||
+    subChapters.find(c => c.id === selectedChapterId);
+
+  // DnD sensors — supports mouse, touch and keyboard
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   // Auth check
   useEffect(() => {
@@ -122,12 +175,10 @@ const AdminUpload = () => {
   // Fetch sub-chapters + lessons when chapter selected
   useEffect(() => {
     if (!selectedChapterId) { setLessons([]); setSubChapters([]); return; }
-    // Fetch sub-chapters
     supabase.from('chapters').select('*')
       .eq('parent_id', selectedChapterId)
       .order('position', { ascending: true })
       .then(({ data }) => setSubChapters(data || []));
-    // Fetch lessons
     supabase.from('lessons').select('*')
       .eq('chapter_id', selectedChapterId)
       .order('position', { ascending: true })
@@ -139,6 +190,48 @@ const AdminUpload = () => {
     navigate('/admin/login');
   };
 
+  // ─── Drag end handlers ──────────────────────────────────────────────────
+  const handleChapterDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = chapters.findIndex(c => c.id === active.id);
+    const newIndex = chapters.findIndex(c => c.id === over.id);
+    const reordered = arrayMove(chapters, oldIndex, newIndex);
+    setChapters(reordered);
+    setReorderingChapters(true);
+    try {
+      await Promise.all(reordered.map((ch, idx) =>
+        supabase.from('chapters').update({ position: idx + 1 }).eq('id', ch.id)
+      ));
+      toast.success("Chapter order saved");
+    } catch {
+      toast.error("Failed to save order");
+    } finally {
+      setReorderingChapters(false);
+    }
+  };
+
+  const handleLessonDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = lessons.findIndex(l => l.id === active.id);
+    const newIndex = lessons.findIndex(l => l.id === over.id);
+    const reordered = arrayMove(lessons, oldIndex, newIndex);
+    setLessons(reordered);
+    setReorderingLessons(true);
+    try {
+      await Promise.all(reordered.map((l, idx) =>
+        supabase.from('lessons').update({ position: idx + 1 }).eq('id', l.id)
+      ));
+      toast.success("Lesson order saved");
+    } catch {
+      toast.error("Failed to save order");
+    } finally {
+      setReorderingLessons(false);
+    }
+  };
+
+  // ─── Chapter / Sub-chapter creation ────────────────────────────────────
   const handleCreateChapter = async () => {
     if (!newChapterTitle.trim() || !newChapterCode.trim() || !selectedCourseId) {
       toast.error("Please fill title and code");
@@ -156,7 +249,6 @@ const AdminUpload = () => {
       toast.success("Chapter created!");
       setNewChapterTitle(""); setNewChapterCode(""); setNewChapterPosition(0);
       setShowCreateChapter(false);
-      // Refresh chapters
       const { data } = await supabase.from('chapters').select('*')
         .eq('course_id', selectedCourseId).is('parent_id', null).order('position', { ascending: true });
       setChapters(data || []);
@@ -185,7 +277,6 @@ const AdminUpload = () => {
       toast.success("Sub-folder created!");
       setNewSubfolderTitle(""); setNewSubfolderCode(""); setNewSubfolderPosition(0);
       setShowCreateSubfolder(false);
-      // Refresh sub-chapters
       const { data } = await supabase.from('chapters').select('*')
         .eq('parent_id', selectedChapterId).order('position', { ascending: true });
       setSubChapters(data || []);
@@ -196,6 +287,7 @@ const AdminUpload = () => {
     }
   };
 
+  // ─── MIME validation ────────────────────────────────────────────────────
   const BLOCKED_EXTS = ['exe','html','htm','js','php','sh','bat','cmd','vbs','py','rb','mjs','ts','tsx','json','xml','svg'];
   const ALLOWED_MIME_TYPES = [
     'application/pdf','application/msword',
@@ -203,7 +295,7 @@ const AdminUpload = () => {
     'application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'image/jpeg','image/png','image/gif','image/webp',
-    'application/octet-stream', // fallback for some systems
+    'application/octet-stream',
   ];
 
   const validateFile = (file: File): boolean => {
@@ -219,6 +311,7 @@ const AdminUpload = () => {
     return true;
   };
 
+  // ─── Upload ─────────────────────────────────────────────────────────────
   const handleUpload = async () => {
     if (!title || !selectedCourseId || !selectedChapterId) {
       toast.error("Please fill title and select course & chapter via breadcrumbs");
@@ -227,7 +320,6 @@ const AdminUpload = () => {
     if (uploadType === "VIDEO" && !videoUrl) { toast.error("Please enter video URL"); return; }
     if (uploadType !== "VIDEO" && pdfInputMode === "file" && !pdfFile) { toast.error("Please select a file"); return; }
     if (uploadType !== "VIDEO" && pdfInputMode === "url" && !pdfUrl) { toast.error("Please enter a URL"); return; }
-    // MIME type validation
     if (pdfFile && !validateFile(pdfFile)) return;
     if (classPdfFile && !validateFile(classPdfFile)) return;
 
@@ -269,12 +361,12 @@ const AdminUpload = () => {
         is_locked: true,
         lecture_type: uploadType,
         class_pdf_url: classPdfFinalUrl,
+        position: lessons.length + 1,
       }).select().single();
 
       if (error) throw error;
       toast.success("Content uploaded successfully!");
       setTitle(""); setVideoUrl(""); setPdfFile(null); setPdfUrl(""); setDescription(""); setClassPdfFile(null); setClassPdfUrl("");
-      // Refresh lessons list
       const { data } = await supabase.from('lessons').select('*')
         .eq('chapter_id', selectedChapterId).order('position', { ascending: true });
       setLessons(data || []);
@@ -298,7 +390,6 @@ const AdminUpload = () => {
   const handleDeleteChapter = async (chapterId: string, chapterTitle: string) => {
     if (!confirm(`Delete folder "${chapterTitle}" and ALL its content? This cannot be undone.`)) return;
     try {
-      // Delete all sub-chapters' lessons first
       const { data: subChs } = await supabase.from('chapters').select('id').eq('parent_id', chapterId);
       if (subChs && subChs.length > 0) {
         for (const sc of subChs) {
@@ -306,19 +397,15 @@ const AdminUpload = () => {
         }
         await supabase.from('chapters').delete().eq('parent_id', chapterId);
       }
-      // Delete direct lessons in this chapter
       await supabase.from('lessons').delete().eq('chapter_id', chapterId);
-      // Delete the chapter itself
       const { error } = await supabase.from('chapters').delete().eq('id', chapterId);
       if (error) throw error;
       toast.success(`"${chapterTitle}" deleted`);
-      // Refresh lists
       if (selectedChapterId === chapterId) {
         setSelectedChapterId(null);
         setSubChapters([]);
         setLessons([]);
       }
-      // Refresh chapters or subchapters depending on level
       const { data: refreshedChapters } = await supabase.from('chapters').select('*')
         .eq('course_id', selectedCourseId!).is('parent_id', null).order('position', { ascending: true });
       setChapters(refreshedChapters || []);
@@ -355,7 +442,7 @@ const AdminUpload = () => {
     );
   }
 
-  // === BREADCRUMB NAV ===
+  // ─── BREADCRUMB NAV ──────────────────────────────────────────────────────
   const renderBreadcrumb = () => (
     <nav className="flex items-center gap-1.5 text-sm mb-4 flex-wrap py-2 px-1" aria-label="Breadcrumb">
       <button
@@ -390,17 +477,17 @@ const AdminUpload = () => {
     </nav>
   );
 
-  // === UPLOAD FORM ===
+  // ─── UPLOAD FORM ─────────────────────────────────────────────────────────
   const renderUploadForm = () => (
     <div className="space-y-5">
       {/* Type tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
         {(["VIDEO", "PDF", "DPP", "NOTES", "TEST"] as UploadType[]).map(type => (
           <button
             key={type}
             onClick={() => setUploadType(type)}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all whitespace-nowrap",
+              "flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-medium transition-all whitespace-nowrap min-h-[44px]",
               uploadType === type
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "bg-muted/60 text-muted-foreground hover:bg-muted"
@@ -414,7 +501,7 @@ const AdminUpload = () => {
 
       <div className="space-y-1.5">
         <Label>Title *</Label>
-        <Input placeholder="Content Title" value={title} onChange={e => setTitle(e.target.value)} />
+        <Input placeholder="Content Title" value={title} onChange={e => setTitle(e.target.value)} className="h-12 text-base" />
       </div>
 
       <div className="space-y-1.5">
@@ -433,7 +520,7 @@ const AdminUpload = () => {
           <Label>Video URL (YouTube/Vimeo/Archive.org/Drive)</Label>
           <div className="relative">
             <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="https://..." value={videoUrl} onChange={e => setVideoUrl(e.target.value)} className="pl-10" />
+            <Input placeholder="https://..." value={videoUrl} onChange={e => setVideoUrl(e.target.value)} className="pl-10 h-12" />
           </div>
           {videoUrl && <MediaPreview url={videoUrl} type="video" />}
         </div>
@@ -442,10 +529,10 @@ const AdminUpload = () => {
           <div className="flex items-center justify-between">
             <Label>Upload {uploadType}</Label>
             <div className="flex gap-1 bg-muted rounded-md p-0.5">
-              <button type="button" className={cn("px-3 py-1 text-xs rounded", pdfInputMode === 'file' ? 'bg-background shadow text-foreground' : 'text-muted-foreground')} onClick={() => setPdfInputMode("file")}>
+              <button type="button" className={cn("px-3 py-1.5 text-xs rounded min-h-[36px]", pdfInputMode === 'file' ? 'bg-background shadow text-foreground' : 'text-muted-foreground')} onClick={() => setPdfInputMode("file")}>
                 <FileUp className="h-3 w-3 inline mr-1" />File
               </button>
-              <button type="button" className={cn("px-3 py-1 text-xs rounded", pdfInputMode === 'url' ? 'bg-background shadow text-foreground' : 'text-muted-foreground')} onClick={() => setPdfInputMode("url")}>
+              <button type="button" className={cn("px-3 py-1.5 text-xs rounded min-h-[36px]", pdfInputMode === 'url' ? 'bg-background shadow text-foreground' : 'text-muted-foreground')} onClick={() => setPdfInputMode("url")}>
                 <LinkIcon className="h-3 w-3 inline mr-1" />URL
               </button>
             </div>
@@ -453,10 +540,31 @@ const AdminUpload = () => {
           {pdfInputMode === "file" ? (
             <>
               <div className="border-2 border-dashed border-primary/30 rounded-lg p-6 text-center hover:border-primary/60 transition-colors">
-                <input id="pdfFile" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif" onChange={e => setPdfFile(e.target.files?.[0] || null)} className="hidden" />
-                <label htmlFor="pdfFile" className="cursor-pointer">
+                <input
+                  id="pdfFile"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif"
+                  onChange={e => setPdfFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+                <input
+                  id="pdfCamera"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={e => setPdfFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+                <label htmlFor="pdfFile" className="cursor-pointer block">
                   <FileUp className="h-8 w-8 mx-auto text-primary/50 mb-2" />
-                  {pdfFile ? <p className="text-primary font-medium text-sm">{pdfFile.name}</p> : <p className="text-muted-foreground text-sm">Click to select file</p>}
+                  {pdfFile
+                    ? <p className="text-primary font-medium text-sm">{pdfFile.name}</p>
+                    : <p className="text-muted-foreground text-sm">Tap to select file</p>}
+                </label>
+                {/* Camera capture shortcut (mobile) */}
+                <label htmlFor="pdfCamera" className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-muted rounded-full text-xs text-muted-foreground cursor-pointer hover:bg-muted/80 transition-colors">
+                  <Camera className="h-3.5 w-3.5" />
+                  Use Camera
                 </label>
               </div>
               {pdfFile && <MediaPreview file={pdfFile} type="pdf" />}
@@ -464,7 +572,7 @@ const AdminUpload = () => {
           ) : (
             <div className="relative">
               <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Paste direct link..." value={pdfUrl} onChange={e => setPdfUrl(e.target.value)} className="pl-10" />
+              <Input placeholder="Paste direct link..." value={pdfUrl} onChange={e => setPdfUrl(e.target.value)} className="pl-10 h-12" />
             </div>
           )}
         </div>
@@ -475,26 +583,30 @@ const AdminUpload = () => {
         <Label>Class PDF (optional - students can download)</Label>
         <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 text-center hover:border-primary/40 transition-colors">
           <input id="classPdfFile" type="file" accept=".pdf" onChange={e => setClassPdfFile(e.target.files?.[0] || null)} className="hidden" />
-          <label htmlFor="classPdfFile" className="cursor-pointer">
+          <label htmlFor="classPdfFile" className="cursor-pointer block">
             <FileText className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-            {classPdfFile ? (
-              <p className="text-primary font-medium text-sm">{classPdfFile.name}</p>
-            ) : (
-              <p className="text-muted-foreground text-sm">Click to upload Class PDF</p>
-            )}
+            {classPdfFile
+              ? <p className="text-primary font-medium text-sm">{classPdfFile.name}</p>
+              : <p className="text-muted-foreground text-sm">Tap to upload Class PDF</p>}
           </label>
         </div>
         <p className="text-xs text-muted-foreground">Or paste a URL:</p>
-        <Input placeholder="https://... class PDF URL" value={classPdfUrl} onChange={e => setClassPdfUrl(e.target.value)} />
+        <Input placeholder="https://... class PDF URL" value={classPdfUrl} onChange={e => setClassPdfUrl(e.target.value)} className="h-11" />
       </div>
 
       <div className="space-y-1.5">
         <Label>Watermark Text</Label>
-        <Input value={watermarkText} onChange={e => setWatermarkText(e.target.value)} />
+        <Input value={watermarkText} onChange={e => setWatermarkText(e.target.value)} className="h-11" />
       </div>
 
-      <Button onClick={handleUpload} disabled={isUploading} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-        {isUploading ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Uploading...</> : <><Upload className="h-5 w-5 mr-2" />Publish Content</>}
+      <Button
+        onClick={handleUpload}
+        disabled={isUploading}
+        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12 text-base"
+      >
+        {isUploading
+          ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Uploading...</>
+          : <><Upload className="h-5 w-5 mr-2" />Publish Content</>}
       </Button>
     </div>
   );
@@ -515,8 +627,12 @@ const AdminUpload = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="text-white border-white/30 hover:bg-white/10 text-xs">Dashboard</Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-white/10"><LogOut className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="text-white border-white/30 hover:bg-white/10 text-xs hidden sm:flex">
+              Dashboard
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-white/10">
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>
@@ -533,7 +649,7 @@ const AdminUpload = () => {
                 <button
                   key={course.id}
                   onClick={() => setSelectedCourseId(course.id)}
-                  className="p-4 border rounded-xl bg-card hover:border-primary hover:shadow-md transition-all text-left group"
+                  className="p-4 border rounded-xl bg-card hover:border-primary hover:shadow-md transition-all text-left group min-h-[80px]"
                 >
                   <div className="flex items-start gap-3">
                     <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -551,14 +667,18 @@ const AdminUpload = () => {
           </div>
         )}
 
-        {/* LEVEL 2: Chapter List + Create Chapter */}
+        {/* LEVEL 2: Chapter List (Sortable) + Create Chapter */}
         {selectedCourseId && !selectedChapterId && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Select a Chapter</h2>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowCreateChapter(!showCreateChapter)}>
+              <h2 className="text-lg font-semibold">
+                Select a Chapter
+                {reorderingChapters && <Loader2 className="h-4 w-4 inline ml-2 animate-spin text-muted-foreground" />}
+              </h2>
+              <Button size="sm" variant="outline" className="gap-1.5 min-h-[44px]" onClick={() => setShowCreateChapter(!showCreateChapter)}>
                 <Plus className="h-4 w-4" />
-                Create Chapter
+                <span className="hidden sm:inline">Create Chapter</span>
+                <span className="sm:hidden">New</span>
               </Button>
             </div>
 
@@ -569,23 +689,19 @@ const AdminUpload = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs">Title *</Label>
-                      <Input placeholder="Chapter title" value={newChapterTitle} onChange={e => setNewChapterTitle(e.target.value)} />
+                      <Input placeholder="Chapter title" value={newChapterTitle} onChange={e => setNewChapterTitle(e.target.value)} className="h-11" />
                     </div>
                     <div>
                       <Label className="text-xs">Code *</Label>
-                      <Input placeholder="CH01" value={newChapterCode} onChange={e => setNewChapterCode(e.target.value)} />
+                      <Input placeholder="CH01" value={newChapterCode} onChange={e => setNewChapterCode(e.target.value)} className="h-11" />
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">Position</Label>
-                    <Input type="number" placeholder="1" value={newChapterPosition || ''} onChange={e => setNewChapterPosition(Number(e.target.value))} />
-                  </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleCreateChapter} disabled={creatingChapter}>
+                    <Button size="sm" onClick={handleCreateChapter} disabled={creatingChapter} className="min-h-[44px]">
                       {creatingChapter ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
                       Create
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setShowCreateChapter(false)}>Cancel</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowCreateChapter(false)} className="min-h-[44px]">Cancel</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -596,40 +712,45 @@ const AdminUpload = () => {
             ) : chapters.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No chapters found. Create one above!</p>
             ) : (
-              <div className="space-y-3">
-                {chapters.map(ch => (
-                  <div
-                    key={ch.id}
-                    className="w-full p-4 border rounded-xl bg-card hover:border-primary hover:shadow-sm transition-all group flex items-center"
-                  >
-                    <button
-                      className="flex items-center gap-3 flex-1 text-left"
-                      onClick={() => setSelectedChapterId(ch.id)}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                        {ch.position || "—"}
-                      </div>
-                      <p className="font-medium text-sm">{ch.title}</p>
-                    </button>
-                    <div className="flex items-center gap-1 ml-2">
-                      <Button
-                        variant="ghost" size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteChapter(ch.id, ch.title); }}
-                        title="Delete chapter"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleChapterDragEnd}>
+                <SortableContext items={chapters.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-3">
+                    {chapters.map(ch => (
+                      <SortableItem key={ch.id} id={ch.id}>
+                        {(handle) => (
+                          <div className="w-full p-4 border rounded-xl bg-card hover:border-primary hover:shadow-sm transition-all group flex items-center gap-2">
+                            {handle}
+                            <button
+                              className="flex items-center gap-3 flex-1 text-left min-h-[44px]"
+                              onClick={() => setSelectedChapterId(ch.id)}
+                            >
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
+                                {ch.position || "—"}
+                              </div>
+                              <p className="font-medium text-sm">{ch.title}</p>
+                            </button>
+                            <div className="flex items-center gap-1 ml-auto">
+                              <Button
+                                variant="ghost" size="icon"
+                                className="h-10 w-10 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteChapter(ch.id, ch.title); }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                            </div>
+                          </div>
+                        )}
+                      </SortableItem>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         )}
 
-        {/* LEVEL 3: Upload Form + Sub-folders + Existing Lessons */}
+        {/* LEVEL 3: Upload Form + Sub-folders + Sortable Lessons */}
         {selectedCourseId && selectedChapterId && (
           <div className="space-y-6">
             {/* Sub-folders section */}
@@ -640,7 +761,7 @@ const AdminUpload = () => {
                     <FolderOpen className="h-4 w-4" />
                     Sub-folders ({subChapters.length})
                   </CardTitle>
-                  <Button size="sm" variant="outline" className="gap-1 h-8 text-xs" onClick={() => setShowCreateSubfolder(!showCreateSubfolder)}>
+                  <Button size="sm" variant="outline" className="gap-1 h-10 text-xs" onClick={() => setShowCreateSubfolder(!showCreateSubfolder)}>
                     <FolderPlus className="h-3.5 w-3.5" />
                     Add Sub-folder
                   </Button>
@@ -652,19 +773,19 @@ const AdminUpload = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs">Title *</Label>
-                        <Input placeholder="Sub-folder title" value={newSubfolderTitle} onChange={e => setNewSubfolderTitle(e.target.value)} className="h-8 text-sm" />
+                        <Input placeholder="Sub-folder title" value={newSubfolderTitle} onChange={e => setNewSubfolderTitle(e.target.value)} className="h-11 text-sm" />
                       </div>
                       <div>
                         <Label className="text-xs">Code *</Label>
-                        <Input placeholder="SF01" value={newSubfolderCode} onChange={e => setNewSubfolderCode(e.target.value)} className="h-8 text-sm" />
+                        <Input placeholder="SF01" value={newSubfolderCode} onChange={e => setNewSubfolderCode(e.target.value)} className="h-11 text-sm" />
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" className="h-7 text-xs" onClick={handleCreateSubfolder} disabled={creatingSubfolder}>
+                      <Button size="sm" className="h-10 text-xs" onClick={handleCreateSubfolder} disabled={creatingSubfolder}>
                         {creatingSubfolder ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
                         Create
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowCreateSubfolder(false)}>Cancel</Button>
+                      <Button size="sm" variant="ghost" className="h-10 text-xs" onClick={() => setShowCreateSubfolder(false)}>Cancel</Button>
                     </div>
                   </div>
                 )}
@@ -675,7 +796,7 @@ const AdminUpload = () => {
                     {subChapters.map(sc => (
                       <div
                         key={sc.id}
-                        className="w-full p-2.5 border rounded-lg bg-card hover:border-primary transition-all group flex items-center gap-2"
+                        className="w-full p-3 border rounded-lg bg-card hover:border-primary transition-all group flex items-center gap-2 min-h-[52px]"
                       >
                         <button
                           className="flex items-center gap-2 flex-1 text-left"
@@ -687,9 +808,8 @@ const AdminUpload = () => {
                         <div className="flex items-center gap-0.5 ml-auto">
                           <Button
                             variant="ghost" size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={(e) => { e.stopPropagation(); handleDeleteChapter(sc.id, sc.title); }}
-                            title="Delete sub-folder"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -725,7 +845,13 @@ const AdminUpload = () => {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <BookOpen className="h-5 w-5" />
                     Chapter Content ({lessons.length})
+                    {reorderingLessons && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-auto" />}
                   </CardTitle>
+                  {lessons.length > 1 && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <GripVertical className="h-3 w-3" /> Drag to reorder
+                    </p>
+                  )}
                 </CardHeader>
                 <CardContent className="p-0">
                   <ScrollArea className="h-[500px]">
@@ -735,36 +861,49 @@ const AdminUpload = () => {
                         <p className="text-sm">No content yet. Upload the first item!</p>
                       </div>
                     ) : (
-                      <div className="divide-y">
-                        {lessons.map(lesson => (
-                          <div key={lesson.id} className="p-3 hover:bg-muted/20 transition-colors">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <div className={cn("p-1.5 rounded-md", typeColor(lesson.lecture_type))}>
-                                  {typeIcon(lesson.lecture_type)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-sm truncate">{lesson.title}</p>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <Badge variant="secondary" className="text-[10px]">
-                                      {lesson.lecture_type || "VIDEO"}
-                                    </Badge>
-                                    {lesson.class_pdf_url && (
-                                      <Badge variant="outline" className="text-[10px] gap-0.5">
-                                        <FileText className="h-2.5 w-2.5" />
-                                        PDF
-                                      </Badge>
-                                    )}
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLessonDragEnd}>
+                        <SortableContext items={lessons.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                          <div className="divide-y">
+                            {lessons.map(lesson => (
+                              <SortableItem key={lesson.id} id={lesson.id}>
+                                {(handle) => (
+                                  <div className="p-3 hover:bg-muted/20 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                      {handle}
+                                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                        <div className={cn("p-1.5 rounded-md shrink-0", typeColor(lesson.lecture_type))}>
+                                          {typeIcon(lesson.lecture_type)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium text-sm truncate">{lesson.title}</p>
+                                          <div className="flex items-center gap-1.5 mt-0.5">
+                                            <Badge variant="secondary" className="text-[10px]">
+                                              {lesson.lecture_type || "VIDEO"}
+                                            </Badge>
+                                            {lesson.class_pdf_url && (
+                                              <Badge variant="outline" className="text-[10px] gap-0.5">
+                                                <FileText className="h-2.5 w-2.5" />
+                                                PDF
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        variant="ghost" size="icon"
+                                        onClick={() => handleDeleteLesson(lesson.id)}
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 shrink-0"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
-                              </div>
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteLesson(lesson.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
+                                )}
+                              </SortableItem>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </SortableContext>
+                      </DndContext>
                     )}
                   </ScrollArea>
                 </CardContent>

@@ -13,8 +13,27 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronLeft, Eye, EyeOff, Save, Loader2,
   ClipboardList, FlaskConical, Edit2, ArrowLeft, Check, X, Link2,
+  ChevronDown, ChevronUp, GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Quiz {
   id: string;
@@ -50,6 +69,89 @@ const defaultQuestion = (): QuestionForm => ({
   negative_marks: 1,
 });
 
+// ─── Sortable Question Card ─────────────────────────────────────────────────
+const SortableQuestion = ({
+  id, index, q, isExpanded, onToggle, onDelete, children,
+}: {
+  id: string;
+  index: number;
+  q: QuestionForm;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+  children: React.ReactNode;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="bg-card border rounded-xl overflow-hidden">
+      {/* Collapsed header — always visible */}
+      <div className="flex items-center gap-2 p-3 sm:p-4">
+        <button
+          {...attributes}
+          {...listeners}
+          className="touch-none cursor-grab active:cursor-grabbing p-2 text-muted-foreground hover:text-foreground rounded shrink-0"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+
+        <button
+          onClick={onToggle}
+          className="flex-1 text-left flex items-center gap-2 min-h-[44px]"
+        >
+          <span className={cn(
+            "text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0",
+            q.question_text.trim()
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground"
+          )}>
+            {index + 1}
+          </span>
+          <span className={cn(
+            "text-sm flex-1 truncate",
+            q.question_text.trim() ? "font-medium text-foreground" : "text-muted-foreground italic"
+          )}>
+            {q.question_text.trim() || "Enter question text..."}
+          </span>
+          <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">
+            {q.marks}m · {q.question_type.replace("_", "/")}
+          </span>
+        </button>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={onDelete}
+            className="p-2 text-destructive hover:bg-destructive/10 rounded min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Delete question"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onToggle}
+            className="p-2 text-muted-foreground hover:text-foreground rounded min-h-[44px] min-w-[44px] flex items-center justify-center"
+          >
+            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded content */}
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-4 border-t pt-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AdminQuizManager = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -61,6 +163,9 @@ const AdminQuizManager = () => {
   const [view, setView] = useState<"list" | "create" | "edit-questions">("list");
   const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
   const [savingQuiz, setSavingQuiz] = useState(false);
+
+  // Collapsible questions
+  const [expandedQuestions, setExpandedQuestions] = useState<Record<number, boolean>>({ 0: true });
 
   // Quiz form
   const [quizForm, setQuizForm] = useState({
@@ -75,9 +180,15 @@ const AdminQuizManager = () => {
   });
 
   // Questions for current quiz
-  const [questions, setQuestions] = useState<any[]>([]);
   const [questionForms, setQuestionForms] = useState<QuestionForm[]>([defaultQuestion()]);
   const [savingQuestions, setSavingQuestions] = useState(false);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     const init = async () => {
@@ -130,6 +241,7 @@ const AdminQuizManager = () => {
       await fetchQuizzes();
       setEditingQuizId(data.id);
       setQuestionForms([defaultQuestion()]);
+      setExpandedQuestions({ 0: true });
       setView("edit-questions");
     } catch (err: any) {
       toast.error(err.message);
@@ -145,7 +257,6 @@ const AdminQuizManager = () => {
 
     setSavingQuestions(true);
     try {
-      // Delete existing then re-insert
       await supabase.from("questions").delete().eq("quiz_id", editingQuizId);
       const rows = questionForms.map((q, idx) => ({
         quiz_id: editingQuizId,
@@ -160,11 +271,8 @@ const AdminQuizManager = () => {
       }));
       const { error } = await supabase.from("questions").insert(rows);
       if (error) throw error;
-
-      // Update total_marks
       const totalMarks = questionForms.reduce((s, q) => s + q.marks, 0);
       await supabase.from("quizzes").update({ total_marks: totalMarks }).eq("id", editingQuizId);
-
       toast.success("Questions saved!");
       await fetchQuizzes();
     } catch (err: any) {
@@ -188,8 +296,11 @@ const AdminQuizManager = () => {
         marks: q.marks,
         negative_marks: q.negative_marks,
       })));
+      // Collapse all by default when loading existing
+      setExpandedQuestions({});
     } else {
       setQuestionForms([defaultQuestion()]);
+      setExpandedQuestions({ 0: true });
     }
     setView("edit-questions");
   };
@@ -223,6 +334,43 @@ const AdminQuizManager = () => {
     }));
   };
 
+  const addQuestion = () => {
+    const newIdx = questionForms.length;
+    setQuestionForms(f => [...f, defaultQuestion()]);
+    // Auto-expand the new question
+    setExpandedQuestions(prev => ({ ...prev, [newIdx]: true }));
+    // Scroll to bottom after a tick
+    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+  };
+
+  const deleteQuestion = (idx: number) => {
+    if (questionForms.length === 1) { toast.error("At least one question required"); return; }
+    setQuestionForms(prev => prev.filter((_, i) => i !== idx));
+    setExpandedQuestions(prev => {
+      const next: Record<number, boolean> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const ki = Number(k);
+        if (ki < idx) next[ki] = v;
+        else if (ki > idx) next[ki - 1] = v;
+      });
+      return next;
+    });
+  };
+
+  const handleQuestionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = questionForms.map((_, i) => String(i));
+    const oldIndex = ids.indexOf(String(active.id));
+    const newIndex = ids.indexOf(String(over.id));
+    setQuestionForms(prev => arrayMove(prev, oldIndex, newIndex));
+    setExpandedQuestions(prev => {
+      const next: Record<number, boolean> = {};
+      arrayMove(Object.entries(prev), oldIndex, newIndex).forEach(([_, v], i) => { next[i] = v; });
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -237,13 +385,21 @@ const AdminQuizManager = () => {
       <div className="min-h-screen bg-background">
         <header className="bg-card border-b px-4 py-4 sticky top-0 z-10">
           <div className="flex items-center gap-3 max-w-4xl mx-auto">
-            <button onClick={() => navigate("/admin")} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => navigate("/admin")} className="text-muted-foreground hover:text-foreground p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded">
               <ChevronLeft className="h-5 w-5" />
             </button>
             <h1 className="text-lg font-bold flex-1">Quiz Manager</h1>
-            <Button size="sm" className="gap-1.5" onClick={() => { setQuizForm({ title: "", type: "dpp", course_id: "", lesson_id: "", duration_minutes: 30, total_marks: 0, pass_percentage: 40, description: "" }); setView("create"); }}>
+            <Button
+              size="sm"
+              className="gap-1.5 min-h-[44px]"
+              onClick={() => {
+                setQuizForm({ title: "", type: "dpp", course_id: "", lesson_id: "", duration_minutes: 30, total_marks: 0, pass_percentage: 40, description: "" });
+                setView("create");
+              }}
+            >
               <Plus className="h-4 w-4" />
-              New Quiz
+              <span className="hidden sm:inline">New Quiz</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
         </header>
@@ -260,14 +416,14 @@ const AdminQuizManager = () => {
               <div key={quiz.id} className="bg-card border rounded-xl p-4">
                 <div className="flex items-start gap-3">
                   <div className={cn(
-                    "p-2.5 rounded-lg",
+                    "p-2.5 rounded-lg shrink-0",
                     quiz.type === "dpp" ? "bg-blue-500/10 text-blue-600" : "bg-purple-500/10 text-purple-600"
                   )}>
                     {quiz.type === "dpp" ? <ClipboardList className="h-5 w-5" /> : <FlaskConical className="h-5 w-5" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-sm truncate">{quiz.title}</h3>
+                      <h3 className="font-semibold text-sm">{quiz.title}</h3>
                       <Badge variant={quiz.is_published ? "default" : "secondary"} className="text-[10px]">
                         {quiz.is_published ? "Published" : "Draft"}
                       </Badge>
@@ -282,15 +438,16 @@ const AdminQuizManager = () => {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => loadQuizForEdit(quiz)} title="Edit questions">
-                      <Edit2 className="h-3.5 w-3.5" />
+                  {/* Action buttons - stack on mobile */}
+                  <div className="flex flex-col sm:flex-row items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => loadQuizForEdit(quiz)} title="Edit questions">
+                      <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => togglePublish(quiz)} title={quiz.is_published ? "Unpublish" : "Publish"}>
-                      {quiz.is_published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => togglePublish(quiz)} title={quiz.is_published ? "Unpublish" : "Publish"}>
+                      {quiz.is_published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteQuiz(quiz.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive hover:text-destructive" onClick={() => deleteQuiz(quiz.id)}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -308,7 +465,7 @@ const AdminQuizManager = () => {
       <div className="min-h-screen bg-background">
         <header className="bg-card border-b px-4 py-4 sticky top-0 z-10">
           <div className="flex items-center gap-3 max-w-2xl mx-auto">
-            <button onClick={() => setView("list")} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => setView("list")} className="text-muted-foreground hover:text-foreground p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="text-base font-bold flex-1">Create New Quiz</h1>
@@ -317,14 +474,20 @@ const AdminQuizManager = () => {
         <main className="max-w-2xl mx-auto p-4 space-y-5">
           <div className="space-y-1.5">
             <Label>Quiz Title *</Label>
-            <Input placeholder="e.g., Chapter 3 DPP" value={quizForm.title} onChange={e => setQuizForm(f => ({ ...f, title: e.target.value }))} />
+            <Input
+              placeholder="e.g., Chapter 3 DPP"
+              value={quizForm.title}
+              onChange={e => setQuizForm(f => ({ ...f, title: e.target.value }))}
+              className="h-12 text-base"
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Type + Duration — stack on mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Type</Label>
               <Select value={quizForm.type} onValueChange={v => setQuizForm(f => ({ ...f, type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="dpp">DPP (Daily Practice)</SelectItem>
                   <SelectItem value="test">Test / Exam</SelectItem>
@@ -333,21 +496,32 @@ const AdminQuizManager = () => {
             </div>
             <div className="space-y-1.5">
               <Label>Duration (minutes, 0 = no limit)</Label>
-              <Input type="number" min={0} value={quizForm.duration_minutes} onChange={e => setQuizForm(f => ({ ...f, duration_minutes: Number(e.target.value) }))} />
+              <Input
+                type="number" min={0}
+                value={quizForm.duration_minutes}
+                onChange={e => setQuizForm(f => ({ ...f, duration_minutes: Number(e.target.value) }))}
+                className="h-12"
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Pass Percentage (%)</Label>
-              <Input type="number" min={0} max={100} value={quizForm.pass_percentage} onChange={e => setQuizForm(f => ({ ...f, pass_percentage: Number(e.target.value) }))} />
-            </div>
+          <div className="space-y-1.5 max-w-[200px]">
+            <Label>Pass Percentage (%)</Label>
+            <Input
+              type="number" min={0} max={100}
+              value={quizForm.pass_percentage}
+              onChange={e => setQuizForm(f => ({ ...f, pass_percentage: Number(e.target.value) }))}
+              className="h-12"
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label>Link to Course (optional)</Label>
-            <Select value={quizForm.course_id} onValueChange={v => { setQuizForm(f => ({ ...f, course_id: v, lesson_id: "" })); if (v) fetchLessons(Number(v)); }}>
-              <SelectTrigger><SelectValue placeholder="Select course..." /></SelectTrigger>
+            <Select
+              value={quizForm.course_id}
+              onValueChange={v => { setQuizForm(f => ({ ...f, course_id: v, lesson_id: "" })); if (v) fetchLessons(Number(v)); }}
+            >
+              <SelectTrigger className="h-12"><SelectValue placeholder="Select course..." /></SelectTrigger>
               <SelectContent>
                 {courses.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>)}
               </SelectContent>
@@ -358,7 +532,7 @@ const AdminQuizManager = () => {
             <div className="space-y-1.5">
               <Label>Link to Lesson (DPP/TEST lessons only)</Label>
               <Select value={quizForm.lesson_id} onValueChange={v => setQuizForm(f => ({ ...f, lesson_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select lesson..." /></SelectTrigger>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Select lesson..." /></SelectTrigger>
                 <SelectContent>
                   {lessons.length === 0 ? (
                     <SelectItem value="" disabled>No DPP/TEST lessons found</SelectItem>
@@ -381,7 +555,7 @@ const AdminQuizManager = () => {
             />
           </div>
 
-          <Button onClick={handleCreateQuiz} disabled={savingQuiz} className="w-full gap-2">
+          <Button onClick={handleCreateQuiz} disabled={savingQuiz} className="w-full gap-2 h-12 text-base">
             {savingQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Create & Add Questions
           </Button>
@@ -392,153 +566,205 @@ const AdminQuizManager = () => {
 
   // ─── EDIT QUESTIONS VIEW ─────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <header className="bg-card border-b px-4 py-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3 max-w-3xl mx-auto">
-          <button onClick={() => { setView("list"); setEditingQuizId(null); }} className="text-muted-foreground hover:text-foreground">
+        <div className="flex items-center gap-2 max-w-3xl mx-auto">
+          <button
+            onClick={() => { setView("list"); setEditingQuizId(null); }}
+            className="text-muted-foreground hover:text-foreground p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded shrink-0"
+          >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-bold flex-1">Edit Questions</h1>
-          <span className="text-xs text-muted-foreground">{questionForms.length} questions</span>
-          <Button size="sm" variant="outline" className="gap-1" onClick={() => setQuestionForms(f => [...f, defaultQuestion()])}>
+          <h1 className="text-base font-bold flex-1 truncate">Edit Questions</h1>
+          <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{questionForms.length} questions</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1 min-h-[44px] shrink-0"
+            onClick={addQuestion}
+          >
             <Plus className="h-3.5 w-3.5" />
-            Add
+            <span className="hidden sm:inline">Add</span>
           </Button>
-          <Button size="sm" className="gap-1" onClick={handleSaveQuestions} disabled={savingQuestions}>
+          <Button
+            size="sm"
+            className="gap-1 min-h-[44px] shrink-0"
+            onClick={handleSaveQuestions}
+            disabled={savingQuestions}
+          >
             {savingQuestions ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Save
           </Button>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto p-4 space-y-6">
-        {questionForms.map((q, qIdx) => (
-          <div key={qIdx} className="bg-card border rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-primary">Question {qIdx + 1}</span>
-              <button
-                onClick={() => setQuestionForms(prev => prev.filter((_, i) => i !== qIdx))}
-                className="text-destructive hover:text-destructive/80 p-1 rounded"
+      <main className="max-w-3xl mx-auto p-4 space-y-4">
+        {/* Collapse/Expand all */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{questionForms.length} questions</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const all: Record<number, boolean> = {};
+                questionForms.forEach((_, i) => { all[i] = true; });
+                setExpandedQuestions(all);
+              }}
+              className="hover:text-foreground underline-offset-2 underline"
+            >
+              Expand all
+            </button>
+            <button
+              onClick={() => setExpandedQuestions({})}
+              className="hover:text-foreground underline-offset-2 underline"
+            >
+              Collapse all
+            </button>
+          </div>
+        </div>
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleQuestionDragEnd}
+        >
+          <SortableContext
+            items={questionForms.map((_, i) => String(i))}
+            strategy={verticalListSortingStrategy}
+          >
+            {questionForms.map((q, qIdx) => (
+              <SortableQuestion
+                key={qIdx}
+                id={String(qIdx)}
+                index={qIdx}
+                q={q}
+                isExpanded={!!expandedQuestions[qIdx]}
+                onToggle={() => setExpandedQuestions(prev => ({ ...prev, [qIdx]: !prev[qIdx] }))}
+                onDelete={() => deleteQuestion(qIdx)}
               >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+                {/* ── Question form fields ── */}
+                <div>
+                  <Label className="text-xs">Question Text *</Label>
+                  <textarea
+                    rows={3}
+                    value={q.question_text}
+                    onChange={e => updateQuestionForm(qIdx, "question_text", e.target.value)}
+                    placeholder="Enter the question..."
+                    className="mt-1 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
 
-            <div>
-              <Label className="text-xs">Question Text *</Label>
-              <textarea
-                rows={3}
-                value={q.question_text}
-                onChange={e => updateQuestionForm(qIdx, "question_text", e.target.value)}
-                placeholder="Enter the question..."
-                className="mt-1 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
+                {/* Type + Marks — responsive grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">Type</Label>
+                    <Select value={q.question_type} onValueChange={v => updateQuestionForm(qIdx, "question_type", v as any)}>
+                      <SelectTrigger className="mt-1 h-11"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mcq">MCQ</SelectItem>
+                        <SelectItem value="true_false">True/False</SelectItem>
+                        <SelectItem value="numerical">Numerical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Marks (+)</Label>
+                    <Input type="number" min={0} value={q.marks} onChange={e => updateQuestionForm(qIdx, "marks", Number(e.target.value))} className="mt-1 h-11" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Negative Marks</Label>
+                    <Input type="number" min={0} value={q.negative_marks} onChange={e => updateQuestionForm(qIdx, "negative_marks", Number(e.target.value))} className="mt-1 h-11" />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs">Type</Label>
-                <Select value={q.question_type} onValueChange={v => updateQuestionForm(qIdx, "question_type", v as any)}>
-                  <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mcq">MCQ</SelectItem>
-                    <SelectItem value="true_false">True/False</SelectItem>
-                    <SelectItem value="numerical">Numerical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Marks (+)</Label>
-                <Input type="number" min={0} value={q.marks} onChange={e => updateQuestionForm(qIdx, "marks", Number(e.target.value))} className="mt-1 h-9" />
-              </div>
-              <div>
-                <Label className="text-xs">Negative Marks</Label>
-                <Input type="number" min={0} value={q.negative_marks} onChange={e => updateQuestionForm(qIdx, "negative_marks", Number(e.target.value))} className="mt-1 h-9" />
-              </div>
-            </div>
+                {q.question_type === "mcq" && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Options (tap circle to mark correct)</Label>
+                    {q.options.map((opt, oIdx) => (
+                      <div key={oIdx} className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuestionForm(qIdx, "correct_answer", String(oIdx))}
+                          className={cn(
+                            "w-8 h-8 rounded-full border-2 shrink-0 flex items-center justify-center text-xs font-bold transition-colors",
+                            q.correct_answer === String(oIdx)
+                              ? "border-green-500 bg-green-500 text-white"
+                              : "border-muted-foreground/30 text-muted-foreground hover:border-green-400"
+                          )}
+                        >
+                          {String.fromCharCode(65 + oIdx)}
+                        </button>
+                        <Input
+                          placeholder={`Option ${String.fromCharCode(65 + oIdx)}`}
+                          value={opt}
+                          onChange={e => updateOption(qIdx, oIdx, e.target.value)}
+                          className="h-11 flex-1"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-            {q.question_type === "mcq" && (
-              <div className="space-y-2">
-                <Label className="text-xs">Options (select correct answer)</Label>
-                {q.options.map((opt, oIdx) => (
-                  <div key={oIdx} className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateQuestionForm(qIdx, "correct_answer", String(oIdx))}
-                      className={cn(
-                        "w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center text-xs font-bold transition-colors",
-                        q.correct_answer === String(oIdx)
-                          ? "border-green-500 bg-green-500 text-white"
-                          : "border-muted-foreground/30 text-muted-foreground hover:border-green-400"
-                      )}
-                    >
-                      {String.fromCharCode(65 + oIdx)}
-                    </button>
+                {q.question_type === "true_false" && (
+                  <div>
+                    <Label className="text-xs">Correct Answer</Label>
+                    <div className="flex gap-3 mt-1">
+                      {["true", "false"].map(v => (
+                        <button
+                          key={v}
+                          onClick={() => updateQuestionForm(qIdx, "correct_answer", v)}
+                          className={cn(
+                            "flex-1 py-3 rounded-lg border-2 text-sm font-medium transition-colors capitalize min-h-[44px]",
+                            q.correct_answer === v ? "border-green-500 bg-green-500/10 text-green-600" : "border-border"
+                          )}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {q.question_type === "numerical" && (
+                  <div>
+                    <Label className="text-xs">Correct Answer (numerical)</Label>
                     <Input
-                      placeholder={`Option ${String.fromCharCode(65 + oIdx)}`}
-                      value={opt}
-                      onChange={e => updateOption(qIdx, oIdx, e.target.value)}
-                      className="h-9 flex-1"
+                      type="number"
+                      value={q.correct_answer}
+                      onChange={e => updateQuestionForm(qIdx, "correct_answer", e.target.value)}
+                      placeholder="e.g. 42"
+                      className="mt-1 h-11 max-w-[200px]"
                     />
                   </div>
-                ))}
-              </div>
-            )}
+                )}
 
-            {q.question_type === "true_false" && (
-              <div>
-                <Label className="text-xs">Correct Answer</Label>
-                <div className="flex gap-3 mt-1">
-                  {["true", "false"].map(v => (
-                    <button
-                      key={v}
-                      onClick={() => updateQuestionForm(qIdx, "correct_answer", v)}
-                      className={cn(
-                        "px-6 py-2 rounded-lg border-2 text-sm font-medium transition-colors capitalize",
-                        q.correct_answer === v ? "border-green-500 bg-green-500/10 text-green-600" : "border-border"
-                      )}
-                    >
-                      {v}
-                    </button>
-                  ))}
+                <div>
+                  <Label className="text-xs">Explanation (shown after submit)</Label>
+                  <Input
+                    value={q.explanation}
+                    onChange={e => updateQuestionForm(qIdx, "explanation", e.target.value)}
+                    placeholder="Why is this the correct answer?"
+                    className="mt-1 h-11"
+                  />
                 </div>
-              </div>
-            )}
+              </SortableQuestion>
+            ))}
+          </SortableContext>
+        </DndContext>
 
-            {q.question_type === "numerical" && (
-              <div>
-                <Label className="text-xs">Correct Answer (numerical)</Label>
-                <Input
-                  type="number"
-                  value={q.correct_answer}
-                  onChange={e => updateQuestionForm(qIdx, "correct_answer", e.target.value)}
-                  placeholder="e.g. 42"
-                  className="mt-1 h-9 max-w-[200px]"
-                />
-              </div>
-            )}
-
-            <div>
-              <Label className="text-xs">Explanation (shown after submit)</Label>
-              <Input
-                value={q.explanation}
-                onChange={e => updateQuestionForm(qIdx, "explanation", e.target.value)}
-                placeholder="Why is this the correct answer?"
-                className="mt-1 h-9"
-              />
-            </div>
-          </div>
-        ))}
-
+        {/* Bottom action buttons */}
         <Button
           variant="outline"
-          className="w-full gap-2"
-          onClick={() => setQuestionForms(f => [...f, defaultQuestion()])}
+          className="w-full gap-2 h-12"
+          onClick={addQuestion}
         >
           <Plus className="h-4 w-4" />
           Add Another Question
         </Button>
 
-        <Button className="w-full gap-2" onClick={handleSaveQuestions} disabled={savingQuestions}>
+        <Button
+          className="w-full gap-2 h-12 text-base"
+          onClick={handleSaveQuestions}
+          disabled={savingQuestions}
+        >
           {savingQuestions ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save All Questions
         </Button>
