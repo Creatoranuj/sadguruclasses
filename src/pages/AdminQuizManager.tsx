@@ -320,6 +320,8 @@ const AdminQuizManager = () => {
         explanation: q.explanation || "",
         marks: q.marks,
         negative_marks: q.negative_marks,
+        image_url: q.image_url || "",
+        _imageFile: null,
       })));
       // Collapse all by default when loading existing
       setExpandedQuestions({});
