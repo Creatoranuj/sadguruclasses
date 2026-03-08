@@ -31,7 +31,7 @@ export const useHeroBanners = () => {
         .eq("is_active", true)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data || []) as HeroBanner[];
+      return (data as unknown as HeroBanner[]) || [];
     },
     staleTime: 1000 * 60 * 5, // 5 min cache
   });
@@ -47,7 +47,7 @@ export const useAllHeroBanners = () => {
         .select("*")
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data || []) as HeroBanner[];
+      return (data as unknown as HeroBanner[]) || [];
     },
   });
 };
@@ -62,7 +62,7 @@ export const useCreateBanner = () => {
         .select()
         .single();
       if (error) throw error;
-      return data as HeroBanner;
+      return data as unknown as HeroBanner;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hero_banners"] });
