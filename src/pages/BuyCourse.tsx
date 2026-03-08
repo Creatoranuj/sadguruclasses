@@ -392,7 +392,7 @@ const BuyCourse = () => {
                         navigate("/login", { state: { from: location.pathname + location.search } });
                         return;
                       }
-                      await handleFreeEnrollment(Number(courseId));
+                      await handleFreeEnrollmentEarly(Number(courseId));
                     }}
                     disabled={loading}
                   >
