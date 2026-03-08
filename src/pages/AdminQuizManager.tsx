@@ -9,11 +9,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronLeft, Eye, EyeOff, Save, Loader2,
   ClipboardList, FlaskConical, Edit2, ArrowLeft, Check, X, Link2,
-  ChevronDown, ChevronUp, GripVertical,
+  ChevronDown, ChevronUp, GripVertical, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
