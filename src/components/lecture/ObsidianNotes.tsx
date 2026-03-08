@@ -277,7 +277,7 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
             My Notes
           </CardTitle>
           <div className="flex items-center gap-2">
-            <SaveStatusIndicator />
+            <SaveStatusIndicator status={saveStatus} />
             <Button
               variant="outline"
               size="sm"
