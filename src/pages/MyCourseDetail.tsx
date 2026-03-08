@@ -691,7 +691,7 @@ const MyCourseDetail = () => {
                       title={chapter.title}
                       lectureCount={chapter.lessonCount}
                       completedLectures={chapter.completedLessons}
-                      onClick={() => setSelectedChapterId(chapter.id)}
+                      onClick={() => { setSelectedChapterId(chapter.id); setLessonSearch(""); }}
                     />
                   ))
                 }
