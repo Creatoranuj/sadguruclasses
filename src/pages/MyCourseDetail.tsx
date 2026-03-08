@@ -602,6 +602,24 @@ const MyCourseDetail = () => {
                     ? `${selectedChapter.code} : ${selectedChapter.title}`
                     : course.title}
               </h1>
+              {/* Resume last watched — only show when no lesson is open */}
+              {!selectedLesson && lastWatchedLessonId && (() => {
+                const resumeLesson = lessons.find(l => l.id === lastWatchedLessonId);
+                if (!resumeLesson) return null;
+                return (
+                  <Button
+                    size="sm"
+                    className="shrink-0 gap-1.5 h-8 text-xs font-medium"
+                    onClick={() => {
+                      setSelectedLesson(resumeLesson);
+                      setSearchParams({ lesson: resumeLesson.id });
+                    }}
+                  >
+                    <Play className="h-3 w-3" />
+                    Resume
+                  </Button>
+                );
+              })()}
               {/* Desktop sidebar collapse toggle */}
               <button
                 onClick={() => setSidebarCollapsed(prev => !prev)}
