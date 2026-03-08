@@ -509,23 +509,74 @@ const LessonView = () => {
                   />
                 )}
 
-                {/* INFO & TABS (PW Style) */}
+                {/* INFO & TABS */}
                 <div className="px-4 lg:px-0 pb-10">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
-                                {currentLesson?.title || "Course Introduction"}
-                            </h1>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {videoDuration > 0 ? formatDuration(videoDuration) : '—'}</span>
-                                <span className="flex items-center gap-1"><Star className="h-4 w-4 text-primary fill-primary" /> 4.8 Rating</span>
-                            </div>
+                    {/* Lesson Title + Meta */}
+                    <div className="py-4 border-b border-border">
+                        <h1 className="text-lg md:text-xl font-bold text-foreground mb-1">
+                            {currentLesson?.title || "Course Introduction"}
+                        </h1>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                            {course?.grade && (
+                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                                Class {course.grade}
+                              </span>
+                            )}
+                            {videoDuration > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(videoDuration)}
+                              </span>
+                            )}
+                            {currentLesson?.created_at && (
+                              <span>{new Date(currentLesson.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                            )}
                         </div>
-                        {/* Share button removed to prevent video link leaking */}
+                        {/* Description with Read More */}
+                        {currentLesson?.description && (
+                          <LessonDescription description={currentLesson.description} />
+                        )}
+                    </div>
+
+                    {/* Smart Notes + Ask Doubt Quick Cards */}
+                    <div className="grid grid-cols-2 gap-3 py-4 border-b border-border">
+                      <button
+                        onClick={() => {
+                          const t = document.querySelector('[value="notes"]') as HTMLElement;
+                          if (t) { t.click(); setTimeout(() => t.scrollIntoView({ behavior: 'smooth' }), 100); }
+                        }}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-accent/10 transition-all text-left group"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <BookOpen className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground">Smart Notes</p>
+                          <p className="text-[10px] text-muted-foreground">Your personal notes</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const t = document.querySelector('[value="doubts"]') as HTMLElement;
+                          if (t) { t.click(); setTimeout(() => t.scrollIntoView({ behavior: 'smooth' }), 100); }
+                        }}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-accent/10 transition-all text-left group"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                          <HelpCircle className="h-4 w-4 text-amber-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground">Ask Doubt</p>
+                          <p className="text-[10px] text-muted-foreground">Get instant answers</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-amber-500 transition-colors flex-shrink-0" />
+                      </button>
                     </div>
 
                     {/* TABS COMPONENT */}
-                    <Tabs defaultValue={currentLesson?.class_pdf_url ? "pdf" : "overview"} className="w-full">
+                    <Tabs defaultValue={currentLesson?.class_pdf_url ? "pdf" : "overview"} className="w-full mt-4">
                         <TabsList className={`grid w-full mb-6 ${currentLesson?.class_pdf_url ? "grid-cols-5" : "grid-cols-4"} lg:w-auto lg:inline-flex`}>
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             {currentLesson?.class_pdf_url && (
@@ -542,15 +593,25 @@ const LessonView = () => {
                             <TabsTrigger value="doubts">Discussion</TabsTrigger>
                         </TabsList>
                         
-                        <TabsContent value="overview" className="bg-white p-6 rounded-xl border shadow-sm">
-                            <h3 className="font-semibold text-lg mb-3">About this lesson</h3>
-                            <p className="text-gray-600 leading-relaxed">
-                                {currentLesson?.description || "In this lesson, we will cover the fundamental concepts needed to master this topic. Make sure to watch the full video and take notes."}
-                            </p>
-                            <div className="mt-6 flex items-center gap-3 p-4 bg-blue-50 text-blue-800 rounded-lg border border-blue-100">
-                                <CheckCircle className="h-5 w-5" />
-                                <div className="text-sm font-medium">You will learn: Basic definitions, Real-world examples, and Problem solving.</div>
+                        <TabsContent value="overview" className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-6">
+                            {/* About section */}
+                            <div>
+                              <h3 className="font-semibold text-base text-foreground mb-2">About this lesson</h3>
+                              <p className="text-muted-foreground leading-relaxed text-sm">
+                                  {currentLesson?.description || "In this lesson, we will cover the fundamental concepts needed to master this topic. Make sure to watch the full video and take notes."}
+                              </p>
+                              <div className="mt-4 flex items-center gap-3 p-4 bg-primary/5 text-primary rounded-lg border border-primary/20">
+                                  <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                                  <div className="text-sm font-medium">You will learn: Basic definitions, Real-world examples, and Problem solving.</div>
+                              </div>
                             </div>
+
+                            {/* Topics Covered timeline */}
+                            <TopicsCovered
+                              lessonId={currentLesson?.id || ''}
+                              overview={(currentLesson as any)?.overview || null}
+                              isAdmin={isAdminOrTeacher}
+                            />
                         </TabsContent>
 
                         {/* PDF Tab — inline Archive.org / Drive / direct PDF embed */}
