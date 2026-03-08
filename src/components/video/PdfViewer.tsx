@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from "react";
-import { FileText, ExternalLink, Maximize, Minimize, Download } from "lucide-react";
+import { FileText, Maximize, Minimize, Download } from "lucide-react";
+import { useDownloads } from "@/hooks/useDownloads";
 import { Button } from "@/components/ui/button";
 import { downloadFile } from "@/utils/fileUtils";
 import { toast } from "sonner";
