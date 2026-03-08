@@ -321,34 +321,6 @@ const ChatWidget = () => {
     }]);
   };
 
-  const MarkdownMessage = ({ content }: { content: string }) => (
-    <ReactMarkdown
-      components={{
-        h2: ({ children }) => <h2 className="text-sm font-bold mt-3 mb-1.5 text-foreground">{children}</h2>,
-        h3: ({ children }) => <h3 className="text-sm font-semibold mt-2 mb-1 text-foreground">{children}</h3>,
-        p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>,
-        ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5">{children}</ul>,
-        ol: ({ children }) => <ol className="list-decimal pl-4 mb-1.5 space-y-0.5">{children}</ol>,
-        li: ({ children }) => <li className="text-sm leading-relaxed">{children}</li>,
-        strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-        a: ({ href, children }) => <a href={href} className="underline text-primary" target="_blank" rel="noopener noreferrer">{children}</a>,
-        table: ({ children }) => (
-          <div className="overflow-x-auto my-2 rounded-md border">
-            <table className="text-xs w-full">{children}</table>
-          </div>
-        ),
-        thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
-        th: ({ children }) => <th className="px-2 py-1.5 text-left font-semibold border-b">{children}</th>,
-        td: ({ children }) => <td className="px-2 py-1.5 border-b border-border/50">{children}</td>,
-        tr: ({ children }) => <tr className="hover:bg-muted/30 transition-colors">{children}</tr>,
-        blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/50 pl-3 italic text-muted-foreground my-1">{children}</blockquote>,
-        code: ({ children }) => <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  );
-
   return (
     <>
       {/* Hidden file input */}
