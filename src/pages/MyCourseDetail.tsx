@@ -373,6 +373,8 @@ const MyCourseDetail = () => {
         setInlineViewer({ url: lesson.videoUrl, title: lesson.title });
         setActiveDiscussionTab("resources");
         setSearchParams({ lesson: lesson.id });
+      } else {
+        toast.error("No content URL available for this lesson.");
       }
     }
   }, [hasPurchased, isAdminOrTeacher, courseId, navigate, setSearchParams]);

@@ -1,18 +1,7 @@
 /* Sadguru Coaching Classes - Main Stylesheet */
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&display=swap");
+
 
 @tailwind base;
 @tailwind components;
@@ -208,7 +197,15 @@
   animation: mahima-ring 1.8s ease-in-out infinite;
 }
 
-/* ========== VIDEO PLAYER - ANTI-PIRACY STYLES ========== */
+/* Alias classes for Dashboard.tsx loader animation */
+.sadhguru-loader-logo {
+  animation: mahima-pulse 1.8s ease-in-out infinite;
+}
+.sadhguru-loader-ring {
+  animation: mahima-ring 1.8s ease-in-out infinite;
+}
+
+
 .secure-video-player,
 .student-video-player,
 .mahima-player,

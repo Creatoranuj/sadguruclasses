@@ -8,7 +8,7 @@ export interface LectureCardProps {
   id: string;
   title: string;
   lectureType: "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST";
-  position: number;
+  position?: number;
   isLocked?: boolean;
   isCompleted?: boolean;
   createdAt?: string | null;

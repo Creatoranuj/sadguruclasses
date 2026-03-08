@@ -256,6 +256,13 @@ const MyCourses = () => {
     fetchEnrolledCourses();
   }, [fetchEnrolledCourses]);
 
+  // Refetch when window regains focus (e.g., returning from MyCourseDetail)
+  useEffect(() => {
+    const handleFocus = () => fetchEnrolledCourses();
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [fetchEnrolledCourses]);
+
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);

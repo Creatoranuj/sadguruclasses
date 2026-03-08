@@ -1,88 +1,83 @@
 
-## Full Website Audit — Bugs, Polish & Pending Items
+## Root Cause: Missing `lovable.toml`
 
-After reading every major file in the project, here is a complete categorized audit.
-
----
-
-### CATEGORY 1 — VIDEO PLAYER (MahimaGhostPlayer) — 3 remaining issues
-
-**P1-A: `mahima-ghost-player` CSS class never applied to the container div**
-In `MahimaGhostPlayer.tsx` line 591, the outer `<div ref={containerRef}>` has `className="relative rounded-xl overflow-hidden bg-black select-none group"` — but the CSS in `index.css` targets `.mahima-ghost-player` for pointer-events blocking on the iframe and YouTube UI removal. The class is never applied. Fix: add `mahima-ghost-player` to the outer container's `className`.
-
-**P1-B: `mahima-fullscreen` class applied but CSS uses `:fullscreen` pseudo-selector**
-`isFullscreen && "mahima-fullscreen"` is added as a class, but all CSS rules are written as `.mahima-ghost-player:fullscreen` and `.mahima-ghost-player:-webkit-full-screen`. The `.mahima-fullscreen` class is unused. This is fine — the `:fullscreen` pseudo-class already works for fullscreen. But the `mahima-ghost-player` class is still missing from the container (bug P1-A).
-
-**P1-C: `sadhguru-loader-logo` / `sadhguru-loader-ring` in Dashboard.tsx vs `mahima-loader-logo` in index.css**
-`Dashboard.tsx` line 153–154 uses class `sadhguru-loader-logo` and `sadhguru-loader-ring`. But `index.css` only defines `.mahima-loader-logo` and `.mahima-loader-ring`. So the dashboard page-load animation is broken — the logo doesn't pulse. Fix: add aliases `.sadhguru-loader-logo` and `.sadhguru-loader-ring` to `index.css` pointing to the same keyframes, or rename the classes in `Dashboard.tsx` to match.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
 ---
 
-### CATEGORY 2 — PROGRESS & COMPLETION — 2 issues
+## Plan
 
-**P2-A: `MyCourses.tsx` progress percentage is out of sync with `MyCourseDetail.tsx`**
-`MyCourses.tsx` calculates `progressPercent` from `user_progress` table in its own fetch, but `MyCourseDetail.tsx` computes live from `completedLessonIds`. After a student marks lessons as done in detail view and navigates back to MyCourses, the progress bar won't update until a full page refresh because `MyCourses` has no real-time subscription or re-fetch trigger.
-Fix: Call `fetchEnrolledCourses()` on `window focus` event or when navigating back (using `useEffect` with `location` pathname change).
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-**P2-B: `Dashboard.tsx` `progressPercent` uses `e.progress_percentage` from `enrollments` table**
-Line 125: `progressPercent: e.progress_percentage || 0`. The `enrollments` table's `progress_percentage` column is NOT updated by the `user_progress` upsert in `MyCourseDetail.tsx`. The progress bar on the dashboard course card will always show 0% unless a separate trigger updates `enrollments.progress_percentage`. Fix: compute progress the same way as `MyCourses.tsx` — fetch lesson counts from `user_progress` table joined with lessons.
+```toml
+[run]
+dev = "npm run dev"
+```
 
----
-
-### CATEGORY 3 — UI / LAYOUT — 4 issues
-
-**P3-A: `BottomNav` active state broken for nested routes**
-`isActive(path)` uses `location.pathname === path` (strict equality). So when the user is on `/my-courses/16`, the "My Courses" tab (`/my-courses`) shows as inactive. Fix: change to `location.pathname.startsWith(path)` for prefix matching (with a special case for `/dashboard` to avoid matching everything).
-
-**P3-B: `LectureCard` `position` prop typed as `number` but passed `lesson.position ?? undefined`**
-In `LectureCardProps`, `position: number` is required (no `?`). But in `MyCourseDetail.tsx` line 827 it's passed as `lesson.position ?? undefined`, which means if `position` is null it passes `undefined` to a required `number` prop — TypeScript may not catch this at runtime but it can cause rendering `undefined` in the position display if the card ever renders the position number. Fix: type the prop as `position?: number` in `LectureCard.tsx`.
-
-**P3-C: `handleContentClick` for non-VIDEO lessons without a `videoUrl` does nothing silently**
-In `MyCourseDetail.tsx` line 370–377: if `lesson.lectureType !== "VIDEO"` and `lesson.videoUrl` is falsy, the function does nothing and returns silently. The student taps a PDF card, nothing happens — no toast, no feedback. Fix: add a toast message `"No content URL available for this lesson"` when `!lesson.videoUrl` for non-video types.
-
-**P3-D: Bottom navigation tab "My Courses" active-state vs "Courses"**
-`/courses` path starts with `/course` so both "Courses" and "Course" detail pages would match. The `startsWith` fix from P3-A needs to handle this carefully — `/courses` should match `/courses` and `/my-courses` should match `/my-courses/...` without overlap.
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
 ---
 
-### CATEGORY 4 — ADMIN PANEL — 2 issues
+### 2. Visual Polish — CSS & Theme Improvements
 
-**P4-A: `AdminUpload.tsx` uses `useNavigate` but no auth guard for non-admin users**
-The page manually checks `user` state from Supabase `auth.getUser()` (line 72–73), but the `AdminRoute` wrapper in `App.tsx` already guards `/admin/upload`. However `AdminUpload.tsx` re-implements its own auth check separately (lines 72–120), creating duplication. Not a security bug (route guard runs first), but the internal auth logic inside AdminUpload creates an extra loading state and could be simplified. Low priority.
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-**P4-B: Admin tab state is not persisted in URL — navigating away loses the active tab**
-`Admin.tsx` line 44: `const [activeTab, setActiveTab] = useState("payments")`. If an admin is on the "Users" tab and refreshes, they're back to "Payments". Fix: use `useSearchParams` to persist `?tab=users` in the URL.
-
----
-
-### CATEGORY 5 — PERFORMANCE / FONTS — 1 issue
-
-**P5-A: 15 Google Font imports in `index.css` lines 2–15 (blocking)**
-Every page load requests 15 separate Google Fonts URLs. Most are never used (Lora, Space Mono, EB Garamond, Fira Code, Cormorant Garamond, IBM Plex Mono, Lato). The body font is `Poppins`. The CSS variable `--font-sans` is set to `DM Sans`. Only `Poppins` and `JetBrains Mono` are clearly used. All unused font imports should be removed — each blocks page rendering. This explains slow initial loads.
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
 ---
 
-## Implementation Plan
+### 3. Landing Page & Navigation Visual Fixes
 
-### Files to change
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
 
-| File | Changes |
-|------|---------|
-| `src/index.css` | Add `.sadhguru-loader-logo` + `.sadhguru-loader-ring` keyframe aliases; remove 10+ unused Google Font imports |
-| `src/components/video/MahimaGhostPlayer.tsx` | Add `mahima-ghost-player` class to the outer container div |
-| `src/components/Layout/BottomNav.tsx` | Fix `isActive` to use `startsWith` with careful `/dashboard` exact match |
-| `src/components/course/LectureCard.tsx` | Change `position: number` → `position?: number` |
-| `src/pages/MyCourseDetail.tsx` | Add fallback toast when non-video lesson has no URL |
-| `src/pages/MyCourses.tsx` | Refetch courses on window focus / navigation return |
-| `src/pages/Dashboard.tsx` | Fix progress percentage to use `user_progress` instead of `enrollments.progress_percentage` |
-| `src/pages/Admin.tsx` | Persist active tab in URL via `useSearchParams` |
+---
 
-### Priority order
-1. `index.css` — font cleanup (perf win, instant) + loader animation fix (visual)
-2. `MahimaGhostPlayer.tsx` — add `mahima-ghost-player` class (piracy protection working correctly)
-3. `BottomNav.tsx` — active state fix (UX correctness)
-4. `MyCourseDetail.tsx` — empty-URL toast feedback
-5. `LectureCard.tsx` — prop type fix
-6. `MyCourses.tsx` — refetch on focus
-7. `Dashboard.tsx` — correct progress from user_progress
-8. `Admin.tsx` — tab URL persistence
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

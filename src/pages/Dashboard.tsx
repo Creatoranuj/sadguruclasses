@@ -83,7 +83,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
-        const [enrollmentsRes, attemptsRes, doubtsRes] = await Promise.all([
+        const [enrollmentsRes, attemptsRes, doubtsRes, progressRes] = await Promise.all([
           supabase
             .from('enrollments')
             .select('*, courses(*)')
@@ -103,9 +103,22 @@ const Dashboard = () => {
             .in('status', ['scheduled', 'active'])
             .order('scheduled_at', { ascending: true })
             .limit(3),
+          supabase
+            .from('user_progress')
+            .select('lesson_id, completed, course_id')
+            .eq('user_id', user!.id),
         ]);
 
         if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {
+          const progressData = progressRes.data || [];
+
+          // Fetch lesson counts for enrolled courses
+          const courseIds = enrollmentsRes.data.map((e: any) => e.course_id).filter(Boolean);
+          const lessonsRes = courseIds.length > 0
+            ? await supabase.from('lessons').select('id, course_id').in('course_id', courseIds)
+            : { data: [] };
+          const allLessons = lessonsRes.data || [];
+
           // Deduplicate by course id — keep first occurrence only
           const seenIds = new Set<number>();
           const enrolled = enrollmentsRes.data
@@ -115,15 +128,25 @@ const Dashboard = () => {
               seenIds.add(cid);
               return true;
             })
-            .map((e: any) => ({
-              id: e.courses?.id,
-              title: e.courses?.title,
-              description: e.courses?.description,
-              grade: e.courses?.grade,
-              imageUrl: e.courses?.image_url,
-              thumbnailUrl: e.courses?.thumbnail_url,
-              progressPercent: e.progress_percentage || 0,
-            }));
+            .map((e: any) => {
+              const courseId = e.courses?.id;
+              const courseLessons = allLessons.filter((l: any) => l.course_id === courseId);
+              const courseLessonIds = new Set(courseLessons.map((l: any) => l.id));
+              const completedCount = progressData.filter(
+                (p: any) => p.completed && (p.course_id === courseId || courseLessonIds.has(p.lesson_id))
+              ).length;
+              const total = courseLessons.length;
+              const pct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+              return {
+                id: courseId,
+                title: e.courses?.title,
+                description: e.courses?.description,
+                grade: e.courses?.grade,
+                imageUrl: e.courses?.image_url,
+                thumbnailUrl: e.courses?.thumbnail_url,
+                progressPercent: pct,
+              };
+            });
           setMyCourses(enrolled);
           setProgressPercent(enrolled[0]?.progressPercent || 0);
         }
