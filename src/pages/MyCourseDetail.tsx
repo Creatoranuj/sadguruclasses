@@ -833,7 +833,7 @@ const MyCourseDetail = () => {
                 hasLiked={hasLiked}
                 onLike={toggleLike}
                 onDoubts={() => setActiveDiscussionTab("discussion")}
-                onDownloadPdf={selectedLesson.classPdfUrl ? () => window.open(selectedLesson.classPdfUrl!, "_blank") : undefined}
+                onDownloadPdf={selectedLesson.classPdfUrl ? () => { setInlineViewer({ url: selectedLesson.classPdfUrl!, title: `${selectedLesson.title} – Class PDF` }); setActiveDiscussionTab("resources"); } : undefined}
                 hasPdf={!!selectedLesson.classPdfUrl}
                 likesLoading={likesLoading}
                 lessonTitle={selectedLesson.title}
