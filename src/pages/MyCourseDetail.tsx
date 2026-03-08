@@ -495,11 +495,8 @@ const MyCourseDetail = () => {
                                     <button
                                       key={res.id}
                                       onClick={() => {
-                                        if (res.lectureType === "NOTES") {
-                                          setSelectedNoteUrl({ url: res.videoUrl, title: res.title });
-                                        } else {
-                                          window.open(res.videoUrl, "_blank");
-                                        }
+                                        // All non-VIDEO resources open inline via PdfViewer
+                                        setInlineViewer({ url: res.videoUrl, title: res.title });
                                       }}
                                       className={cn(
                                         "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors",
