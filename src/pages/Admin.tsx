@@ -244,6 +244,25 @@ const Admin = () => {
     }
   };
 
+  // --- ROLE MANAGEMENT ---
+  const handleChangeRole = async (userId: string, newRole: string) => {
+    setRoleChanging(prev => ({ ...prev, [userId]: true }));
+    try {
+      // Delete existing role then insert new one (upsert on user_id conflict)
+      const { error } = await supabase
+        .from('user_roles')
+        .upsert({ user_id: userId, role: newRole as "admin" | "teacher" | "student" }, { onConflict: 'user_id' });
+      if (error) throw error;
+      // Update local state immediately
+      setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      toast.success("Role updated successfully");
+    } catch (err: any) {
+      toast.error("Failed to update role: " + (err?.message || "Unknown error"));
+    } finally {
+      setRoleChanging(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
   // --- FILTERED DATA (Notion-like search) ---
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
