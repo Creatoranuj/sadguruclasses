@@ -89,9 +89,8 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
       className={
         isFullscreen
           ? "fixed inset-0 z-[100] bg-background flex flex-col"
-          : "relative w-full rounded-xl overflow-hidden border border-border bg-card flex flex-col"
+          : "relative w-full h-full min-h-[70vh] rounded-xl overflow-hidden border border-border bg-card flex flex-col"
       }
-      style={isFullscreen ? undefined : { height: "calc(100dvh - 44px)" }}
     >
       {/* Header bar */}
       <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border shrink-0">
