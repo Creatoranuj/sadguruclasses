@@ -1,4 +1,4 @@
-import { Play, Lock, ClipboardCheck } from "lucide-react";
+import { Play, Lock, ClipboardCheck, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import checkmarkIcon from "@/assets/icons/checkmark-3d.png";
@@ -14,6 +14,7 @@ export interface LectureCardProps {
   createdAt?: string | null;
   duration?: number | null;
   onClick?: () => void;
+  onMarkComplete?: (e: React.MouseEvent) => void;
 }
 
 const formatDuration = (seconds: number | null | undefined): string => {
