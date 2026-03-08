@@ -12,11 +12,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   ArrowLeft, Play, FileText, BookOpen, Grid3X3,
-  Lock, Clock, Download, Eye, Star, CheckCircle, MessageCircle, Send, FolderOpen, ChevronRight
+  Lock, Clock, Download, Star, CheckCircle, MessageCircle, Send, FolderOpen, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import UnifiedVideoPlayer from "@/components/video/UnifiedVideoPlayer";
+import PdfViewer from "@/components/video/PdfViewer";
+import { Breadcrumbs } from "@/components/course/Breadcrumbs";
 
  
   interface Lesson {

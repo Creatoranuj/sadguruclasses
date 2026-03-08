@@ -353,7 +353,7 @@ const ChatWidget = () => {
           "fixed inset-0 z-50",
           "bg-background flex flex-col",
           "animate-in fade-in duration-200",
-          "md:left-auto md:w-[440px] md:shadow-2xl md:border-l"
+          "md:left-auto md:w-[560px] lg:w-[680px] md:shadow-2xl md:border-l md:border md:rounded-l-2xl"
         )}>
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b bg-primary/5 shrink-0">
