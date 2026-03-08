@@ -101,7 +101,7 @@ const Profile = () => {
         <h1 className="text-lg font-semibold text-primary-foreground">Profile</h1>
       </div>
 
-      <main className="flex-1 p-4 space-y-6">
+      <main className="flex-1 p-4 space-y-6 pb-20 md:pb-6">
         {/* Avatar Section */}
         <div className="flex flex-col items-center py-6">
           <div className="relative">
