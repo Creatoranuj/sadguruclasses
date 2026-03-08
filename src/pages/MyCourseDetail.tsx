@@ -143,8 +143,6 @@ const MyCourseDetail = () => {
     return null;
   };
 
-   const { isAdmin, isTeacher } = useAuth();
-   const isAdminOrTeacher = isAdmin || isTeacher;
  
    useEffect(() => {
       const fetchData = async () => {
