@@ -361,6 +361,65 @@ export type Database = {
         }
         Relationships: []
       }
+      doubt_sessions: {
+        Row: {
+          course_id: number | null
+          created_at: string
+          description: string
+          id: string
+          scheduled_at: string | null
+          status: string
+          student_id: string
+          subject: string | null
+          teacher_id: string | null
+          updated_at: string
+          zoom_join_url: string | null
+          zoom_meeting_id: string | null
+          zoom_meeting_number: string | null
+          zoom_password: string | null
+        }
+        Insert: {
+          course_id?: number | null
+          created_at?: string
+          description: string
+          id?: string
+          scheduled_at?: string | null
+          status?: string
+          student_id: string
+          subject?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+          zoom_join_url?: string | null
+          zoom_meeting_id?: string | null
+          zoom_meeting_number?: string | null
+          zoom_password?: string | null
+        }
+        Update: {
+          course_id?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          scheduled_at?: string | null
+          status?: string
+          student_id?: string
+          subject?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+          zoom_join_url?: string | null
+          zoom_meeting_id?: string | null
+          zoom_meeting_number?: string | null
+          zoom_password?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doubt_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           course_id: number
