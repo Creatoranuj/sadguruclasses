@@ -395,8 +395,44 @@ const AdminUpload = () => {
     else {
       toast.success("Lesson deleted");
       setLessons(prev => prev.filter(l => l.id !== id));
+      if (editingLesson?.id === id) setEditingLesson(null);
     }
   };
+
+  const handleOpenEdit = (lesson: any) => {
+    setEditingLesson(lesson);
+    setEditTitle(lesson.title || "");
+    setEditVideoUrl(lesson.video_url || "");
+    setEditDescription(lesson.description || "");
+    setEditOverview(lesson.overview || "");
+    setEditClassPdfUrl(lesson.class_pdf_url || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingLesson) return;
+    setIsSavingEdit(true);
+    try {
+      const { error } = await supabase.from('lessons').update({
+        title: editTitle.trim(),
+        video_url: editVideoUrl.trim(),
+        description: editDescription.trim() || null,
+        overview: editOverview.trim() || null,
+        class_pdf_url: editClassPdfUrl.trim() || null,
+      }).eq('id', editingLesson.id);
+      if (error) throw error;
+      toast.success("Lesson updated!");
+      setLessons(prev => prev.map(l => l.id === editingLesson.id
+        ? { ...l, title: editTitle, video_url: editVideoUrl, description: editDescription, overview: editOverview, class_pdf_url: editClassPdfUrl }
+        : l
+      ));
+      setEditingLesson(null);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
 
   const handleDeleteChapter = async (chapterId: string, chapterTitle: string) => {
     if (!confirm(`Delete folder "${chapterTitle}" and ALL its content? This cannot be undone.`)) return;
