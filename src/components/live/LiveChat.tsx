@@ -25,9 +25,13 @@ interface LiveMessage {
 interface LiveChatProps {
   sessionId: string;
   isAdmin?: boolean;
+  canModerate?: boolean;
+  /** When used inside TeacherLiveView tabs, force a single tab to render */
+  activeTab?: "chat" | "doubts";
 }
 
-const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
+const LiveChat = ({ sessionId, isAdmin = false, canModerate = false, activeTab }: LiveChatProps) => {
+  const showModerate = isAdmin || canModerate;
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<LiveMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
