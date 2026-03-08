@@ -852,6 +852,18 @@ const MahimaGhostPlayer = memo(({
                 <span style={{ color: 'white', fontSize: '12px', fontWeight: 600 }}>{Math.round(swipeIndicator.value)}%</span>
               </div>
             )}
+
+            {/* ── Long-press 2x speed indicator ── */}
+            {isLongPressSpeed && (
+              <div
+                className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex items-center gap-2 px-4 py-2 rounded-full"
+                style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}
+              >
+                <span style={{ fontSize: '18px' }}>⚡</span>
+                <span style={{ color: 'white', fontSize: '14px', fontWeight: 700, letterSpacing: '0.03em' }}>2× Speed</span>
+              </div>
+            )}
+
             {/* Center controls: [⏪10s]  [▶ PLAY]  [⏩10s] */}
             <div className="absolute inset-0 flex flex-row items-center justify-evenly px-6 md:px-12">
               {/* Skip back 10s */}
