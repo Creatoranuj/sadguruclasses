@@ -65,6 +65,7 @@ const Admin = () => {
   const [lessonTypeFilter, setLessonTypeFilter] = useState<"all" | "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST">("all");
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState<"all" | "student" | "teacher" | "admin">("all");
+  const [teacherSearch, setTeacherSearch] = useState("");
 
   // -- COURSE CREATION STATE --
   const [newCourse, setNewCourse] = useState({
