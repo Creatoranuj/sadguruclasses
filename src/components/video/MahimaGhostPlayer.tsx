@@ -400,20 +400,29 @@ const MahimaGhostPlayer = memo(({
   const handleNextVideo = useCallback(() => { setShowEndScreen(false); onNextVideo?.(); }, [onNextVideo]);
 
   // Progress bar handlers
-  const calculateTimeFromPosition = useCallback((clientX: number) => {
+  // When rotated 90°, the progress bar is physically vertical on screen.
+  // We must use clientY mapped to the bar's rendered height instead of clientX/width.
+  const calculateTimeFromPosition = useCallback((clientX: number, clientY?: number) => {
     if (!progressBarRef.current || duration <= 0) return 0;
     const rect = progressBarRef.current.getBoundingClientRect();
+    if (rotation === 90 && clientY !== undefined) {
+      // Bar is rotated: its visual bottom maps to time=0, visual top maps to time=duration
+      // rect is still reported in original (unrotated) screen coords by the browser
+      // In 90° rotation the bar becomes vertical: use clientY within rect.top/bottom
+      const ratio = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+      return ratio * duration;
+    }
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * duration;
-  }, [duration]);
+  }, [duration, rotation]);
 
   const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsSeeking(true);
-    const newTime = calculateTimeFromPosition(e.clientX);
+    const newTime = calculateTimeFromPosition(e.clientX, e.clientY);
     setCurrentTime(newTime);
-    const handleMouseMove = (moveEvent: MouseEvent) => setCurrentTime(calculateTimeFromPosition(moveEvent.clientX));
+    const handleMouseMove = (moveEvent: MouseEvent) => setCurrentTime(calculateTimeFromPosition(moveEvent.clientX, moveEvent.clientY));
     const handleMouseUp = (upEvent: MouseEvent) => {
-      seekTo(calculateTimeFromPosition(upEvent.clientX));
+      seekTo(calculateTimeFromPosition(upEvent.clientX, upEvent.clientY));
       setIsSeeking(false);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -428,17 +437,17 @@ const MahimaGhostPlayer = memo(({
     e.stopPropagation();
     setIsSeeking(true);
     const touch = e.touches[0];
-    const newTime = calculateTimeFromPosition(touch.clientX);
+    const newTime = calculateTimeFromPosition(touch.clientX, touch.clientY);
     setCurrentTime(newTime);
 
     const handleTouchMove = (moveEvent: TouchEvent) => {
       moveEvent.preventDefault();
       const t = moveEvent.touches[0];
-      setCurrentTime(calculateTimeFromPosition(t.clientX));
+      setCurrentTime(calculateTimeFromPosition(t.clientX, t.clientY));
     };
     const handleTouchEnd = (endEvent: TouchEvent) => {
       const t = endEvent.changedTouches[0];
-      seekTo(calculateTimeFromPosition(t.clientX));
+      seekTo(calculateTimeFromPosition(t.clientX, t.clientY));
       setIsSeeking(false);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
@@ -638,8 +647,8 @@ const MahimaGhostPlayer = memo(({
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
-            {/* Center controls: [⏪10s]          [▶ PLAY]          [⏩10s] */}
-            <div className="absolute inset-0 flex flex-row items-center justify-between px-10 md:px-20">
+            {/* Center controls: [⏪10s]  [▶ PLAY]  [⏩10s] */}
+            <div className="absolute inset-0 flex flex-row items-center justify-center gap-10 md:gap-14">
               {/* Skip back 10s */}
               <button
                 className={cn(
