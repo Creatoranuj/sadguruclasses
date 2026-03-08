@@ -426,6 +426,7 @@ const MyCourseDetail = () => {
               url={selectedLesson.videoUrl}
               title={selectedLesson.title}
               onReady={() => console.log('Video ready')}
+              onProgress={handleVideoProgress}
             />
           </div>
 
@@ -754,7 +755,7 @@ const MyCourseDetail = () => {
                     <button
                       key={chapter.id}
                       onClick={() => {
-                        setSelectedChapterId(chapter.id === "__all__" ? null : chapter.id);
+                        setSelectedChapterId(chapter.id);
                         setCourseSidebarOpen(false);
                       }}
                       className={cn(
@@ -890,7 +891,7 @@ const MyCourseDetail = () => {
                       title={chapter.title}
                       lectureCount={chapter.lessonCount}
                       completedLectures={chapter.completedLessons}
-                      onClick={() => setSelectedChapterId(chapter.id === "__all__" ? null : chapter.id)}
+                      onClick={() => setSelectedChapterId(chapter.id)}
                     />
                   ))
                 }
