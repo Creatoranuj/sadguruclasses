@@ -1,83 +1,41 @@
 
-## Root Cause: Missing `lovable.toml`
+## Changes to Hero.tsx and Subjects.tsx
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+### Hero.tsx — exact changes:
 
----
+**Line 46 — Title (h1):**
+- Remove gradient, change to: `text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground`
+- This gives it a large, clear non-gradient size as requested (text-4xl/5xl)
 
-## Plan
+**Line 51 — Subheading "India's Most Affordable…":**
+- Change to: `text-base md:text-lg text-gray-600 dark:text-gray-400 font-medium tracking-wide`
+- Makes it light gray (text-gray-600) as requested
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+**Line 56 — Subtitle "Quality education…":**
+- Change to: `text-lg text-muted-foreground max-w-lg mx-auto lg:mx-0`
+- Already text-lg, just clean up to exactly text-lg (remove md:text-xl so it stays smaller)
 
-```toml
-[run]
-dev = "npm run dev"
-```
+**Line 62 — Button:**
+- Change to: `w-full sm:w-auto h-12 min-w-[160px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-md hover:shadow-lg transition-all duration-200 font-semibold px-6 py-3`
+- Blue background, white text, rounded-lg (~8px), hover darkens to blue-700, proper padding
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
-
----
-
-### 2. Visual Polish — CSS & Theme Improvements
-
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
-
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+**Line 39 — Text content wrapper:**
+- Change `space-y-6` to `space-y-8` for proper section margins
 
 ---
 
-### 3. Landing Page & Navigation Visual Fixes
+### Subjects.tsx — exact changes:
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+The Subjects section already has circle backgrounds and Lucide icons from the previous implementation. The user wants:
+- Circle background per icon ✅ already done
+- Grid layout (3-4 columns) — currently `grid-cols-2 sm:grid-cols-3 md:grid-cols-5` → change to `grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5` (3 cols on tablet, 4-5 on desktop) — this makes 3 columns visible on mid-size, more request-aligned
+- Icon text center aligned ✅ already done
+- Make icons slightly bigger for better visual weight: w-16 h-16 with w-8 h-8 icon inside
 
----
+Minor polish: increase card padding slightly, make icon circles slightly larger.
 
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
-
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
-
----
-
-## Note on Visual Editor
-
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+**Summary of file changes:**
+| File | Lines touched |
+|------|--------------|
+| `src/components/Landing/Hero.tsx` | 39, 46, 51, 56, 62 |
+| `src/components/Landing/Subjects.tsx` | 59, 65, 66 |
