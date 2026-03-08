@@ -175,13 +175,23 @@ const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerPro
           />
         )}
 
-        {/* Archive.org top-bar mask — hides the IA logo/nav that bleeds through */}
+        {/* Archive.org top-bar mask — replaces IA logo/nav with Sadguru branding */}
         {isArchive && iframeSrc && (
           <div
-            className="absolute top-0 left-0 right-0 z-30 pointer-events-none"
-            style={{ height: "52px", background: "hsl(var(--background))" }}
+            className="absolute top-0 left-0 right-0 z-30 flex items-center gap-2 px-3 pointer-events-none select-none"
+            style={{ height: "52px", background: "hsl(var(--background))", borderBottom: "1px solid hsl(var(--border))" }}
             aria-hidden="true"
-          />
+          >
+            <img
+              src={sadguruLogo}
+              alt="Sadguru Coaching Classes"
+              className="h-7 w-auto opacity-90"
+              draggable={false}
+            />
+            <span className="text-sm font-semibold text-foreground truncate">
+              Sadguru Coaching Classes
+            </span>
+          </div>
         )}
 
         {/* Sadguru Coaching Classes watermark — bottom-right, always visible */}
