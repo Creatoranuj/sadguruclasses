@@ -57,6 +57,7 @@ const LiveClass = lazy(() => import("./pages/LiveClass"));
 const AdminLiveManager = lazy(() => import("./pages/AdminLiveManager"));
 const TeacherLiveView = lazy(() => import("./pages/TeacherLiveView"));
 const AdminChatbotSettings = lazy(() => import("./pages/AdminChatbotSettings"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const Downloads = lazy(() => import("./pages/Downloads"));
 const Doubts = lazy(() => import("./pages/Doubts"));
 const ChatWidget = lazy(() => import("./components/chat/ChatWidget"));
@@ -148,6 +149,7 @@ const App = () => (
                   <Route path="/admin/quiz" element={<AdminRoute element={<AdminQuizManager />} />} />
                   <Route path="/admin/live" element={<AdminRoute element={<AdminLiveManager />} />} />
                   <Route path="/admin/chatbot" element={<AdminRoute element={<AdminChatbotSettings />} />} />
+                  <Route path="/admin/analytics" element={<AdminRoute element={<AdminAnalytics />} />} />
                   
                   {/* Protected Routes */}
                   <Route path="/dashboard" element={<Dashboard />} />
