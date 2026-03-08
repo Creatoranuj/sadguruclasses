@@ -1,0 +1,134 @@
+name: 🤖 Build Android APK & Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # triggers on v1.0.0, v1.1.0, etc.
+  workflow_dispatch:  # allows manual trigger from GitHub Actions tab
+
+permissions:
+  contents: write   # required to create GitHub Releases
+
+jobs:
+  build:
+    name: Build APK and Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout code ──────────────────────────────────────────────
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Setup Node.js ──────────────────────────────────────────────
+      - name: 🟢 Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # ── 3. Install JS dependencies ────────────────────────────────────
+      - name: 📦 Install npm dependencies
+        run: npm ci
+
+      # ── 4. Build the web app (creates dist/) ──────────────────────────
+      - name: 🏗️ Build web app
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      # ── 5. Verify android/ folder exists ──────────────────────────────
+      - name: ✅ Check android/ folder exists
+        run: |
+          if [ ! -d "android" ]; then
+            echo "❌ ERROR: The android/ folder does not exist in the repo."
+            echo ""
+            echo "📖 One-time setup required on your local machine:"
+            echo "  1. git clone <your-repo>"
+            echo "  2. npm install"
+            echo "  3. npm run build"
+            echo "  4. npx cap add android"
+            echo "  5. git add android/ && git commit -m 'Add Capacitor android project'"
+            echo "  6. git push"
+            echo ""
+            echo "After that, this workflow will succeed on every release tag."
+            exit 1
+          fi
+          echo "✅ android/ folder found"
+
+      # ── 6. Setup Java 17 (required by Android Gradle) ─────────────────
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # ── 7. Sync Capacitor (copies dist/ → android project) ────────────
+      - name: 🔄 Sync Capacitor (dist → android)
+        run: npx cap sync android
+
+      # ── 8. Make Gradle wrapper executable ─────────────────────────────
+      - name: 🔧 Make Gradlew executable
+        run: chmod +x android/gradlew
+
+      # ── 9. Build debug APK ────────────────────────────────────────────
+      - name: 🤖 Build Debug APK
+        run: cd android && ./gradlew assembleDebug --no-daemon
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
+
+      # ── 10. Verify APK was built ──────────────────────────────────────
+      - name: 📋 List built APK
+        run: |
+          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ APK not found at expected path: $APK_PATH"
+            find android -name "*.apk" 2>/dev/null || echo "No APKs found anywhere"
+            exit 1
+          fi
+          SIZE=$(du -sh "$APK_PATH" | cut -f1)
+          echo "✅ APK built successfully: $APK_PATH ($SIZE)"
+
+      # ── 11. Rename APK with version ───────────────────────────────────
+      - name: 🏷️ Rename APK with version tag
+        run: |
+          VERSION="${{ github.ref_name }}"
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             "SadguruCoachingClasses-${VERSION}.apk"
+          echo "APK_FILE=SadguruCoachingClasses-${VERSION}.apk" >> $GITHUB_ENV
+
+      # ── 12. Upload APK as workflow artifact (backup) ──────────────────
+      - name: 📤 Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sadguru-apk-${{ github.ref_name }}
+          path: ${{ env.APK_FILE }}
+          retention-days: 30
+
+      # ── 13. Create GitHub Release with APK attached ───────────────────
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Sadguru Coaching Classes ${{ github.ref_name }}"
+          body: |
+            ## 📱 Sadguru Coaching Classes ${{ github.ref_name }}
+
+            ### 📥 Installation Instructions
+
+            1. Download the APK file below (`SadguruCoachingClasses-${{ github.ref_name }}.apk`)
+            2. On your Android phone, open the downloaded file
+            3. If prompted, allow "Install from unknown sources" in Settings → Security
+            4. Tap **Install** and wait for it to complete
+            5. Open **Sadguru Coaching Classes** from your home screen
+
+            > ⚠️ This is a debug build intended for student distribution.
+            > It requires Android 7.0 (API 24) or higher.
+
+            ---
+            *Built automatically from the latest codebase via GitHub Actions.*
+          files: ${{ env.APK_FILE }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

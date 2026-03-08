@@ -73,18 +73,26 @@ const Install = () => {
                 </p>
                 <Button asChild className="w-full gap-2">
                   <a
-                    href="https://github.com/sadguru-coaching/sadguru-app/releases/latest"
+                    href="https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/releases/latest"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <Download className="h-4 w-4" />
-                    Download APK from GitHub
+                    Download Latest APK
                   </a>
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  Note: You may need to enable "Install from unknown sources" in your phone settings.
-                  Once you create your GitHub repo, update this URL to your actual releases page.
-                </p>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    📌 <strong className="text-foreground">Admin:</strong> Replace the GitHub URL above with your actual
+                    repo releases link after connecting to GitHub.
+                  </p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Download the APK file</li>
+                    <li>Open the downloaded file on your phone</li>
+                    <li>Allow <strong className="text-foreground">"Install from unknown sources"</strong> if asked</li>
+                    <li>Tap <strong className="text-foreground">Install</strong> and open the app</li>
+                  </ol>
+                </div>
               </CardContent>
             </Card>
 

@@ -1,12 +1,20 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+// For local development with live-reload, temporarily restore the server block:
+// server: {
+//   url: 'https://33478fb9-7020-4ec9-be5f-04cb93d2fa17.lovableproject.com?forceHideBadge=true',
+//   cleartext: true,
+// }
+// For production APK builds (GitHub Actions), the server block is intentionally
+// removed so the APK bundles the built dist/ files and works self-contained.
+
 const config: CapacitorConfig = {
-  appId: 'app.lovable.b37af6442649452885c0456243e70148',
+  appId: 'app.lovable.33478fb970204ec9be5f04cb93d2fa17',
   appName: 'Sadguru Coaching Classes',
   webDir: 'dist',
-  server: {
-    url: 'https://b37af644-2649-4528-85c0-456243e70148.lovableproject.com?forceHideBadge=true',
-    cleartext: true,
+  android: {
+    allowMixedContent: true,
+    webContentsDebuggingEnabled: false,
   },
 };
 
