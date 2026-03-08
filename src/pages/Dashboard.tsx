@@ -62,6 +62,7 @@ const Dashboard = () => {
   const [progressPercent, setProgressPercent] = useState(0);
   const [loading, setLoading] = useState(true);
   const [quizAttempts, setQuizAttempts] = useState<QuizAttemptRow[]>([]);
+  const [upcomingDoubts, setUpcomingDoubts] = useState<{ id: string; subject: string | null; scheduled_at: string | null; zoom_join_url: string | null; status: string }[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
