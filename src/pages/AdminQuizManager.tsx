@@ -276,6 +276,11 @@ const AdminQuizManager = () => {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {quiz.total_marks} marks · {quiz.duration_minutes > 0 ? `${quiz.duration_minutes} min` : "No limit"} · Pass: {quiz.pass_percentage}%
                     </p>
+                    {quiz.lessons?.title && (
+                      <p className="text-xs text-primary/70 mt-0.5 flex items-center gap-1">
+                        <Link2 className="h-3 w-3" /> {quiz.lessons.title}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => loadQuizForEdit(quiz)} title="Edit questions">
