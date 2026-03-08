@@ -310,30 +310,7 @@ const Dashboard = () => {
               </Card>
             )}
 
-            {myCourses.length > 0 && (
-              <section>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-bold text-foreground">My Batches</h2>
-                  <Button variant="link" size="sm" onClick={() => navigate('/my-courses')}>View All</Button>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {myCourses.map((course) => (
-                    <Card key={course.id} className="hover:shadow-md transition-all cursor-pointer overflow-hidden" onClick={() => navigate(`/my-courses/${course.id}`)}>
-                      <div className="h-32 bg-muted relative">
-                        <img src={course.imageUrl || course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-bold text-base mb-1 line-clamp-1">{course.title}</h3>
-                        <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{course.description}</p>
-                        <Button size="sm" className="w-full">
-                          <PlayCircle className="h-4 w-4 mr-2" /> Start Learning
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
+            {/* My Batches section removed — same courses already shown in Continue Learning hero card above */}
           </div>
         )}
       </main>

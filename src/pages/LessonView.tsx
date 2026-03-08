@@ -462,7 +462,7 @@ const LessonView = () => {
                         <MahimaGhostPlayer
                             videoUrl={currentLesson.video_url}
                             title={currentLesson.title}
-                            subtitle={currentLesson.created_at ? new Date(currentLesson.created_at).toLocaleDateString() : undefined}
+                            subtitle={currentLesson.created_at ? new Date(currentLesson.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : undefined}
                             lessonId={currentLesson.id}
                             onReady={() => console.log('Video ready')}
                             onDurationReady={(dur) => setVideoDuration(dur)}
