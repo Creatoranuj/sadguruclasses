@@ -1,83 +1,114 @@
 
-## Root Cause: Missing `lovable.toml`
+## What the user wants
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+1. **Lesson Page Layout** — Match the Vedantu screenshot: prominent lesson title + date header, Likes/Comments/Doubts action bar (already exists), lesson info section with title/subject/description/"Read More", a "Smart Notes" / "Ask Doubt" card section, and a **"Topics Covered" timeline** with clickable timestamps.
+2. **Install page APK link** — Update the GitHub release URL from the placeholder `YOUR_USERNAME/YOUR_REPO` to the real URL, matching what the screenshot shows.
+3. **Documentation update** — Update `IMPLEMENTATION_STATUS.md` with a final comparison table.
 
----
+## What is already done (no changes needed)
 
-## Plan
+- Video player: `MahimaGhostPlayer` fully wired with watermark, controls, skip, settings, rotation — already rendered correctly in `LessonView.tsx`
+- `LessonActionBar`: Likes button + count, Doubts button, Class PDF / Download buttons — all wired to real data
+- Tabs: Overview, PDF, Resources, Notes, Discussion — all exist and functional
+- Comments system: real-time, image attachment, fully working
+- Progress tracking: 80% rule, `user_progress` upsert
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+## What needs to be built
 
-```toml
-[run]
-dev = "npm run dev"
-```
+### 1. Lesson info section enhancement (LessonView.tsx)
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+The current "info section" (lines 511–523) shows title, duration, and rating. We need to enhance it to match the screenshot:
 
----
+**Current:**
+- Title
+- Duration + Star rating
+- Tabs immediately follow
 
-### 2. Visual Polish — CSS & Theme Improvements
+**Desired (matching screenshot):**
+- Lesson title bold, large
+- Subject line: `Biology • 12 - neet_ug` style (using `course.subject`, `course.grade`, `course.category`)
+- Short description with **"Read More"** expand/collapse (truncate to 2 lines by default)
+- The `LessonActionBar` already shows Likes/Comments/Doubts — keep it, but add a **"Comments"** button (currently only "Doubts" — add a Comments button that scrolls to the Discussion tab)
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+### 2. Smart Notes + Ask Doubt cards (new section above tabs)
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+Between the action bar and the tabs, add 2 cards styled like the Vedantu screenshot:
+- **"Smart Notes"** card — pill icon + text + chevron → clicking opens/jumps to the Notes tab
+- **"Ask in class Doubt"** card — pill icon + "Get instant doubt solving" subtext + chevron → clicking opens the Discussion tab
 
----
+These are purely UI cards that navigate to the existing tab functionality. No new backend needed.
 
-### 3. Landing Page & Navigation Visual Fixes
+### 3. Topics Covered section (new collapsible in Overview tab)
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+The `lessons` table has a `description` and `overview` field. We'll add a "Topics Covered" collapsible section inside the **Overview** tab. Since there is no `lesson_topics` table, we will:
+- Parse the `overview` field as newline-separated `timestamp|topic` pairs (e.g. `0:00:18|Beginning the Plant Kingdom Chapter`)
+- If `overview` has no structured data, show a placeholder message for admin to add topics
+- For admin users, show an editable textarea to set the topics (saved to `overview` field in Supabase)
 
----
+This approach requires **no DB migration** — reuses the existing `overview` column that already exists on the `lessons` table.
 
-### 4. Global Component Polish in `src/index.css`
+### 4. Fix Install page APK link
 
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
+`Install.tsx` line 76: `href="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest"` — update this to a real GitHub releases URL. Since we don't know the actual repo, we'll update it to a sensible placeholder that admins can configure, and add a note. Based on the project context (Sadguru Coaching Classes), the URL will be: `https://github.com/sadguru-coaching/sadguru-app/releases/latest` with a note that this needs to be updated once the GitHub repo is created.
 
----
+### 5. Update IMPLEMENTATION_STATUS.md
 
-### 5. Branding Consistency
+Add final Session 7 entry with table comparing what was done.
 
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
+## Files to change
 
 | File | Change |
 |------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+| `src/pages/LessonView.tsx` | Enhance lesson info section + add Smart Notes/Doubt cards + Topics Covered in Overview tab |
+| `src/components/video/LessonActionBar.tsx` | Add "Comments" button alongside Doubts; clean up duplicate Download/Class PDF buttons |
+| `src/pages/Install.tsx` | Update APK download URL |
+| `IMPLEMENTATION_STATUS.md` | Append final status table |
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+## Detailed design for LessonView.tsx changes
 
----
+### A. LessonActionBar — fix duplicate buttons + add Comments
 
-## Note on Visual Editor
+Currently has both "Download" AND "Class PDF" buttons that do the same thing (lines 71–98). This is a bug — they render twice. Fix: keep only one "Class PDF" button. Also add a "Comments" button between Likes and Doubts.
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+New button row: `[Likes] [Comments] [Doubts] [Class PDF (conditional)]`
+
+### B. Lesson info section (after LessonActionBar, before Tabs)
+
+```
+┌────────────────────────────────────────────┐
+│ Plant Kingdom 1 | Tarun Kumar              │  ← lessonTitle (bold)
+│ Biology • Class 12 · neet_ug    [Class PDF]│  ← course.subject • grade  + PDF pill
+│ Plants are awesome... [Read More]           │  ← description, 2-line truncate + toggle
+└────────────────────────────────────────────┘
+```
+
+### C. Smart Notes + Ask Doubt cards (before tabs)
+
+```
+┌──────────────────────────────────┐
+│ 📋 Smart Notes                 > │
+└──────────────────────────────────┘
+┌──────────────────────────────────┐
+│ ❓ Ask in class Doubt            │
+│    Get instant doubt solving    >│
+└──────────────────────────────────┘
+```
+
+These are `<button>` elements styled as rounded cards that call `tabsTrigger.click()` to switch tabs.
+
+### D. Topics Covered in Overview tab
+
+```
+▼ Topics Covered
+  0:00:18  Beginning the Plant Kingdom Chapter
+  0:02:06  Introduction to Plant Kingdom  
+  0:07:48  System of Classification: Revisiting Five
+```
+
+Parse from `currentLesson.overview` using format `timestamp|topic\n` per line.
+For admins: show an "Edit Topics" textarea + save button that updates `overview` via Supabase.
+If no topics set, show "Topics will be added soon."
+
+## APK / GitHub release note
+
+The `Install.tsx` will be updated with a note explaining the admin needs to paste their actual GitHub release URL. The `capacitor.config.ts` and `docs/APK-BUILD-GUIDE.md` already document the full APK build process. **We cannot generate the actual APK file inside Lovable** — that must be done locally via Android Studio as documented. We will update the Install page to reflect the correct project name and make the URL easy to update.
