@@ -488,23 +488,27 @@ const MahimaGhostPlayer = memo(({
     );
   }
 
+
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPercentage = duration > 0 ? (bufferedTime / duration) * 100 : 0;
 
-  // Rotation styles — only 0° or 90° toggle
-  const isRotated = rotation === 90;
-  const rotationStyle: React.CSSProperties = isRotated ? {
-    transform: 'rotate(90deg)',
+  // Rotation styles — supports 0, 90, 180, 270 degrees
+  const isLandscapeRotation = rotation === 90 || rotation === 270;
+  const rotationStyle: React.CSSProperties = rotation !== 0 ? {
+    transform: `rotate(${rotation}deg)`,
     transformOrigin: 'center center',
     transition: 'transform 0.3s ease',
-    width: '100vh',
-    height: '100vw',
-    position: 'absolute' as const,
-    top: '50%',
-    left: '50%',
-    marginLeft: '-50vh',
-    marginTop: '-50vw',
+    ...(isLandscapeRotation ? {
+      width: '100vh',
+      height: '100vw',
+      position: 'absolute' as const,
+      top: '50%',
+      left: '50%',
+      marginLeft: '-50vh',
+      marginTop: '-50vw',
+    } : {}),
   } : { transition: 'transform 0.3s ease' };
+
 
   return (
     <>
@@ -799,29 +803,29 @@ const MahimaGhostPlayer = memo(({
                 )}
               </div>
 
-              {/* Rotate CW — toggle 90° fullscreen */}
+              {/* Rotate CCW button */}
               <button
-                className="h-10 w-10 md:h-11 md:w-11 flex items-center justify-center outline-none focus:outline-none pointer-events-auto"
-                onClick={async () => {
-                  if (rotation === 0) {
-                    setRotation(90);
-                    if (!document.fullscreenElement) {
-                      try { await containerRef.current?.requestFullscreen(); setIsFullscreen(true); } catch {}
-                    }
-                  } else {
-                    setRotation(0);
-                    if (document.fullscreenElement) {
-                      try { await document.exitFullscreen(); setIsFullscreen(false); } catch {}
-                    }
-                  }
-                }}
-                title="Rotate video"
+                className="h-10 w-10 md:h-11 md:w-11 flex items-center justify-center outline-none focus:outline-none pointer-events-auto text-white hover:bg-white/20 rounded-lg transition-colors"
+                onClick={(e) => { e.stopPropagation(); rotateCCW(); }}
+                title="Rotate counter-clockwise"
+                aria-label="Rotate counter-clockwise"
               >
-                <img src={rotationIcon} alt="Rotate" className="h-8 w-8 md:h-9 md:w-9" draggable={false} />
+                <RotateCcw className="h-5 w-5 md:h-6 md:w-6" />
+              </button>
+
+              {/* Rotate CW button */}
+              <button
+                className="h-10 w-10 md:h-11 md:w-11 flex items-center justify-center outline-none focus:outline-none pointer-events-auto text-white hover:bg-white/20 rounded-lg transition-colors"
+                onClick={(e) => { e.stopPropagation(); rotateCW(); }}
+                title="Rotate clockwise"
+                aria-label="Rotate clockwise"
+              >
+                <RotateCw className="h-5 w-5 md:h-6 md:w-6" />
               </button>
             </div>
           </div>
         </div>
+
 
         {/* DISCUSSION BOTTOM SHEET */}
         {showDiscussion && lessonId && (
