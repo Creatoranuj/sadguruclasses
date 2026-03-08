@@ -1,4 +1,4 @@
-import { Play, FileText, BookOpen, Lock, Download, Copy, ClipboardCheck } from "lucide-react";
+import { Play, Lock, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import checkmarkIcon from "@/assets/icons/checkmark-3d.png";
