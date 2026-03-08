@@ -863,49 +863,53 @@ const Admin = () => {
             <TabsTrigger value="live" className="py-2 gap-1 text-destructive data-[state=active]:text-destructive"><Radio className="h-4 w-4" />Live</TabsTrigger>
           </TabsList>
 
-          {/* --- TAB 1: PAYMENTS (with Notion-like features) --- */}
+          {/* --- TAB 1: UNIFIED PAYMENTS --- */}
           <TabsContent value="payments">
+            {/* Revenue stats */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <Card className="p-3 text-center">
+                <p className="text-xs text-muted-foreground">Total Revenue</p>
+                <p className="text-xl font-bold text-primary">₹{statsData.totalRevenue.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Manual + Razorpay</p>
+              </Card>
+              <Card className="p-3 text-center">
+                <p className="text-xs text-muted-foreground">Manual UPI</p>
+                <p className="text-xl font-bold">₹{payments.filter(p=>p.status==='approved').reduce((s,p)=>s+(p.amount||0),0).toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{payments.filter(p=>p.status==='approved').length} approved</p>
+              </Card>
+              <Card className="p-3 text-center">
+                <p className="text-xs text-muted-foreground">Razorpay</p>
+                <p className="text-xl font-bold">₹{razorpayPayments.filter(p=>p.status==='completed').reduce((s,p)=>s+(p.amount||0),0).toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{razorpayPayments.filter(p=>p.status==='completed').length} completed</p>
+              </Card>
+            </div>
             <Card className="border shadow-sm">
               <CardHeader className="bg-orange-50/50 border-b pb-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <CardTitle className="flex items-center gap-2 text-orange-700">
                     <ShieldAlert className="h-5 w-5" />
-                    Payment Requests
+                    All Payments ({filteredPayments.length})
                   </CardTitle>
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Search */}
                     <div className="relative flex-1 min-w-[200px]">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input 
-                        placeholder="Search by name, UTR, email..." 
-                        value={paymentSearch}
-                        onChange={(e) => setPaymentSearch(e.target.value)}
-                        className="pl-9 bg-white"
-                      />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Search name, UTR, course..." value={paymentSearch} onChange={(e) => setPaymentSearch(e.target.value)} className="pl-9" />
                     </div>
-                    {/* Filter */}
                     <Select value={paymentStatusFilter} onValueChange={(v: any) => setPaymentStatusFilter(v)}>
-                      <SelectTrigger className="w-[130px] bg-white">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className="w-[130px]"><Filter className="h-4 w-4 mr-2" /><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="rejected">Rejected</SelectItem>
                       </SelectContent>
                     </Select>
-                    {/* Export */}
                     <Button variant="outline" size="sm" onClick={() => exportToCSV(filteredPayments.map(p => ({
-                      sender_name: p.sender_name,
-                      transaction_id: p.transaction_id,
-                      amount: p.amount,
-                      status: p.status,
-                      course: p.courses?.title,
-                      user: p.profiles?.full_name,
-                      email: p.profiles?.email,
-                      created_at: p.created_at
+                      method: p._method === 'razorpay' ? 'Razorpay' : 'UPI Manual',
+                      name: p._displayName, course: p._course,
+                      amount: p._amount, status: p._status, date: p._date,
+                      ref: p.transaction_id || p.razorpay_payment_id || '',
                     })), 'payments')}>
                       <Download className="h-4 w-4 mr-1" /> Export
                     </Button>
@@ -917,88 +921,68 @@ const Admin = () => {
                   {filteredPayments.length === 0 ? (
                     <div className="text-center py-12">
                       <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3 opacity-20" />
-                      <p className="text-muted-foreground">No payment requests found.</p>
+                      <p className="text-muted-foreground">No payments found.</p>
                     </div>
                   ) : (
                     <div className="divide-y">
                       {filteredPayments.map((req) => (
-                        <div key={req.id} className="p-4 md:p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row gap-6">
-                          
-                          {/* Left: Info */}
+                        <div key={req._key} className="p-4 md:p-5 hover:bg-muted/30 transition-colors flex flex-col md:flex-row gap-4">
                           <div className="flex-1 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-bold text-lg text-gray-900">{req.courses?.title || "Unknown Course"}</h3>
-                                  {getStatusBadge(req.status)}
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-bold text-foreground">{req._course}</h3>
+                                  {getStatusBadge(req._status)}
+                                  <Badge variant={req._method === 'razorpay' ? 'default' : 'outline'} className="text-xs">
+                                    {req._method === 'razorpay' ? '💳 Razorpay' : '📱 UPI Manual'}
+                                  </Badge>
                                 </div>
-                                <p className="text-sm text-gray-500">
-                                  App User: <span className="font-medium text-gray-700">{req.profiles?.full_name || "N/A"}</span> ({req.profiles?.email})
+                                <p className="text-sm text-muted-foreground">
+                                  {req._method === 'razorpay'
+                                    ? `Order: ${req.razorpay_order_id?.slice(-8) || '—'}`
+                                    : `${req._displayName} · ${req._email || '—'}`}
                                 </p>
                               </div>
-                              <Badge variant="outline" className="text-lg px-3 py-1 bg-green-50 text-green-700 border-green-200">
-                                ₹{req.amount}
-                              </Badge>
+                              <Badge variant="outline" className="text-base px-3 py-1 shrink-0">₹{req._amount}</Badge>
                             </div>
-
-                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-sm space-y-1">
-                              <p className="flex justify-between">
-                                <span className="text-blue-600 font-medium">Bank Sender Name:</span>
-                                <span className="font-bold text-gray-800">{req.sender_name || "Not Provided"}</span>
-                              </p>
-                              <p className="flex justify-between">
-                                <span className="text-blue-600 font-medium">UTR / Ref No:</span>
-                                <span className="font-mono font-bold text-gray-800">{req.transaction_id}</span>
-                              </p>
+                            {req._method === 'upi' && (
+                              <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg text-xs space-y-1 border border-blue-100 dark:border-blue-900">
+                                <p className="flex justify-between"><span className="text-blue-600 font-medium">Sender:</span><span className="font-bold">{req.sender_name || '—'}</span></p>
+                                <p className="flex justify-between"><span className="text-blue-600 font-medium">UTR:</span><span className="font-mono font-bold">{req.transaction_id || '—'}</span></p>
+                              </div>
+                            )}
+                            {req._method === 'razorpay' && req.razorpay_payment_id && (
+                              <div className="bg-primary/5 p-2 rounded-lg text-xs border border-primary/10">
+                                <p>Payment ID: <span className="font-mono">{req.razorpay_payment_id}</span></p>
+                              </div>
+                            )}
+                            <p className="text-xs text-muted-foreground">{new Date(req._date).toLocaleString('en-IN')}</p>
+                          </div>
+                          {/* Actions — only for manual UPI pending */}
+                          {req._method === 'upi' && (
+                            <div className="flex flex-col gap-2 min-w-[180px]">
+                              {req.screenshot_url && (
+                                <a href="#" onClick={async (e) => {
+                                  e.preventDefault();
+                                  const { data, error } = await supabase.storage.from('receipts').createSignedUrl(req.screenshot_url, 3600);
+                                  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                                  else if (error) toast.error('Could not load screenshot');
+                                }}>
+                                  <Button variant="outline" className="w-full" size="sm"><Eye className="h-4 w-4 mr-2" />View Screenshot</Button>
+                                </a>
+                              )}
+                              {req._status === 'pending' && (
+                                <div className="flex gap-2">
+                                  <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => handleApprovePayment(req)}>
+                                    <CheckCircle className="h-4 w-4 mr-1" />Approve
+                                  </Button>
+                                  <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleRejectPayment(req.id)}>
+                                    <XCircle className="h-4 w-4 mr-1" />Reject
+                                  </Button>
+                                </div>
+                              )}
                             </div>
-                          </div>
-
-                          {/* Right: Actions & Proof */}
-                          <div className="flex flex-col gap-3 min-w-[200px]">
-                             {/* Screenshot Button */}
-                             {req.screenshot_url ? (
-                               <a 
-                                 href="#"
-                                 onClick={async (e) => {
-                                   e.preventDefault();
-                                   // Generate a 1-hour signed URL for the private receipts bucket
-                                   const { data, error } = await supabase.storage
-                                     .from('receipts')
-                                     .createSignedUrl(req.screenshot_url, 3600);
-                                   if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                                   else if (error) toast.error('Could not load screenshot');
-                                 }}
-                                 target="_blank" 
-                                 rel="noopener noreferrer"
-                                 className="w-full"
-                               >
-                                 <Button variant="outline" className="w-full border-dashed border-gray-400 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300">
-                                   <Eye className="h-4 w-4 mr-2" /> View Screenshot
-                                 </Button>
-                               </a>
-                             ) : (
-                               <div className="text-xs text-red-500 text-center py-2 bg-red-50 rounded">No Screenshot</div>
-                             )}
-
-                             {req.status === 'pending' && (
-                               <div className="flex gap-2 mt-auto">
-                                 <Button 
-                                   className="flex-1 bg-green-600 hover:bg-green-700 text-white" 
-                                   onClick={() => handleApprovePayment(req)}
-                                 >
-                                   <CheckCircle className="h-4 w-4 mr-1" /> Approve
-                                 </Button>
-                                 <Button 
-                                   variant="destructive" 
-                                   className="flex-1" 
-                                   onClick={() => handleRejectPayment(req.id)}
-                                 >
-                                   <XCircle className="h-4 w-4 mr-1" /> Reject
-                                 </Button>
-                               </div>
-                             )}
-                          </div>
-
+                          )}
                         </div>
                       ))}
                     </div>
