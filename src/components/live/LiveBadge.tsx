@@ -15,8 +15,8 @@ const LiveBadge = () => {
 
   useEffect(() => {
     const fetchActive = async () => {
-      const { data } = await supabase
-        .from("live_sessions" as any)
+      const { data } = await (supabase as any)
+        .from("live_sessions")
         .select("id, title")
         .eq("is_active", true)
         .maybeSingle();
@@ -25,7 +25,6 @@ const LiveBadge = () => {
 
     fetchActive();
 
-    // Subscribe to live_sessions changes
     const channel = supabase
       .channel("live-badge-watch")
       .on("postgres_changes", { event: "*", schema: "public", table: "live_sessions" }, () => {
@@ -39,23 +38,23 @@ const LiveBadge = () => {
   if (!activeSession) return null;
 
   return (
-    <div className="relative flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 mb-4 overflow-hidden">
-      {/* Pulse background */}
-      <div className="absolute inset-0 bg-red-500/5 animate-pulse rounded-xl" />
+    <div className="relative flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 mb-4 overflow-hidden">
+      <div className="absolute inset-0 bg-destructive/5 animate-pulse rounded-xl" />
       <div className="relative flex items-center gap-2 flex-1">
         <span className="relative flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive" />
         </span>
-        <Radio className="h-4 w-4 text-red-500" />
+        <Radio className="h-4 w-4 text-destructive" />
         <div>
-          <p className="text-sm font-bold text-red-600 dark:text-red-400">LIVE CLASS NOW</p>
+          <p className="text-sm font-bold text-destructive">LIVE CLASS NOW</p>
           <p className="text-xs text-muted-foreground line-clamp-1">{activeSession.title}</p>
         </div>
       </div>
       <Button
         size="sm"
-        className="relative bg-red-500 hover:bg-red-600 text-white shrink-0"
+        variant="destructive"
+        className="relative shrink-0"
         onClick={() => navigate(`/live/${activeSession.id}`)}
       >
         Join Now

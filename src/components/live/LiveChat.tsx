@@ -36,12 +36,11 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
   const [answerText, setAnswerText] = useState("");
   const [sending, setSending] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
-  const doubtBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
-      const { data } = await supabase
-        .from("live_messages" as any)
+      const { data } = await (supabase as any)
+        .from("live_messages")
         .select("*")
         .eq("session_id", sessionId)
         .order("created_at", { ascending: true });
@@ -62,7 +61,6 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
     return () => { supabase.removeChannel(channel); };
   }, [sessionId]);
 
-  // Auto-scroll chat
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -73,8 +71,8 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
     if (!text) return;
 
     setSending(true);
-    const { error } = await supabase
-      .from("live_messages" as any)
+    const { error } = await (supabase as any)
+      .from("live_messages")
       .insert({
         session_id: sessionId,
         user_id: user.id,
@@ -94,8 +92,8 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
 
   const handleAnswerDoubt = async (doubtId: string) => {
     if (!answerText.trim()) return;
-    const { error } = await supabase
-      .from("live_messages" as any)
+    const { error } = await (supabase as any)
+      .from("live_messages")
       .update({ is_answered: true, answer: answerText.trim() })
       .eq("id", doubtId);
 
@@ -123,7 +121,7 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
         <TabsTrigger value="doubts" className="gap-1 text-xs">
           <HelpCircle className="h-3.5 w-3.5" /> Doubts
           {unansweredCount > 0 && (
-            <Badge className="bg-red-500 text-white text-[10px] h-4 px-1 ml-1">{unansweredCount}</Badge>
+            <Badge className="bg-destructive text-destructive-foreground text-[10px] h-4 px-1 ml-1">{unansweredCount}</Badge>
           )}
         </TabsTrigger>
       </TabsList>
@@ -175,17 +173,17 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
             )}
             {doubtMessages.map((doubt) => (
               <div key={doubt.id} className="bg-muted rounded-xl p-3 space-y-2">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="text-xs font-semibold text-foreground">{doubt.user_name}</span>
                       <span className="text-[10px] text-muted-foreground">{formatTime(doubt.created_at)}</span>
                       {doubt.is_answered ? (
-                        <Badge className="bg-green-500/15 text-green-600 border-green-200 text-[10px] gap-0.5 h-4 px-1.5">
+                        <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] gap-0.5 h-4 px-1.5">
                           <CheckCircle2 className="h-3 w-3" /> Answered
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 text-orange-500 border-orange-300">Pending</Badge>
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5">Pending</Badge>
                       )}
                     </div>
                     <p className="text-sm text-foreground">{doubt.message}</p>
@@ -193,8 +191,8 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
                 </div>
 
                 {doubt.is_answered && doubt.answer && (
-                  <div className="bg-green-500/10 border border-green-200 rounded-lg p-2">
-                    <p className="text-[10px] font-semibold text-green-700 dark:text-green-400 mb-0.5">Teacher's Answer:</p>
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
+                    <p className="text-[10px] font-semibold text-primary mb-0.5">Teacher's Answer:</p>
                     <p className="text-xs text-foreground">{doubt.answer}</p>
                   </div>
                 )}
@@ -210,7 +208,7 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
                       />
                       <div className="flex gap-2">
                         <Button size="sm" className="text-xs h-7 flex-1" onClick={() => handleAnswerDoubt(doubt.id)}>Submit Answer</Button>
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setAnsweringId(null)}>Cancel</Button>
+                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setAnsweringId(null); setAnswerText(""); }}>Cancel</Button>
                       </div>
                     </div>
                   ) : (
@@ -221,7 +219,6 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
                 )}
               </div>
             ))}
-            <div ref={doubtBottomRef} />
           </div>
         </ScrollArea>
         <div className="flex gap-2 p-3 border-t border-border shrink-0">
@@ -232,7 +229,7 @@ const LiveChat = ({ sessionId, isAdmin = false }: LiveChatProps) => {
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage("doubt")}
             className="text-sm h-9"
           />
-          <Button size="icon" className="h-9 w-9 shrink-0 bg-orange-500 hover:bg-orange-600" onClick={() => sendMessage("doubt")} disabled={sending || !doubtInput.trim()}>
+          <Button size="icon" className="h-9 w-9 shrink-0" onClick={() => sendMessage("doubt")} disabled={sending || !doubtInput.trim()}>
             <HelpCircle className="h-4 w-4" />
           </Button>
         </div>
