@@ -258,6 +258,7 @@ const LessonView = () => {
           ...l,
           video_url: '',
           class_pdf_url: null,
+          overview: l.overview || null,
         }));
         
         setLessons(mappedLessons);
