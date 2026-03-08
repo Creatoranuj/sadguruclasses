@@ -325,6 +325,32 @@ const Dashboard = () => {
             )}
 
             {/* My Batches section removed — same courses already shown in Continue Learning hero card above */}
+
+            {/* Upcoming Doubt Sessions card */}
+            {upcomingDoubts.length > 0 && (
+              <Card
+                className="border border-primary/20 bg-primary/5 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate("/doubts")}
+              >
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary/10 shrink-0">
+                    <Video className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      {upcomingDoubts.length} Upcoming Zoom Session{upcomingDoubts.length > 1 ? "s" : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {upcomingDoubts[0].subject || "Doubt Session"} —{" "}
+                      {upcomingDoubts[0].scheduled_at
+                        ? new Date(upcomingDoubts[0].scheduled_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                        : "Scheduled"}
+                    </p>
+                  </div>
+                  <Badge className="bg-primary/10 text-primary border-primary/20 shrink-0">Join</Badge>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </main>
