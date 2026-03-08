@@ -556,6 +556,41 @@ export type Database = {
           },
         ]
       }
+      live_participants: {
+        Row: {
+          hand_raised: boolean
+          id: string
+          joined_at: string
+          session_id: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          hand_raised?: boolean
+          id?: string
+          joined_at?: string
+          session_id: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          hand_raised?: boolean
+          id?: string
+          joined_at?: string
+          session_id?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_sessions: {
         Row: {
           course_id: number | null
@@ -565,6 +600,7 @@ export type Database = {
           ended_at: string | null
           id: string
           is_active: boolean | null
+          recording_url: string | null
           scheduled_at: string | null
           started_at: string | null
           title: string
@@ -578,6 +614,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           is_active?: boolean | null
+          recording_url?: string | null
           scheduled_at?: string | null
           started_at?: string | null
           title: string
@@ -591,6 +628,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           is_active?: boolean | null
+          recording_url?: string | null
           scheduled_at?: string | null
           started_at?: string | null
           title?: string
