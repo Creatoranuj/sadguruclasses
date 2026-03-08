@@ -661,20 +661,32 @@ const MahimaGhostPlayer = memo(({
               const container = containerRef.current;
               if (!container) { handleOverlayTouchStart(e); return; }
               const rect = container.getBoundingClientRect();
-              const side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+
+              // ── Rotation-aware side detection ─────────────────────────────
+              // When rotated 90°: DOM "left" is visual "top" → finger on visual left = high clientY
+              // When rotated 270°: DOM "left" is visual "bottom" → finger on visual left = low clientY
+              let side: 'left' | 'right';
+              if (rotation === 90) {
+                // Visual left half = high clientY in DOM space
+                side = touch.clientY - rect.top > rect.height / 2 ? 'left' : 'right';
+              } else if (rotation === 270) {
+                side = touch.clientY - rect.top < rect.height / 2 ? 'left' : 'right';
+              } else {
+                side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+              }
+              // ─────────────────────────────────────────────────────────────
 
               // ── Double-tap detection ──────────────────────────────────────
               const now = Date.now();
               const last = lastTapRef.current;
               if (last && now - last.time < 300 && last.side === side) {
-                // Double-tap confirmed — skip 10s
                 clearTimeout(doubleTapTimerRef.current);
                 lastTapRef.current = null;
                 if (side === 'left') skipBackward();
                 else skipForward();
                 setDoubleTapRipple({ side, key: now });
-                setTimeout(() => setDoubleTapRipple(null), 700);
-                return; // don't start swipe / show controls
+                setTimeout(() => setDoubleTapRipple(null), 750);
+                return;
               }
               lastTapRef.current = { time: now, side };
               doubleTapTimerRef.current = setTimeout(() => { lastTapRef.current = null; }, 300);
@@ -723,40 +735,42 @@ const MahimaGhostPlayer = memo(({
             {doubleTapRipple && (
               <div
                 key={doubleTapRipple.key}
-                className="absolute inset-y-0 pointer-events-none z-50 flex items-center overflow-hidden"
+                className="absolute inset-y-0 pointer-events-none z-50 flex items-center"
                 style={{
                   left: doubleTapRipple.side === 'left' ? 0 : '50%',
                   right: doubleTapRipple.side === 'right' ? 0 : '50%',
+                  overflow: 'hidden',
+                  borderRadius: doubleTapRipple.side === 'left' ? '0 999px 999px 0' : '999px 0 0 999px',
                 }}
               >
-                {/* Expanding arc ripple */}
+                {/* Expanding circle ripple */}
                 <div
                   className="absolute"
                   style={{
-                    width: '130px', height: '130px',
+                    width: '160px', height: '160px',
                     borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.18)',
-                    top: '50%', marginTop: '-65px',
-                    ...(doubleTapRipple.side === 'left' ? { left: '-50px' } : { right: '-50px' }),
-                    animation: 'dt-ripple 0.65s ease-out forwards',
+                    background: 'rgba(255,255,255,0.15)',
+                    top: '50%', marginTop: '-80px',
+                    ...(doubleTapRipple.side === 'left' ? { left: '-70px' } : { right: '-70px' }),
+                    animation: 'dt-ripple 0.75s ease-out forwards',
                   }}
                 />
-                {/* Label "+10s" / "-10s" */}
+                {/* Icon + label */}
                 <div
-                  className="absolute flex flex-col items-center gap-1"
+                  className="absolute flex flex-col items-center gap-1.5"
                   style={{
                     top: '50%', transform: 'translateY(-50%)',
-                    ...(doubleTapRipple.side === 'left' ? { left: '18px' } : { right: '18px' }),
-                    animation: 'dt-label 0.65s ease-out forwards',
+                    ...(doubleTapRipple.side === 'left' ? { left: '20px' } : { right: '20px' }),
+                    animation: 'dt-label 0.75s ease-out forwards',
                   }}
                 >
                   <img
                     src={doubleTapRipple.side === 'left' ? skipBack10Icon : skipForward10Icon}
                     alt={doubleTapRipple.side === 'left' ? '-10s' : '+10s'}
-                    style={{ width: '36px', height: '36px', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.7))' }}
+                    style={{ width: '40px', height: '40px', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}
                   />
-                  <span style={{ color: 'white', fontSize: '13px', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
-                    {doubleTapRipple.side === 'left' ? '- 10 seconds' : '+ 10 seconds'}
+                  <span style={{ color: 'white', fontSize: '12px', fontWeight: 700, textShadow: '0 1px 6px rgba(0,0,0,0.9)', whiteSpace: 'nowrap' }}>
+                    {doubleTapRipple.side === 'left' ? '– 10 seconds' : '+ 10 seconds'}
                   </span>
                 </div>
               </div>
