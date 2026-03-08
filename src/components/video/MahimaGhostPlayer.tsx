@@ -215,11 +215,11 @@ const MahimaGhostPlayer = memo(({
   const isInLastTenSeconds = duration > 0 && (duration - currentTime) <= 10;
   const watermarkVisible = currentTime >= 10 || showEndScreen || isInLastTenSeconds;
 
-  // Show/hide controls — prevent auto-hide in last 10 seconds
-  const handleMouseMove = useCallback(() => {
+  // Show controls immediately on any interaction, reset auto-hide timer
+  const showControlsNow = useCallback(() => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    if (isInLastTenSeconds) return; // Don't auto-hide in last 10 seconds
+    if (isInLastTenSeconds) return;
     controlsTimeoutRef.current = setTimeout(() => {
       if (isPlaying && !showVolumeSlider && !showSpeedMenu && !showDiscussion) {
         setShowControls(false);
@@ -227,23 +227,35 @@ const MahimaGhostPlayer = memo(({
     }, 3000);
   }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion, isInLastTenSeconds]);
 
-  // Single tap toggles controls only — also starts auto-hide timer when showing
+  // Mouse move on desktop: show controls + reset timer
+  const handleMouseMove = useCallback(() => {
+    showControlsNow();
+  }, [showControlsNow]);
+
+  // Touch: show controls instantly on touchstart (no 300ms click delay)
+  const handleOverlayTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    showControlsNow();
+  }, [showControlsNow]);
+
+  // Click: on desktop toggle; on touch it fires after touchstart already showed controls
   const handleOverlayTap = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    setShowControls(prev => {
-      const next = !prev;
-      if (next && isPlaying) {
-        // Start auto-hide timer when showing controls
-        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-        controlsTimeoutRef.current = setTimeout(() => {
-          if (!showVolumeSlider && !showSpeedMenu && !showDiscussion) {
-            setShowControls(false);
-          }
-        }, 3000);
-      }
-      return next;
-    });
-  }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion]);
+    if (!('ontouchstart' in window)) {
+      setShowControls(prev => {
+        const next = !prev;
+        if (next && !isInLastTenSeconds) {
+          if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+          controlsTimeoutRef.current = setTimeout(() => {
+            if (isPlaying && !showVolumeSlider && !showSpeedMenu && !showDiscussion) {
+              setShowControls(false);
+            }
+          }, 3000);
+        }
+        return next;
+      });
+    }
+  }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion, isInLastTenSeconds]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -570,10 +582,11 @@ const MahimaGhostPlayer = memo(({
              <span className="text-white text-[10px] font-semibold tracking-wide opacity-80">SC</span>
           </div>
 
-          {/* GHOST OVERLAY - single-tap toggles controls only */}
+          {/* GHOST OVERLAY - touchstart for instant response, click for desktop */}
           <div
             className="absolute inset-0 z-40"
             onClick={handleOverlayTap}
+            onTouchStart={handleOverlayTouchStart}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
