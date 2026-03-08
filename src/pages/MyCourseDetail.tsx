@@ -734,13 +734,39 @@ const MyCourseDetail = () => {
                 })}
               </div>
 
+              {/* Search bar */}
+              <div className="px-5 pb-1 pt-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search lessons…"
+                    value={lessonSearch}
+                    onChange={(e) => setLessonSearch(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 text-sm bg-muted rounded-xl border-0 outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+                  />
+                  {lessonSearch && (
+                    <button
+                      onClick={() => setLessonSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Lessons */}
               <div className="p-5 space-y-4">
                 {filteredLessons.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-muted-foreground font-medium">No content found</p>
-                    <p className="text-sm text-muted-foreground/70 mt-1">Try switching tabs or check back later.</p>
+                    <p className="text-muted-foreground font-medium">
+                      {lessonSearch ? `No lessons match "${lessonSearch}"` : "No content found"}
+                    </p>
+                    <p className="text-sm text-muted-foreground/70 mt-1">
+                      {lessonSearch ? "Try a different search term." : "Try switching tabs or check back later."}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
