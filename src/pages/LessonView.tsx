@@ -684,7 +684,51 @@ const LessonView = () => {
                                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
                                             {(profile?.fullName || user.email)?.charAt(0)?.toUpperCase() || '?'}
                                         </div>
-...
+                                        <div className="flex-1 space-y-2">
+                                            <Textarea
+                                                placeholder="Post a comment or question..."
+                                                value={newComment}
+                                                onChange={(e) => setNewComment(e.target.value)}
+                                                className="min-h-[80px] resize-none"
+                                            />
+                                            {commentImagePreview && (
+                                                <div className="relative inline-block">
+                                                    <img src={commentImagePreview} alt="Preview" className="max-w-xs max-h-32 rounded-lg border" />
+                                                    <button
+                                                        onClick={removeCommentImage}
+                                                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between">
+                                                <label className="cursor-pointer flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                                                    <ImageIcon className="h-4 w-4" />
+                                                    <span>Attach Image</span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={handleCommentImageSelect}
+                                                    />
+                                                </label>
+                                                <Button
+                                                    onClick={handlePostComment}
+                                                    disabled={isPostingComment || uploadingImage || (!newComment.trim() && !commentImage)}
+                                                    size="sm"
+                                                    className="gap-2"
+                                                >
+                                                    {isPostingComment ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Send className="h-4 w-4" />
+                                                    )}
+                                                    {uploadingImage ? 'Uploading...' : 'Post Comment'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 ) : (
                                     <div className="text-center py-4 bg-muted/30 rounded-lg">
                                         <p className="text-muted-foreground text-sm">Please login to post comments</p>
@@ -708,25 +752,25 @@ const LessonView = () => {
                                     ) : (
                                         comments.map((comment) => (
                                             <div key={comment.id} className="flex gap-3 p-4 bg-muted/30 rounded-lg">
-                                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center text-blue-600 font-bold text-xs flex-shrink-0">
+                                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
                                                     {comment.userName?.charAt(0)?.toUpperCase() || '?'}
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-medium text-gray-900 text-sm">
+                                                        <span className="font-medium text-foreground text-sm">
                                                             {comment.userName}
                                                         </span>
-                                                        <span className="text-xs text-gray-400">
+                                                        <span className="text-xs text-muted-foreground">
                                                             {formatRelativeTime(comment.createdAt)}
                                                         </span>
                                                     </div>
-                                                    <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                                                    <p className="text-foreground text-sm whitespace-pre-wrap">
                                                         {comment.message}
                                                     </p>
                                                     {comment.imageUrl && (
-                                                        <img 
-                                                            src={comment.imageUrl} 
-                                                            alt="Comment attachment" 
+                                                        <img
+                                                            src={comment.imageUrl}
+                                                            alt="Comment attachment"
                                                             className="mt-2 max-w-xs rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
                                                             onClick={() => window.open(comment.imageUrl!, '_blank')}
                                                         />
