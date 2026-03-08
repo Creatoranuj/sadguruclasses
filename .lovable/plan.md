@@ -1,79 +1,83 @@
 
-## Current State
+## Root Cause: Missing `lovable.toml`
 
-All sidebar items already have working routes and page components:
-- `/books` → `Books.tsx` ✓
-- `/notices` → `Notices.tsx` ✓  
-- `/students` → `Students.tsx` ✓
-- `/attendance` → `Attendance.tsx` ✓
-- `/reports` → `Reports.tsx` ✓
-- `/messages` → `Messages.tsx` ✓
-- `/profile` → `Profile.tsx` ✓
-- `/settings` → `Settings.tsx` ✓
-- `/admin` → `Admin.tsx` (admin-only, already guarded) ✓
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-## Issues to Fix
-
-**1. Role-based visibility gaps**
-- `Students` and `Attendance` are admin/teacher-only features but visible to all users in the sidebar
-- `Reports` is currently open to all — reasonable to keep for students (it shows their own progress)
-- The `isAdmin` flag is already available from `useAuth()`; need to also check `isTeacher`
-
-**2. Active state doesn't handle nested paths**
-- Current logic: `location.pathname === item.path` (exact match only)
-- Problem: navigating to `/books/some-detail` won't highlight "Books" in sidebar
-- Fix: use `location.pathname.startsWith(item.path)` with a guard for `/` (root)
-
-**3. Visual polish for active item**
-- Screenshot shows a salmon/coral pill for active "Attendance" item
-- Current code uses `bg-sidebar-accent` which may already look correct, but let's ensure the active item uses the same style shown in screenshot: a rounded pill with primary-adjacent color (`hsl(var(--primary)/20)` tinted background with solid primary text)
+---
 
 ## Plan
 
-### Single file change: `src/components/Layout/Sidebar.tsx`
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-**Changes:**
-
-1. Add `adminOrTeacherOnly` flag to certain menu items:
-```typescript
-const menuItems = [
-  { icon: Home, label: "Dashboard", path: "/dashboard" },
-  { icon: GraduationCap, label: "My Courses", path: "/my-courses" },
-  { icon: BookOpen, label: "Courses", path: "/courses" },
-  { icon: Library, label: "Books", path: "/books" },
-  { icon: Bell, label: "Notices", path: "/notices" },
-  { icon: Users, label: "Students", path: "/students", adminOrTeacher: true },
-  { icon: Calendar, label: "Attendance", path: "/attendance", adminOrTeacher: true },
-  { icon: FileText, label: "Reports", path: "/reports" },
-  { icon: MessageCircle, label: "Messages", path: "/messages" },
-  { icon: User, label: "Profile", path: "/profile" },
-  { icon: Settings, label: "Settings", path: "/settings" },
-];
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-2. Filter items in render based on role:
-```typescript
-const visibleItems = menuItems.filter(item => {
-  if (item.adminOrTeacher) return isAdmin || isTeacher;
-  return true;
-});
-```
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-3. Fix active state to use `startsWith`:
-```typescript
-const isActive = item.path === '/dashboard' 
-  ? location.pathname === item.path
-  : location.pathname.startsWith(item.path);
-```
+---
 
-4. Match the visual style in the screenshot — the active item uses a coral/salmon pill (`bg-primary/20 text-primary` or the sidebar's own accent variable)
+### 2. Visual Polish — CSS & Theme Improvements
 
-That's the only file that needs changing. All routes, pages, and auth guards already exist and work correctly.
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-## Summary
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/Layout/Sidebar.tsx` | Add `adminOrTeacher` flags to Students + Attendance items; filter by role; fix `startsWith` active detection |
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-No new pages, no new routes, no DB changes needed — everything already exists.
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

@@ -12,25 +12,31 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const menuItems = [
+interface MenuItem {
+  icon: React.ElementType;
+  label: string;
+  path: string;
+  adminOrTeacher?: boolean;
+}
+
+const menuItems: MenuItem[] = [
   { icon: Home, label: "Dashboard", path: "/dashboard" },
   { icon: GraduationCap, label: "My Courses", path: "/my-courses" },
   { icon: BookOpen, label: "Courses", path: "/courses" },
   { icon: Library, label: "Books", path: "/books" },
   { icon: Bell, label: "Notices", path: "/notices" },
-  { icon: Users, label: "Students", path: "/students" },
-  { icon: Calendar, label: "Attendance", path: "/attendance" },
+  { icon: Users, label: "Students", path: "/students", adminOrTeacher: true },
+  { icon: Calendar, label: "Attendance", path: "/attendance", adminOrTeacher: true },
   { icon: FileText, label: "Reports", path: "/reports" },
   { icon: MessageCircle, label: "Messages", path: "/messages" },
   { icon: User, label: "Profile", path: "/profile" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
-
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, logout, isAuthenticated, isAdmin } = useAuth();
+  const { user, profile, logout, isAuthenticated, isAdmin, isTeacher } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -39,6 +45,15 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     navigate("/");
   };
 
+  const visibleItems = menuItems.filter(item => {
+    if (item.adminOrTeacher) return isAdmin || isTeacher;
+    return true;
+  });
+
+  const getIsActive = (path: string) =>
+    path === "/dashboard"
+      ? location.pathname === path
+      : location.pathname.startsWith(path);
 
   return (
     <>
@@ -78,35 +93,40 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
+          {visibleItems.map((item) => {
+            const active = getIsActive(item.path);
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={onClose}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-foreground"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50"
+                  "flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors",
+                  active
+                    ? "bg-primary/15 text-primary font-semibold"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 )}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className={cn("h-5 w-5", active && "text-primary")} />
                 <span className="font-medium">{item.label}</span>
               </Link>
             );
           })}
 
-          {/* Admin Panel Link */}
+          {/* Admin Panel Link — admin only */}
           {isAuthenticated && isAdmin && (
             <Link
               to="/admin"
               onClick={onClose}
-              className="flex items-center gap-3 px-4 py-3 mx-2 mt-2 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 mx-2 mt-2 rounded-xl transition-colors",
+                getIsActive("/admin")
+                  ? "bg-primary/15 text-primary font-semibold"
+                  : "bg-primary/10 text-primary hover:bg-primary/20"
+              )}
             >
               <ShieldCheck className="h-5 w-5" />
-              <span>Admin Panel</span>
+              <span className="font-medium">Admin Panel</span>
             </Link>
           )}
         </nav>
