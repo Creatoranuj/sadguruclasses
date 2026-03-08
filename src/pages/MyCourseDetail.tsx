@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Play, FileText, BookOpen, Grid3X3,
-  Lock, Clock, Star, CheckCircle, MessageCircle, Send,
+  Lock, Clock, CheckCircle, MessageCircle, Send,
   PanelLeftOpen, PanelLeftClose, X, ChevronLeft, Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -811,16 +811,12 @@ const MyCourseDetail = () => {
               {/* Lesson meta */}
               <div className="px-4 py-3 border-b bg-card">
                 <h2 className="font-semibold text-lg text-foreground mb-1">{selectedLesson.title}</h2>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
+                {selectedLesson.duration && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
-                    {selectedLesson.duration ? `${Math.floor(selectedLesson.duration / 60)}m` : "—"}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                    4.8 Rating
-                  </span>
-                </div>
+                    <span>{Math.floor(selectedLesson.duration / 60)}m</span>
+                  </div>
+                )}
               </div>
 
               {/* Like / Doubts / PDF action bar */}
