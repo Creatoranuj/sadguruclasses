@@ -106,14 +106,15 @@ const LectureListing = () => {
               .order("position", { ascending: true });
 
             if (subChaptersData && subChaptersData.length > 0) {
-              // Fetch lesson counts for sub-chapters
+              // Fetch lesson counts AND full lesson data for sub-chapters
               const subIds = subChaptersData.map(sc => sc.id);
-              const { data: subLessonsData } = await supabase
-                .from("lessons").select("id, chapter_id")
-                .in("chapter_id", subIds);
+              const [{ data: subLessonsCountData }, { data: subLessonsFullData }] = await Promise.all([
+                supabase.from("lessons").select("id, chapter_id").in("chapter_id", subIds),
+                supabase.from("lessons").select("*").in("chapter_id", subIds).order("position", { ascending: true }),
+              ]);
 
               const countMap: Record<string, number> = {};
-              (subLessonsData || []).forEach(l => {
+              (subLessonsCountData || []).forEach(l => {
                 if (l.chapter_id) countMap[l.chapter_id] = (countMap[l.chapter_id] || 0) + 1;
               });
 
@@ -122,17 +123,29 @@ const LectureListing = () => {
                 lessonCount: countMap[sc.id] || 0,
               })));
               setShowSubChapters(true);
-            } else {
-              setShowSubChapters(false);
-            }
 
-            // Fetch lessons for this chapter (direct lessons)
-            const { data: lessonsData, error: lessonsError } = await supabase
-              .from("lessons").select("*").eq("chapter_id", chapterId).order("position", { ascending: true });
-            if (!lessonsError) {
-              setLessons((lessonsData || []).map((l: any, idx: number) => ({
+              // Fetch direct lessons for this chapter AND combine with sub-chapter lessons
+              const { data: directLessonsData } = await supabase
+                .from("lessons").select("*").eq("chapter_id", chapterId).order("position", { ascending: true });
+
+              const combined = [
+                ...(directLessonsData || []),
+                ...(subLessonsFullData || []),
+              ];
+              setLessons(combined.map((l: any, idx: number) => ({
                 ...l, lecture_type: l.lecture_type || "VIDEO", position: l.position || idx + 1,
               })));
+            } else {
+              setShowSubChapters(false);
+
+              // Fetch lessons for this chapter (direct lessons only)
+              const { data: lessonsData, error: lessonsError } = await supabase
+                .from("lessons").select("*").eq("chapter_id", chapterId).order("position", { ascending: true });
+              if (!lessonsError) {
+                setLessons((lessonsData || []).map((l: any, idx: number) => ({
+                  ...l, lecture_type: l.lecture_type || "VIDEO", position: l.position || idx + 1,
+                })));
+              }
             }
           }
         } else {

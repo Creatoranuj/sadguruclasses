@@ -3,7 +3,7 @@ import { ExternalLink, Download, Maximize, Minimize, FileText } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { downloadFile, extractArchiveId, extractDocsId, getArchiveDownloadUrl } from "@/utils/fileUtils";
 import { toast } from "sonner";
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 interface DriveEmbedViewerProps {
   url: string;
@@ -141,7 +141,7 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
             className="absolute top-0 left-0 right-0 h-9 z-10 flex items-center px-3 gap-2 select-none pointer-events-none"
             style={{ background: "hsl(var(--card))" }}
           >
-            <img src={refreshLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
+            <img src={sadguruLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
             <span className="text-xs font-semibold text-foreground tracking-wide">
               Sadguru Coaching Classes
             </span>
@@ -171,7 +171,7 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
           className="absolute bottom-0 left-0 right-0 z-20 flex items-center gap-2 px-4 py-1.5 select-none pointer-events-none"
           style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)" }}
         >
-          <img src={refreshLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
+          <img src={sadguruLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
           <span className="text-white text-xs font-semibold tracking-wide">
             Sadguru Coaching Classes
           </span>
