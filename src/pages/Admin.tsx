@@ -19,7 +19,8 @@ import { toast } from "sonner";
 import {
   Upload, Video, FileText, Users, CreditCard, CheckCircle, XCircle, Clock,
   BarChart3, Trash2, Plus, BookOpen, ExternalLink, ShieldAlert, Search,
-  Download, Filter, RefreshCw, ChevronDown, Eye, IndianRupee, Loader2, ClipboardCheck, Library, Calendar
+  Download, Filter, RefreshCw, ChevronDown, Eye, IndianRupee, Loader2, ClipboardCheck, Library, Calendar,
+  GraduationCap, UserCheck, UserX
 } from "lucide-react";
 
 import ContentDrillDown from "@/components/admin/ContentDrillDown";
