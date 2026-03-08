@@ -1,30 +1,83 @@
 
-## Autonomous Agent — Full Error Resolution
+## Root Cause: Missing `lovable.toml`
 
-### Current Console Errors (Confirmed Live)
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-**Error 1**: `Warning: Function components cannot be given refs — Check the render method of Index`
-- Stack: `at _c` → `updateMemoComponent` inside Index
-- Root cause: `Footer` is wrapped in `forwardRef` and rendered inside Index. `SocialLinks` is also `forwardRef` and used inside Footer. Both components use `forwardRef` but **never receive a ref** from their parent — this is a design smell but not the actual cause. The real cause is `Footer` uses the `forwardRef` signature `((_, ref) => ...)` but passes `ref` to `<footer ref={ref}>`. When React's dev mode validates this, it sees the `memo`-wrapped components inside the tree. The `_c` is minified `SocialLinks` — it is a `forwardRef` component, not a plain function component. This should NOT produce this warning. After reading more carefully: the warning fires from `validateFunctionComponentInDev` + `updateMemoComponent` — meaning a `memo()` component is being assigned a ref. The ONLY `memo()` component in Index that could receive a ref is if some parent passes a ref to it. Since no refs are passed explicitly in JSX, React must be getting a ref from a Radix UI internal (e.g., the `Sheet` in Navigation passes refs to `SheetContent` which is memo-wrapped). Actually, the Radix `Sheet` / `SheetContent` uses `forwardRef` internally. This is clean. **The real root**: `Footer` is a `forwardRef` component whose internal `SocialLinks` child is also `forwardRef`. When both return `null` or render, React's dev validation fires because `SocialLinks` is inside a `forwardRef` render tree and is itself `forwardRef`. The fix is simple: **neither Footer nor SocialLinks need `forwardRef`** — no parent passes refs to them. Converting both to plain function components eliminates the indirection and the warning.
+---
 
-**Error 2**: `Warning: Function components cannot be given refs — Check the render method of App — at ChatWidget`
-- Stack: `mountIndeterminateComponent` → ChatWidget line 31
-- Root cause: `MarkdownMessage` component is defined **inside** `ChatWidget`'s render function body (line 296). React creates a new component reference on every render. When this inner component is re-mounted (because reference changed), React's dev mode fires validation warnings. The fix: **move `MarkdownMessage` outside the `ChatWidget` function** to a stable module-level definition.
+## Plan
 
-### Files to Change
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
+
+```toml
+[run]
+dev = "npm run dev"
+```
+
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+
+---
+
+### 2. Visual Polish — CSS & Theme Improvements
+
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/Landing/Footer.tsx` | Remove `forwardRef` — convert to plain `const Footer = () => {...}` |
-| `src/components/Landing/SocialLinks.tsx` | Remove `forwardRef` — convert to plain `const SocialLinks = () => {...}` |
-| `src/components/chat/ChatWidget.tsx` | Move `MarkdownMessage` (lines 296–322) from inside `ChatWidget` to module-level (above the `ChatWidget` function) |
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-### Detailed Changes
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
 
-**Footer.tsx**: Replace `forwardRef<HTMLElement>((_, ref) => { ... <footer ref={ref}> ... })` with `const Footer = () => { ... <footer> ... }`. Remove `forwardRef` import if unused after. Keep `memo` import gone (Footer doesn't use memo). Remove the `ref` parameter and `ref={ref}` from the `<footer>` tag.
+---
 
-**SocialLinks.tsx**: Replace `forwardRef<HTMLDivElement>((_, ref) => { ... <div ref={ref}> ... })` with `const SocialLinks = () => { ... <div> ... }`. Remove `forwardRef` import. Remove `ref` parameter and `ref={ref}` from the `<div>`.
+## Note on Visual Editor
 
-**ChatWidget.tsx**: Cut `MarkdownMessage` (lines 296–322) from inside the component body and paste it above `const ChatWidget = () => {` as a stable module-level component. This gives it a stable reference and stops React from re-mounting it every render.
-
-After these 3 targeted changes: zero React console warnings on the Index page and zero on the App level.
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
