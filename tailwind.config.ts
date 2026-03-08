@@ -96,15 +96,18 @@ export default {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
   		},
-		boxShadow: {
-			sm: 'var(--shadow-sm)',
-			md: 'var(--shadow-md)',
-			lg: 'var(--shadow-lg)',
-			xl: 'var(--shadow-xl)'
-		},
+  		boxShadow: {
+  			sm: 'var(--shadow-sm)',
+  			md: 'var(--shadow-md)',
+  			lg: 'var(--shadow-lg)',
+  			xl: 'var(--shadow-xl)',
+  			'2xs': 'var(--shadow-2xs)',
+  			xs: 'var(--shadow-xs)',
+  			'2xl': 'var(--shadow-2xl)'
+  		},
   		fontFamily: {
   			sans: [
-  				'Inter',
+  				'Poppins',
   				'ui-sans-serif',
   				'system-ui',
   				'-apple-system',
@@ -120,13 +123,21 @@ export default {
   				'JetBrains Mono',
   				'ui-monospace',
   				'SFMono-Regular',
-  				'SF Mono',
   				'Menlo',
   				'Monaco',
   				'Consolas',
   				'Liberation Mono',
   				'Courier New',
   				'monospace'
+  			],
+  			serif: [
+  				'Merriweather',
+  				'ui-serif',
+  				'Georgia',
+  				'Cambria',
+  				'Times New Roman',
+  				'Times',
+  				'serif'
   			]
   		}
   	}
