@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const ICON_MAP: Record<string, { label: string; icon: string }> = {
@@ -10,11 +10,11 @@ const ICON_MAP: Record<string, { label: string; icon: string }> = {
   facebook_url: { label: "Facebook", icon: "📘" },
 };
 
-const SocialLinks = forwardRef<HTMLDivElement>((_, ref) => {
+const SocialLinks = () => {
   const [links, setLinks] = useState<{ key: string; value: string }[]>([]);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchLinks = async () => {
       const { data } = await supabase
         .from("site_settings" as any)
         .select("key, value")
@@ -23,13 +23,13 @@ const SocialLinks = forwardRef<HTMLDivElement>((_, ref) => {
         setLinks((data as any[]).filter((r: any) => r.value && r.value.trim() !== ""));
       }
     };
-    fetch();
+    fetchLinks();
   }, []);
 
   if (links.length === 0) return null;
 
   return (
-    <div ref={ref} className="flex items-center gap-3 flex-wrap">
+    <div className="flex items-center gap-3 flex-wrap">
       {links.map((link) => {
         const info = ICON_MAP[link.key];
         if (!info) return null;
@@ -49,8 +49,6 @@ const SocialLinks = forwardRef<HTMLDivElement>((_, ref) => {
       })}
     </div>
   );
-});
-
-SocialLinks.displayName = "SocialLinks";
+};
 
 export default SocialLinks;
