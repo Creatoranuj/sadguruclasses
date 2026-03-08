@@ -227,23 +227,45 @@ const MahimaGhostPlayer = memo(({
     }, 3000);
   }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion, isInLastTenSeconds]);
 
-  // Single tap toggles controls only — also starts auto-hide timer when showing
+  // Show controls immediately on any interaction, reset auto-hide timer
+  const showControlsNow = useCallback(() => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    if (isInLastTenSeconds) return;
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (isPlaying && !showVolumeSlider && !showSpeedMenu && !showDiscussion) {
+        setShowControls(false);
+      }
+    }, 3000);
+  }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion, isInLastTenSeconds]);
+
+  // Touch: show controls instantly on touchstart (no 300ms delay)
+  const handleOverlayTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    showControlsNow();
+  }, [showControlsNow]);
+
+  // Click (desktop): toggle controls
   const handleOverlayTap = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    setShowControls(prev => {
-      const next = !prev;
-      if (next && isPlaying) {
-        // Start auto-hide timer when showing controls
-        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-        controlsTimeoutRef.current = setTimeout(() => {
-          if (!showVolumeSlider && !showSpeedMenu && !showDiscussion) {
-            setShowControls(false);
+    // On desktop (no touch), toggle; on touch devices this fires after touchstart already showed controls
+    if (!('ontouchstart' in window)) {
+      setShowControls(prev => {
+        const next = !prev;
+        if (next) {
+          if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+          if (!isInLastTenSeconds) {
+            controlsTimeoutRef.current = setTimeout(() => {
+              if (isPlaying && !showVolumeSlider && !showSpeedMenu && !showDiscussion) {
+                setShowControls(false);
+              }
+            }, 3000);
           }
-        }, 3000);
-      }
-      return next;
-    });
-  }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion]);
+        }
+        return next;
+      });
+    }
+  }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion, isInLastTenSeconds]);
 
   // Keyboard shortcuts
   useEffect(() => {
