@@ -1,11 +1,9 @@
-import { ChevronDown } from "lucide-react";
 import { useBatch } from "@/contexts/BatchContext";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 
 const BatchSelector = () => {
@@ -28,10 +26,17 @@ const BatchSelector = () => {
               <img
                 src={selectedBatch.image_url}
                 alt=""
-                className="h-7 w-7 rounded-lg object-cover"
+                className="h-7 w-7 rounded-lg object-cover flex-shrink-0"
               />
             )}
-            <SelectValue placeholder="Select Batch" />
+            <span className="truncate">
+              {selectedBatch?.title || "Select Batch"}
+              {selectedBatch?.grade && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  (Class {selectedBatch.grade})
+                </span>
+              )}
+            </span>
           </div>
         </SelectTrigger>
         <SelectContent>
@@ -42,7 +47,7 @@ const BatchSelector = () => {
                   <img
                     src={batch.image_url}
                     alt=""
-                    className="h-6 w-6 rounded-md object-cover"
+                    className="h-6 w-6 rounded-md object-cover flex-shrink-0"
                   />
                 )}
                 <span>{batch.title}</span>
