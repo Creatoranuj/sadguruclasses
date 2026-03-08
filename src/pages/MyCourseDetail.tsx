@@ -249,8 +249,9 @@ const MyCourseDetail = () => {
        setSelectedLesson(lesson);
        setSearchParams({ lesson: lesson.id });
      } else {
+       // Open PDF/DPP/NOTES inline instead of new tab
        if (lesson.videoUrl) {
-         window.open(lesson.videoUrl, "_blank");
+         setInlineViewer({ url: lesson.videoUrl, title: lesson.title });
        }
      }
    };
@@ -521,30 +522,43 @@ const MyCourseDetail = () => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="resources" className="p-4 mt-0">
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-foreground mb-3">Downloadable Resources</h3>
-                    {lessons.filter(l => l.lectureType === "PDF" || l.lectureType === "DPP").length > 0 ? (
-                      lessons.filter(l => l.lectureType === "PDF" || l.lectureType === "DPP").map((material) => (
-                        <a
-                          key={material.id}
-                          href={material.videoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                        >
-                          <FileText className="h-5 w-5 text-orange-500" />
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">{material.title}</p>
-                            <p className="text-xs text-muted-foreground">{material.lectureType}</p>
+                <TabsContent value="resources" className="mt-0">
+                  {(() => {
+                    const resList = lessons.filter(l => l.lectureType === "PDF" || l.lectureType === "DPP");
+                    if (resList.length === 0) return (
+                      <div className="p-4">
+                        <p className="text-muted-foreground text-sm">No resources available for this lesson.</p>
+                      </div>
+                    );
+                    const activeRes = inlineViewer && resList.find(r => r.videoUrl === inlineViewer.url)
+                      ? inlineViewer
+                      : { url: resList[0].videoUrl, title: resList[0].title };
+                    return (
+                      <div className="flex flex-col">
+                        {resList.length > 1 && (
+                          <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
+                            {resList.map(r => (
+                              <button
+                                key={r.id}
+                                onClick={() => setInlineViewer({ url: r.videoUrl, title: r.title })}
+                                className={cn(
+                                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                                  activeRes.url === r.videoUrl
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-card text-muted-foreground border-border hover:border-primary"
+                                )}
+                              >
+                                {r.title}
+                              </button>
+                            ))}
                           </div>
-                          <Download className="h-4 w-4 text-muted-foreground" />
-                        </a>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground text-sm">No resources available for this lesson.</p>
-                    )}
-                  </div>
+                        )}
+                        <div className="px-3 pb-3 pt-2">
+                          <PdfViewer url={activeRes.url} title={activeRes.title} />
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="notes" className="mt-0">
