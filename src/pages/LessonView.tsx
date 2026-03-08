@@ -496,7 +496,10 @@ const LessonView = () => {
                       if (tabsTrigger) tabsTrigger.click();
                     }}
                     onDownloadPdf={currentLesson.class_pdf_url ? () => {
-                      window.open(currentLesson.class_pdf_url!, '_blank');
+                      // Switch to the inline PDF tab instead of opening a new tab
+                      const pdfTab = document.querySelector('[value="pdf"]') as HTMLElement;
+                      if (pdfTab) { pdfTab.click(); window.scrollTo({ top: 500, behavior: 'smooth' }); }
+                      else window.open(currentLesson.class_pdf_url!, '_blank');
                     } : undefined}
                     hasPdf={!!currentLesson.class_pdf_url}
                     likesLoading={likesLoading}

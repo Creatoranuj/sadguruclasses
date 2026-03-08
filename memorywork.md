@@ -1,5 +1,30 @@
 # Memorywork – Changes Log
 
+## Date: 2026-03-08 (Archive.org PDF Embed + Smart Download)
+
+### Changes Made
+
+| File | Changes |
+|------|---------|
+| `src/utils/fileUtils.ts` | Added `getArchiveDownloadUrl(identifier)` async function — queries Archive.org metadata API to find the real PDF file, falls back to `{id}.pdf` pattern then listing page. Updated `getDownloadUrl` sync fallback to use `{id}.pdf` pattern instead of just the listing folder. |
+| `src/components/course/DriveEmbedViewer.tsx` | `handleDownload` now calls `getArchiveDownloadUrl` for Archive.org URLs (async metadata lookup). Added top branding overlay (`h-9`, `bg-card`) that covers Archive.org header bar — uses `pointer-events-none` + iframe `marginTop: 36px`. iframe now has `allowFullScreen` attribute. Bottom branding gradient unchanged. |
+| `src/pages/LessonView.tsx` | Added conditional **PDF tab** (5th tab) that renders `DriveEmbedViewer` inline when `class_pdf_url` is set. Auto-selects PDF tab as default when lesson has a PDF URL. `onDownloadPdf` in `LessonActionBar` now clicks the PDF tab instead of opening a new window — inline viewing without leaving the app. |
+
+### Archive.org Integration Patterns
+
+- **Embed URL**: `https://archive.org/embed/{identifier}` — used for iframe src
+- **Download URL**: fetched async via `https://archive.org/metadata/{identifier}` → `files[]` array → first file with `format` matching "Text PDF" or `.pdf` extension
+- **Branding suppression**: Top overlay div (z-10, `bg-card`, `h-9`) + iframe shifted down `marginTop: 36px`. Cross-origin iframe means CSS cannot reach inner Archive.org DOM — overlay is best-effort.
+- **Sandbox**: `allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox` — keeps BookReader functional
+
+### Edge Cases Handled
+
+- Archive.org items where PDF filename ≠ `{id}.pdf` (metadata lookup handles arbitrary filenames)
+- Items without any PDF file (falls back to `{id}.pdf`, then CORS-blocked → opens in new tab)
+- Metadata API CORS failures → graceful fallback to `{id}.pdf` pattern
+
+---
+
 ## Date: 2026-03-05 (APK Build Guide, Install Page & Branding Fixes)
 
 ### Changes Made
