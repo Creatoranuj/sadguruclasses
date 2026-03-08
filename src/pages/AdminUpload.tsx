@@ -358,7 +358,7 @@ const AdminUpload = () => {
         title,
         video_url: contentUrl,
         description: description || null,
-        overview: watermarkText || null,
+        overview: overviewText || null,
         is_locked: true,
         lecture_type: uploadType,
         class_pdf_url: classPdfFinalUrl,
@@ -367,7 +367,7 @@ const AdminUpload = () => {
 
       if (error) throw error;
       toast.success("Content uploaded successfully!");
-      setTitle(""); setVideoUrl(""); setPdfFile(null); setPdfUrl(""); setDescription(""); setClassPdfFile(null); setClassPdfUrl("");
+      setTitle(""); setVideoUrl(""); setPdfFile(null); setPdfUrl(""); setDescription(""); setOverviewText(""); setClassPdfFile(null); setClassPdfUrl("");
       const { data } = await supabase.from('lessons').select('*')
         .eq('chapter_id', selectedChapterId).order('position', { ascending: true });
       setLessons(data || []);
