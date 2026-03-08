@@ -10,7 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { 
   PlayCircle, Zap, 
-  ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle
+  ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle,
+  MessageCircle, User
 } from "lucide-react";
 import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
@@ -77,8 +78,9 @@ const Dashboard = () => {
             .eq('status', 'active'),
           supabase
             .from('quiz_attempts')
-            .select('id, quiz_id, score, percentage, passed, created_at, quizzes(title, type, total_marks)')
+            .select('id, quiz_id, score, percentage, passed, created_at, submitted_at, quizzes(title, type, total_marks)')
             .eq('user_id', user!.id)
+            .not('submitted_at', 'is', null)
             .order('created_at', { ascending: false })
             .limit(10),
         ]);
@@ -325,24 +327,38 @@ const Dashboard = () => {
 
       {!isTeacher && (
         <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-30 md:hidden">
-          <div className="flex items-center justify-around h-14">
-            <button onClick={() => navigate('/dashboard')} className="flex flex-col items-center gap-0.5">
-              <img src={homeIcon} alt="Home" width={24} height={24}
-                className={`w-6 h-6 object-contain ${location.pathname !== '/dashboard' ? 'opacity-50 grayscale' : ''}`}
+          <div className="flex items-center justify-around h-14 px-1">
+            <button onClick={() => navigate('/dashboard')} className="flex flex-col items-center gap-0.5 flex-1">
+              <img src={homeIcon} alt="Home" width={22} height={22}
+                className={`w-[22px] h-[22px] object-contain ${location.pathname !== '/dashboard' ? 'opacity-40 grayscale' : ''}`}
                 loading="lazy" decoding="async" />
-              <span className={`text-[10px] font-medium ${location.pathname === '/dashboard' ? 'text-accent' : 'text-muted-foreground'}`}>Home</span>
+              <span className={`text-[9px] font-medium ${location.pathname === '/dashboard' ? 'text-accent' : 'text-muted-foreground'}`}>Home</span>
             </button>
-            <button onClick={() => navigate('/courses')} className="flex flex-col items-center gap-0.5">
-              <img src={scienceIcon} alt="Courses" width={24} height={24}
-                className={`w-6 h-6 object-contain ${location.pathname !== '/courses' ? 'opacity-50 grayscale' : ''}`}
+            <button onClick={() => navigate('/courses')} className="flex flex-col items-center gap-0.5 flex-1">
+              <img src={scienceIcon} alt="Courses" width={22} height={22}
+                className={`w-[22px] h-[22px] object-contain ${location.pathname !== '/courses' ? 'opacity-40 grayscale' : ''}`}
                 loading="lazy" decoding="async" />
-              <span className={`text-[10px] font-medium ${location.pathname === '/courses' ? 'text-accent' : 'text-muted-foreground'}`}>Courses</span>
+              <span className={`text-[9px] font-medium ${location.pathname === '/courses' ? 'text-accent' : 'text-muted-foreground'}`}>Courses</span>
             </button>
-            <button onClick={() => navigate('/my-courses')} className="flex flex-col items-center gap-0.5">
-              <img src={studentIcon} alt="My Courses" width={24} height={24}
-                className={`w-6 h-6 object-contain ${location.pathname !== '/my-courses' ? 'opacity-50 grayscale' : ''}`}
+            <button onClick={() => navigate('/my-courses')} className="flex flex-col items-center gap-0.5 flex-1">
+              <img src={studentIcon} alt="My Courses" width={22} height={22}
+                className={`w-[22px] h-[22px] object-contain ${location.pathname !== '/my-courses' ? 'opacity-40 grayscale' : ''}`}
                 loading="lazy" decoding="async" />
-              <span className={`text-[10px] font-medium ${location.pathname === '/my-courses' ? 'text-accent' : 'text-muted-foreground'}`}>My Courses</span>
+              <span className={`text-[9px] font-medium ${location.pathname === '/my-courses' ? 'text-accent' : 'text-muted-foreground'}`}>My Courses</span>
+            </button>
+            <button onClick={() => navigate('/messages')} className="flex flex-col items-center gap-0.5 flex-1">
+              <MessageCircle
+                size={22}
+                className={location.pathname === '/messages' ? 'text-accent' : 'text-muted-foreground opacity-40'}
+              />
+              <span className={`text-[9px] font-medium ${location.pathname === '/messages' ? 'text-accent' : 'text-muted-foreground'}`}>Messages</span>
+            </button>
+            <button onClick={() => navigate('/profile')} className="flex flex-col items-center gap-0.5 flex-1">
+              <User
+                size={22}
+                className={location.pathname === '/profile' ? 'text-accent' : 'text-muted-foreground opacity-40'}
+              />
+              <span className={`text-[9px] font-medium ${location.pathname === '/profile' ? 'text-accent' : 'text-muted-foreground'}`}>Profile</span>
             </button>
           </div>
         </nav>

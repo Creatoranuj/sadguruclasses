@@ -89,15 +89,7 @@ const QuizAttempt = () => {
         }));
         setQuestions(qs);
 
-        // Create attempt record
-        if (user) {
-          const { data: attempt } = await supabase.from("quiz_attempts").insert({
-            user_id: user.id,
-            quiz_id: quizId,
-            answers: {},
-          }).select("id").single();
-          if (attempt) setAttemptId(attempt.id);
-        }
+        // Attempt record is created only on submit to avoid orphan rows
       } catch (err: any) {
         toast.error("Failed to load quiz: " + err.message);
         navigate(-1);
