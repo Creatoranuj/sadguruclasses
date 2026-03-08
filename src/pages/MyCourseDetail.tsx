@@ -841,15 +841,23 @@ const MyCourseDetail = () => {
                 </TabsList>
 
                 <TabsContent value="overview" className="p-4">
-                  <CourseContent lesson={{
-                    id: selectedLesson.id,
-                    title: selectedLesson.title,
-                    overview: selectedLesson.overview,
-                    description: selectedLesson.description,
-                    lectureType: selectedLesson.lectureType,
-                    duration: selectedLesson.duration,
-                    createdAt: selectedLesson.createdAt,
-                  }} />
+                  <div className="space-y-3">
+                    {selectedLesson.overview && (
+                      <div>
+                        <h4 className="font-semibold text-foreground mb-1 text-sm">Overview</h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedLesson.overview}</p>
+                      </div>
+                    )}
+                    {selectedLesson.description && (
+                      <div>
+                        <h4 className="font-semibold text-foreground mb-1 text-sm">Description</h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedLesson.description}</p>
+                      </div>
+                    )}
+                    {!selectedLesson.overview && !selectedLesson.description && (
+                      <p className="text-sm text-muted-foreground">No overview available for this lesson.</p>
+                    )}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="discussion" className="p-4 space-y-4">
@@ -887,15 +895,23 @@ const MyCourseDetail = () => {
                 </TabsContent>
 
                 <TabsContent value="resources" className="p-4">
-                  <CourseContent lesson={{
-                    id: selectedLesson.id,
-                    title: selectedLesson.title,
-                    overview: selectedLesson.overview,
-                    description: selectedLesson.description,
-                    lectureType: selectedLesson.lectureType,
-                    duration: selectedLesson.duration,
-                    createdAt: selectedLesson.createdAt,
-                  }} activeTab="resources" />
+                  <div className="space-y-3">
+                    {selectedLesson.classPdfUrl && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl border bg-card">
+                        <FileText className="h-5 w-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">Class PDF</p>
+                          <p className="text-xs text-muted-foreground">Download or view class notes</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => setInlineViewer({ url: selectedLesson.classPdfUrl!, title: `${selectedLesson.title} – Class PDF` })}>
+                          View
+                        </Button>
+                      </div>
+                    )}
+                    {!selectedLesson.classPdfUrl && (
+                      <p className="text-sm text-muted-foreground">No resources attached to this lesson.</p>
+                    )}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="notes" className="p-4">

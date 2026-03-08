@@ -136,7 +136,7 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [navigate, isAuthenticated, authLoading, user]);
 
-  // teacherFeatures is defined outside component — see below
+  // (teacherFeatures is defined outside component below)
 
   if (loading || authLoading) {
     return (
