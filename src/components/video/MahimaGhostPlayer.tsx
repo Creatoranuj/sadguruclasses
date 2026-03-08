@@ -952,15 +952,15 @@ const MahimaGhostPlayer = memo(({
           {/* BOTTOM CONTROLS BAR */}
         <div
           className={cn(
-            "absolute left-0 right-0 bottom-0 z-50 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-3 md:px-4 pt-8 pb-2 md:pb-3 transition-opacity duration-300",
-            (showControls || !isPlaying) ? "opacity-100" : "opacity-0 pointer-events-none",
+            "absolute left-0 right-0 bottom-0 z-50 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3 md:px-4 pt-8 pb-2 md:pb-3",
+            (showControls || !isPlaying) ? "opacity-100 transition-opacity duration-200" : "opacity-0 pointer-events-none transition-opacity duration-500",
             showEndScreen && "hidden"
           )}
           style={{ paddingBottom: isFullscreen ? 'max(12px, env(safe-area-inset-bottom))' : undefined }}
           onPointerDown={handleMouseMove}
           onMouseMove={handleMouseMove}
         >
-          {/* Fix 2: Taller progress bar touch target for reliable mobile touch */}
+          {/* Progress bar — tall touch target */}
           <div
             ref={progressBarRef}
             className="relative h-10 md:h-8 bg-transparent rounded-full cursor-pointer group/progress mb-1 md:mb-2 touch-none flex items-center"
@@ -971,7 +971,7 @@ const MahimaGhostPlayer = memo(({
           >
             {/* Visible thin track — expands on hover for easier clicking */}
             <div className="absolute left-0 right-0 h-1 md:h-1.5 group-hover/progress:h-2 md:group-hover/progress:h-2.5 rounded-full bg-white/30 top-1/2 -translate-y-1/2 transition-all duration-150">
-              <div className="absolute inset-y-0 left-0 bg-white/20 rounded-full" style={{ width: `${bufferedPercentage}%` }} />
+              <div className="absolute inset-y-0 left-0 bg-white/35 rounded-full" style={{ width: `${bufferedPercentage}%` }} />
               <div className="absolute inset-y-0 left-0 bg-blue-500 rounded-full transition-all" style={{ width: `${progressPercentage}%` }} />
             </div>
             {/* Always-visible thumb */}
@@ -988,12 +988,12 @@ const MahimaGhostPlayer = memo(({
 
           {/* Controls Row */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 md:gap-2">
+            <div className="flex items-center gap-1.5">
               <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 text-white hover:bg-white/20" onClick={togglePlay}>
                 {isPlaying ? <Pause className="h-4 w-4 md:h-5 md:w-5" fill="white" /> : <Play className="h-4 w-4 md:h-5 md:w-5 ml-0.5" fill="white" />}
               </Button>
 
-              {/* Fix 3: Volume — hover on desktop, tap-toggle on mobile; popup opens above */}
+              {/* Volume — hover on desktop, tap-toggle on mobile; popup opens above with animation */}
               <div
                 className="relative flex items-center"
                 onMouseEnter={() => setShowVolumeSlider(true)}
@@ -1008,7 +1008,7 @@ const MahimaGhostPlayer = memo(({
                 </Button>
                 {showVolumeSlider && (
                   <div
-                    className="absolute left-0 bottom-full mb-2 bg-black/90 rounded-lg p-3 w-28"
+                    className="absolute left-0 bottom-full mb-2 bg-black/90 rounded-lg p-3 w-28 animate-in fade-in slide-in-from-bottom-2 duration-150"
                     onMouseEnter={() => setShowVolumeSlider(true)}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
@@ -1027,12 +1027,12 @@ const MahimaGhostPlayer = memo(({
               </div>
 
               {/* Time */}
-              <span className="text-white text-xs md:text-sm ml-1 md:ml-2 font-mono whitespace-nowrap">
+              <span className="text-white text-xs md:text-sm ml-0.5 font-mono whitespace-nowrap tabular-nums">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
             </div>
 
-            <div className="flex items-center gap-1 md:gap-2">
+            <div className="flex items-center gap-1.5">
               {/* Discussion button */}
               {lessonId && (
                 <Button
@@ -1045,8 +1045,7 @@ const MahimaGhostPlayer = memo(({
                 </Button>
               )}
 
-
-              {/* Settings gear — custom icon */}
+              {/* Settings gear — speed menu */}
               <div className="relative">
                 <button
                   className="h-10 w-10 md:h-11 md:w-11 flex items-center justify-center outline-none focus:outline-none pointer-events-auto"
@@ -1056,9 +1055,9 @@ const MahimaGhostPlayer = memo(({
                   <img src={settingsGearIcon} alt="Settings" className="h-8 w-8 md:h-9 md:w-9" draggable={false} />
                 </button>
                 {showSpeedMenu && (
-                  <div className="absolute bottom-full right-0 mb-2 bg-black/95 rounded-lg py-1 min-w-[80px]">
-                    {[1, 1.5, 2, 3].map((speed) => (
-                      <button key={speed} className={cn("w-full px-3 py-1.5 text-left text-sm hover:bg-white/20", playbackSpeed === speed ? "text-blue-400 font-semibold" : "text-white")} onClick={() => setSpeed(speed)}>
+                  <div className="absolute bottom-full right-0 mb-2 bg-black/95 rounded-lg py-1 min-w-[88px] animate-in fade-in slide-in-from-bottom-2 duration-150">
+                    {[0.75, 1, 1.25, 1.5, 2, 3].map((speed) => (
+                      <button key={speed} className={cn("w-full px-3 py-1.5 text-left text-sm hover:bg-white/20 transition-colors", playbackSpeed === speed ? "text-blue-400 font-semibold" : "text-white")} onClick={() => setSpeed(speed)}>
                         {speed}x
                       </button>
                     ))}
