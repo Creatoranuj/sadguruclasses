@@ -39,7 +39,7 @@ const Hero = memo(({ data, stats = [] }: HeroProps) => {
           <div className="text-center lg:text-left space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
               <Sparkles className="h-4 w-4" />
-              <span>For Grades 1-5</span>
+              <span>CBSE & State Board | Classes 6-12</span>
             </div>
 
             {/* Dynamic Title */}
