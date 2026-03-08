@@ -280,7 +280,10 @@ const MyCourseDetail = () => {
       ? true
       : lesson.chapterId === selectedChapterId;
     const typeMatch = activeTab === "all" ? true : typeMapping[activeTab].includes(lesson.lectureType || "VIDEO");
-    return chapterMatch && typeMatch;
+    const searchMatch = lessonSearch.trim()
+      ? lesson.title.toLowerCase().includes(lessonSearch.toLowerCase())
+      : true;
+    return chapterMatch && typeMatch && searchMatch;
   });
 
   const tabCounts = {
