@@ -347,7 +347,62 @@ const MyCourseDetail = () => {
     );
   }
 
-  // ── LESSON PLAYER VIEW (untouched) ─────────────────────────
+  // ── AUTO-MARK PROGRESS AT 90% ──────────────────────────────
+  const handleVideoProgress = async (state: { played: number; playedSeconds: number }) => {
+    if (!user || !selectedLesson || !courseId) return;
+    if (state.played < 0.9) return;
+    if (progressMarkedRef.current.has(selectedLesson.id)) return;
+    progressMarkedRef.current.add(selectedLesson.id);
+
+    try {
+      // Check if record already exists
+      const { data: existing } = await supabase
+        .from("user_progress")
+        .select("id, completed")
+        .eq("user_id", user.id)
+        .eq("lesson_id", selectedLesson.id)
+        .maybeSingle();
+
+      if (existing?.completed) return; // already marked complete
+
+      if (existing) {
+        await supabase.from("user_progress").update({
+          completed: true,
+          watched_seconds: Math.floor(state.playedSeconds),
+          last_watched_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+      } else {
+        await supabase.from("user_progress").insert({
+          user_id: user.id,
+          lesson_id: selectedLesson.id,
+          course_id: Number(courseId),
+          completed: true,
+          watched_seconds: Math.floor(state.playedSeconds),
+          last_watched_at: new Date().toISOString(),
+        } as any);
+      }
+
+      // Update sidebar chapter progress in-place
+      setChapters(prev => prev.map(ch => {
+        if (ch.id === selectedLesson.chapterId) {
+          if (ch.completedLessons >= ch.lessonCount) return ch;
+          return { ...ch, completedLessons: ch.completedLessons + 1 };
+        }
+        if (ch.id === "__all__") {
+          if (ch.completedLessons >= ch.lessonCount) return ch;
+          return { ...ch, completedLessons: ch.completedLessons + 1 };
+        }
+        return ch;
+      }));
+
+      toast.success("Lesson marked as complete! 🎉");
+    } catch (err) {
+      console.error("Error marking lesson complete:", err);
+      progressMarkedRef.current.delete(selectedLesson.id); // allow retry on error
+    }
+  };
+
+  // ── LESSON PLAYER VIEW ─────────────────────────────────────
   if (isPlayerOpen && selectedLesson) {
     const playerBreadcrumbs = [
       { label: "My Courses", href: "/my-courses" },
