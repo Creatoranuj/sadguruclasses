@@ -1,25 +1,60 @@
 
-## What happened and what to do next
+## Root Cause Analysis
 
-The GitHub Actions workflow file is correct. It expects two secrets: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The build failed in 14 seconds because these secrets weren't set — `npm run build` failed immediately without them.
+The build fails in **15 seconds** — which means it's failing at the very first step: `npm ci`. The actual Gradle build (which takes minutes) is never even reached.
 
-The android/ folder already exists in the repo (from earlier Replit work), so step 5 will pass.
+**Why `npm ci` fails in 15s:**
+- The repo has BOTH `bun.lock` AND `package-lock.json` — this causes `npm ci` to potentially fail if `package-lock.json` is out of sync
+- More likely: `package-lock.json` doesn't exist in the GitHub repo (it may be in `.gitignore`)
+- `npm ci` requires a valid `package-lock.json` — if missing, it fails immediately with exit code 1
 
-## Simple 3-step action plan for the user:
+**The fix:** Change `npm ci` → `npm install` in the workflow, AND change `cache: 'npm'` to handle this gracefully. Also need to ensure `package-lock.json` is committed.
 
-### Step 1 — GitHub Secrets add karo (one-time)
-Go to: https://github.com/Creatoranuj/sadguruclasses/settings/secrets/actions
+**Secondary issue spotted:**
+- The workflow uses `softprops/action-gh-release@v2` but when triggered via `workflow_dispatch` (manual), `github.ref_name` is `main` (not a version tag). This means the APK rename step creates `SadguruCoachingClasses-main.apk` and the release step tries to create a release for `main` branch — which fails because you can't create a release on a branch ref without a tag.
 
-Add these 2 secrets:
-- Name: `VITE_SUPABASE_URL` → Value: `https://wegamscqtvqhxowlskfm.supabase.co`
-- Name: `VITE_SUPABASE_ANON_KEY` → Value: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlZ2Ftc2NxdHZxaHhvd2xza2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MTk4OTIsImV4cCI6MjA4ODA5NTg5Mn0.PgGpSDtx1JpLRsV2w7RAoZ2Y-M3HeiBNVKWqAquc_zc`
+## Plan
 
-### Step 2 — Build re-trigger karo
-Two options:
-A) Replit mein: `git tag v1.0.2 && git push origin v1.0.2`
-B) Ya GitHub pe jaake Actions tab → "Build Android APK" → "Run workflow" button (manual trigger, no tag needed)
+### Fix 1 — `npm ci` → `npm install` (fixes 15s failure)
+In `.github/workflows/build-apk.yml`, change:
+```
+npm ci
+```
+to:
+```
+npm install --legacy-peer-deps
+```
+And remove `cache: 'npm'` from setup-node (or change to npm with package.json).
 
-### Step 3 — APK download karo
-Build ~5 minutes mein complete hoga. GitHub Releases pe APK milega: https://github.com/Creatoranuj/sadguruclasses/releases
+### Fix 2 — Handle `workflow_dispatch` version name
+When triggered manually (no tag), `github.ref_name` = `main`. Fix the release step to use a timestamp-based version if no tag:
+```yaml
+- name: 🏷️ Set version name
+  run: |
+    if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" ]]; then
+      echo "VERSION=v1.0-$(date +%Y%m%d-%H%M)" >> $GITHUB_ENV
+    else
+      echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+    fi
+```
 
-No code changes needed — just GitHub secrets configuration.
+Then use `${{ env.VERSION }}` everywhere instead of `${{ github.ref_name }}`.
+
+### Fix 3 — Release step needs a tag (not branch)
+The `softprops/action-gh-release@v2` action needs a git tag. For manual triggers, we need to either:
+- Create a tag in the workflow before the release step, OR
+- Use `actions/upload-artifact` only (skip the release step for manual triggers)
+
+Best approach: Auto-create a tag in the workflow for manual runs.
+
+## Changes to make
+
+**File: `.github/workflows/build-apk.yml`**
+
+1. Step 2 (setup-node): Remove `cache: 'npm'` line OR keep it — npm cache is fine
+2. Step 3 (install): `npm ci` → `npm install`  
+3. Add new step after checkout: Set VERSION env variable
+4. Replace all `${{ github.ref_name }}` with `${{ env.VERSION }}`
+5. Add step to create git tag for manual dispatch runs (so release step works)
+
+This is a **single file change** to the workflow YAML.
