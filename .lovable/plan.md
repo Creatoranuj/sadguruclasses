@@ -1,26 +1,83 @@
 
-## Plan: Replace Sparkles/Bot Icons with Sadguru Logo in ChatWidget
+## Root Cause: Missing `lovable.toml`
 
-### What the user wants
-The user is pointing at the sparkle icon (✨) in the floating chat button and the chat header avatar — they want it replaced with the **Sadguru Coaching Classes logo** (`logo_icon_web.png`) instead of the generic sparkle/bot icon.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-### 3 Places to update in `src/components/chat/ChatWidget.tsx`:
+---
 
-1. **Floating trigger button** (line 182): `<Sparkles className="w-6 h-6" />` → `<img src={logo} className="w-8 h-8 object-contain" />`
+## Plan
 
-2. **Chat header avatar** (line 196): `<Sparkles className="w-4 h-4 text-primary" />` → `<img src={logo} className="w-6 h-6 object-contain" />`
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-3. **Message bubble avatars** (lines 217–219 and 273–275): The `<Bot className="h-3.5 w-3.5 text-primary" />` icon inside the `w-7 h-7 rounded-full bg-primary/10` div — replace with the logo image
-
-### Import
-Add at the top of the file:
-```typescript
-import logoIcon from "@/assets/branding/logo_icon_web.png";
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-Remove `Sparkles`, `Bot`, `HelpCircle` from lucide-react import if no longer used (keep others like `X`, `Send`, `RotateCcw`, `ThumbsUp`, `ThumbsDown`).
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-Also remove the `Loader2` import since it's not used (bouncing dots replaced it).
+---
 
-### Files to change: 1
-- `src/components/chat/ChatWidget.tsx` — import logo, replace all 4 icon instances
+### 2. Visual Polish — CSS & Theme Improvements
+
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

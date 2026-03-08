@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { X, Send, Loader2, Bot, RotateCcw, HelpCircle, ThumbsUp, ThumbsDown, Sparkles } from "lucide-react";
+import { X, Send, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
+import logoIcon from "@/assets/branding/logo_icon_web.png";
 
 interface Message {
   role: "user" | "assistant";
@@ -179,7 +179,7 @@ const ChatWidget = () => {
         )}
         aria-label="Open Sadguru Sarthi"
       >
-        <Sparkles className="w-6 h-6" />
+        <img src={logoIcon} className="w-8 h-8 object-contain" alt="Sadguru Sarthi" />
       </button>
 
       {/* Full-page chat overlay */}
@@ -193,7 +193,7 @@ const ChatWidget = () => {
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b bg-primary/5 shrink-0">
             <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center relative shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <img src={logoIcon} className="w-5 h-5 object-contain" alt="Sarthi" />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-chart-2 rounded-full border-2 border-card" />
             </div>
             <div className="flex-1 min-w-0">
@@ -215,7 +215,7 @@ const ChatWidget = () => {
                 <div key={msg.id} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
                   {msg.role === "assistant" && (
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <Bot className="h-3.5 w-3.5 text-primary" />
+                      <img src={logoIcon} className="w-4 h-4 object-contain" alt="Sarthi" />
                     </div>
                   )}
                   <div className="flex flex-col gap-1 max-w-[82%]">
@@ -271,7 +271,7 @@ const ChatWidget = () => {
               {isLoading && (
                 <div className="flex gap-2 justify-start">
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Bot className="h-3.5 w-3.5 text-primary" />
+                    <img src={logoIcon} className="w-4 h-4 object-contain" alt="Sarthi" />
                   </div>
                   <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
                     {[0, 1, 2].map(i => (
