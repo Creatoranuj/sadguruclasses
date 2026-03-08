@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { X, Send, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
-import logoIcon from "@/assets/sarthi-avatar.png";
+import logoIcon from "@/assets/sarthi-avatar.png"; // Sarthi guru avatar
 
 interface Message {
   role: "user" | "assistant";
