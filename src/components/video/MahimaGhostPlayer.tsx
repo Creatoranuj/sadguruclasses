@@ -629,14 +629,6 @@ const MahimaGhostPlayer = memo(({
              </span>
           </div>
 
-          {/* TOP-RIGHT WATERMARK — covers YouTube "More options" area on hover */}
-          <div
-            className={`absolute top-2 right-2 z-[46] flex items-center gap-1 px-1.5 py-1 select-none pointer-events-none rounded transition-opacity duration-500 ${watermarkVisible ? 'opacity-100' : 'opacity-0'}`}
-            style={{ background: 'rgba(0,0,0,0.4)' }}
-          >
-             <img src={sadguruLogo} alt="Sadguru" className="h-6 w-6 rounded-sm" draggable={false} />
-             <span className="text-white text-[10px] font-semibold tracking-wide opacity-80">SC</span>
-          </div>
 
           {/* GHOST OVERLAY - touchstart for instant response, click for desktop */}
           <div
