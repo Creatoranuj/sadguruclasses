@@ -4,10 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { MessageCircle, X, Send, Loader2, Bot, RotateCcw } from "lucide-react";
-import sadguruLogo from "@/assets/branding/logo_icon_web.png";
+import { X, Send, Loader2, Bot, RotateCcw, HelpCircle } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -104,7 +102,6 @@ const ChatWidget = () => {
     }]);
   };
 
-  // Simple markdown-like renderer for bold
   const renderContent = (text: string) => {
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return parts.map((part, i) =>
@@ -124,31 +121,27 @@ const ChatWidget = () => {
           "w-14 h-14 rounded-full shadow-lg flex items-center justify-center",
           "bg-primary text-primary-foreground transition-all duration-200",
           "hover:scale-110 active:scale-95",
-          isOpen && "rotate-90"
+          isOpen && "scale-0 opacity-0 pointer-events-none"
         )}
         aria-label="Open Sadguru Chatbot"
       >
-        {isOpen ? (
-          <X className="h-6 w-6" />
-        ) : (
-          <img src={sadguruLogo} alt="Sadguru Bot" className="w-8 h-8 rounded-full object-contain" />
-        )}
+        <HelpCircle className="w-7 h-7" />
       </button>
 
-      {/* Chat window */}
+      {/* Full-page chat overlay */}
       {isOpen && (
         <div className={cn(
-          "fixed bottom-36 right-4 z-50 md:bottom-24 md:right-6",
-          "w-[calc(100vw-2rem)] max-w-sm",
-          "bg-card border rounded-2xl shadow-2xl flex flex-col",
-          "animate-in slide-in-from-bottom-4 duration-200",
-          "h-[520px]"
+          "fixed inset-0 z-50",
+          "bg-background flex flex-col",
+          "animate-in fade-in duration-200",
+          // On md+: right-side panel
+          "md:left-auto md:w-[420px] md:shadow-2xl md:border-l"
         )}>
           {/* Header */}
-          <div className="flex items-center gap-3 p-4 border-b bg-primary/5 rounded-t-2xl">
-            <div className="relative">
-              <img src={sadguruLogo} alt="Sadguru Bot" className="w-9 h-9 rounded-full object-contain bg-primary/10 p-1" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-card" />
+          <div className="flex items-center gap-3 px-4 py-3 border-b bg-primary/5 shrink-0">
+            <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center relative shrink-0">
+              <HelpCircle className="w-5 h-5 text-primary" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm text-foreground">Sadguru Chatbot</p>
@@ -157,11 +150,14 @@ const ChatWidget = () => {
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={resetChat} title="Reset chat">
               <RotateCcw className="h-3.5 w-3.5" />
             </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIsOpen(false)} title="Close">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Messages */}
           <ScrollArea className="flex-1 p-4" ref={scrollRef as any}>
-            <div className="space-y-3">
+            <div className="space-y-3 pb-2">
               {messages.map((msg, i) => (
                 <div key={i} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
                   {msg.role === "assistant" && (
@@ -195,12 +191,12 @@ const ChatWidget = () => {
 
           {/* Quick prompts (show only at start) */}
           {messages.length <= 1 && (
-            <div className="px-4 pb-2 flex flex-wrap gap-1.5">
+            <div className="px-4 pb-2 flex flex-wrap gap-1.5 shrink-0">
               {QUICK_PROMPTS.map(p => (
                 <button
                   key={p}
                   onClick={() => sendMessage(p)}
-                  className="text-xs bg-primary/10 text-primary rounded-full px-3 py-1 hover:bg-primary/20 transition-colors"
+                  className="text-xs bg-primary/10 text-primary rounded-full px-3 py-1.5 hover:bg-primary/20 transition-colors"
                 >
                   {p}
                 </button>
@@ -209,19 +205,19 @@ const ChatWidget = () => {
           )}
 
           {/* Input */}
-          <div className="p-3 border-t flex gap-2">
+          <div className="p-3 border-t flex gap-2 shrink-0">
             <Input
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
               placeholder="Ask about courses, quizzes..."
-              className="flex-1 text-sm h-9"
+              className="flex-1 text-sm h-10"
               disabled={isLoading}
             />
             <Button
               size="icon"
-              className="h-9 w-9 shrink-0"
+              className="h-10 w-10 shrink-0"
               onClick={() => sendMessage()}
               disabled={!input.trim() || isLoading}
             >
@@ -235,3 +231,4 @@ const ChatWidget = () => {
 };
 
 export default ChatWidget;
+
