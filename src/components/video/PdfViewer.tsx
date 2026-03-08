@@ -42,10 +42,11 @@ const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const filename = title ? `${title}.pdf` : undefined;
+      const filename = title ? `${title}.pdf` : "document.pdf";
       await downloadFile(url, filename);
+      await addDownload(title || "Document", url, filename, "PDF");
       toast.success("Download started");
-      onDownloaded?.({ title: title || "Document", url, filename: filename || "document.pdf" });
+      onDownloaded?.({ title: title || "Document", url, filename });
     } catch {
       toast.error("Download failed");
     } finally {

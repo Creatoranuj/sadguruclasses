@@ -87,15 +87,17 @@ const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerPro
         const directUrl = archiveDirectUrl || await getArchiveDownloadUrl(archiveId);
         const filename = title ? `${title}.pdf` : `${archiveId}.pdf`;
         await downloadFile(directUrl, filename);
+        await addDownload(title || archiveId, directUrl, filename, "PDF");
         onDownloaded?.({ title: title || archiveId, url: directUrl, filename });
       } else {
-        const filename = title ? `${title}.pdf` : undefined;
+        const filename = title ? `${title}.pdf` : "document.pdf";
         await downloadFile(url, filename);
-        onDownloaded?.({ title: title || "Document", url, filename: filename || "document.pdf" });
+        await addDownload(title || "Document", url, filename, "PDF");
+        onDownloaded?.({ title: title || "Document", url, filename });
       }
       toast.success("Download started");
     } catch {
-      toast.error("Download failed — try opening in a new tab");
+      toast.error("Download failed");
     } finally {
       setDownloading(false);
     }
