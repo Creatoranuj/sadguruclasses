@@ -521,9 +521,15 @@ const LessonView = () => {
                     </div>
 
                     {/* TABS COMPONENT */}
-                    <Tabs defaultValue="overview" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4 lg:w-[500px] mb-6">
+                    <Tabs defaultValue={currentLesson?.class_pdf_url ? "pdf" : "overview"} className="w-full">
+                        <TabsList className={`grid w-full mb-6 ${currentLesson?.class_pdf_url ? "grid-cols-5" : "grid-cols-4"} lg:w-auto lg:inline-flex`}>
                             <TabsTrigger value="overview">Overview</TabsTrigger>
+                            {currentLesson?.class_pdf_url && (
+                              <TabsTrigger value="pdf" className="gap-1">
+                                <FileText className="h-3 w-3" />
+                                PDF
+                              </TabsTrigger>
+                            )}
                             <TabsTrigger value="resources" className="gap-1">
                                 <Library className="h-3 w-3" />
                                 Resources
