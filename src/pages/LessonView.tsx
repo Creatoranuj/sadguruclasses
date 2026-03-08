@@ -617,8 +617,13 @@ const LessonView = () => {
                             {/* Topics Covered timeline */}
                             <TopicsCovered
                               lessonId={currentLesson?.id || ''}
-                              overview={(currentLesson as any)?.overview || null}
+                              overview={lessonOverviewMap[currentLesson?.id || ''] ?? currentLesson?.overview ?? null}
                               isAdmin={isAdminOrTeacher}
+                              onSaved={(newOverview) => {
+                                if (currentLesson?.id) {
+                                  setLessonOverviewMap(prev => ({ ...prev, [currentLesson.id]: newOverview }));
+                                }
+                              }}
                             />
                         </TabsContent>
 
