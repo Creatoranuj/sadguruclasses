@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { ThumbsUp, HelpCircle, FileText, MessageCircle } from "lucide-react";
+import { ThumbsUp, HelpCircle, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -22,36 +22,24 @@ const LessonActionBar = memo(({
   hasLiked,
   onLike,
   onDoubts,
-  onComments,
   onDownloadPdf,
   hasPdf,
   likesLoading,
   lessonTitle,
-  teacherName,
   courseInfo,
 }: LessonActionBarProps) => {
   return (
     <div className="border-b border-border bg-card">
-      {/* Lesson title + course info section */}
-      {(lessonTitle || teacherName) && (
-        <div className="px-4 pt-3 pb-2">
-          <h3 className="text-sm font-semibold text-foreground line-clamp-1">
-            {lessonTitle}{teacherName ? ` | ${teacherName}` : ''}
-          </h3>
-          {courseInfo && (
-            <p className="text-xs text-muted-foreground mt-0.5">{courseInfo}</p>
-          )}
-        </div>
-      )}
-
-      {/* Action buttons row */}
-      <div className="flex items-center gap-2 px-4 py-3">
-        {/* Like Button */}
+      {/* Action buttons row — 2 large pill buttons matching reference screenshot */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* Like Button — large pill */}
         <Button
           variant="outline"
           className={cn(
-            "flex-1 gap-1.5 h-10 text-xs font-semibold rounded-xl transition-all",
-            hasLiked && "bg-primary/10 border-primary text-primary"
+            "flex-1 gap-2 h-11 text-sm font-semibold rounded-full transition-all border-2",
+            hasLiked
+              ? "bg-primary/10 border-primary text-primary"
+              : "border-border text-foreground"
           )}
           onClick={onLike}
           disabled={likesLoading}
@@ -60,40 +48,42 @@ const LessonActionBar = memo(({
           {likeCount > 0 ? `${likeCount} Likes` : "Like"}
         </Button>
 
-        {/* Comments Button */}
-        {onComments && (
-          <Button
-            variant="outline"
-            className="flex-1 gap-1.5 h-10 text-xs font-semibold rounded-xl"
-            onClick={onComments}
-          >
-            <MessageCircle className="h-4 w-4" />
-            Comments
-          </Button>
-        )}
-
-        {/* Doubts Button */}
+        {/* Doubts Button — large pill */}
         <Button
           variant="outline"
-          className="flex-1 gap-1.5 h-10 text-xs font-semibold rounded-xl"
+          className="flex-1 gap-2 h-11 text-sm font-semibold rounded-full border-2 border-border text-foreground"
           onClick={onDoubts}
         >
-          <HelpCircle className="h-4 w-4" />
+          <HelpCircle className="h-4 w-4 text-amber-500" />
           Doubts
         </Button>
+      </div>
 
-        {/* Class PDF Button — only one, opens PDF tab */}
-        {hasPdf && onDownloadPdf && (
+      {/* PDF / Download row — shown below if PDF exists */}
+      {hasPdf && onDownloadPdf && (
+        <div className="flex items-center gap-3 px-4 pb-3">
           <Button
-            variant="outline"
-            className="flex-1 gap-1.5 h-10 text-xs font-semibold rounded-xl"
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 h-9 text-xs font-medium text-muted-foreground hover:text-foreground"
             onClick={onDownloadPdf}
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="h-3.5 w-3.5" />
             Class PDF
           </Button>
-        )}
-      </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 h-9 text-xs font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              if (onDownloadPdf) onDownloadPdf();
+            }}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download
+          </Button>
+        </div>
+      )}
     </div>
   );
 });
