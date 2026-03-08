@@ -44,6 +44,39 @@ const BuyCourse = () => {
 
   const [countdown, setCountdown] = useState(5);
 
+  // Define free enrollment handler early so useEffect can reference it
+  const handleFreeEnrollmentEarly = async (courseIdNum: number) => {
+    if (!user) return;
+    try {
+      const { data: existing } = await supabase
+        .from("enrollments")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("course_id", courseIdNum)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (existing) {
+        toast.info("You're already enrolled in this course!");
+        navigate(`/my-courses`);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("enrollments")
+        .insert({ user_id: user.id, course_id: courseIdNum, status: "active" });
+
+      if (error) throw error;
+
+      playSuccessSound();
+      toast.success("Free enrollment successful! Starting your course...");
+      navigate(`/my-courses`);
+    } catch (error: any) {
+      console.error("Free enrollment error:", error);
+      toast.error("Failed to enroll. Please try again.");
+    }
+  };
+
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
@@ -57,19 +90,20 @@ const BuyCourse = () => {
             .single();
 
           if (!error && data) {
+            const isFree = !data.price || data.price === 0;
             const mapped = {
               id: data.id,
               title: data.title,
               description: data.description,
               grade: data.grade,
-              price: data.price,
+              price: data.price ?? 0,
               imageUrl: data.image_url,
               thumbnailUrl: data.thumbnail_url,
             };
             setCourse(mapped);
             
-            if (data.price === 0 && user) {
-              await handleFreeEnrollment(Number(courseId));
+            if (isFree && user) {
+              await handleFreeEnrollmentEarly(Number(courseId));
             }
           }
         } catch (err) {
@@ -79,7 +113,8 @@ const BuyCourse = () => {
       setLoading(false);
     };
     initData();
-  }, [courseId, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, user?.id]);
 
   useEffect(() => {
     const handleAdminAutoEnroll = async () => {
@@ -94,37 +129,7 @@ const BuyCourse = () => {
     }
   }, [isAdmin, course, courseId, loading, adminAutoEnrolled, adminEnroll]);
 
-  const handleFreeEnrollment = async (courseIdNum: number) => {
-    if (!user) return;
-    try {
-      const { data: existing } = await supabase
-        .from("enrollments")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("course_id", courseIdNum)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (existing) {
-        toast.info("You're already enrolled in this course!");
-        navigate(`/classes/${courseIdNum}/lessons`);
-        return;
-      }
-
-      const { error } = await supabase
-        .from("enrollments")
-        .insert({ user_id: user.id, course_id: courseIdNum, status: "active" });
-
-      if (error) throw error;
-
-      playSuccessSound();
-      toast.success("Free enrollment successful! Starting your course...");
-      navigate(`/classes/${courseIdNum}/lessons`);
-    } catch (error: any) {
-      console.error("Free enrollment error:", error);
-      toast.error("Failed to enroll. Please try again.");
-    }
-  };
+  // handleFreeEnrollment is defined above as handleFreeEnrollmentEarly (hoisting fix)
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -387,7 +392,7 @@ const BuyCourse = () => {
                         navigate("/login", { state: { from: location.pathname + location.search } });
                         return;
                       }
-                      await handleFreeEnrollment(Number(courseId));
+                      await handleFreeEnrollmentEarly(Number(courseId));
                     }}
                     disabled={loading}
                   >
