@@ -44,6 +44,7 @@ const Admin = () => {
   
   // -- DATA STATES --
   const [payments, setPayments] = useState<any[]>([]);
+  const [razorpayPayments, setRazorpayPayments] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<UserWithRole[]>([]);
@@ -163,19 +164,24 @@ const Admin = () => {
       const { data: coursesData } = await supabase.from('courses').select('*');
       if (coursesData) setCoursesList(coursesData);
 
-      // B. Fetch Payments (With User Profile & Course Details)
+      // B. Fetch Manual UPI Payments
       let paymentQuery = supabase
         .from('payment_requests')
         .select(`*, courses (title), profiles (full_name, email)`)
         .order('created_at', { ascending: false });
-      
       if (paymentStatusFilter !== "all") {
         paymentQuery = paymentQuery.eq('status', paymentStatusFilter);
       }
-        
       const { data: payData, error: payError } = await paymentQuery;
       if (payData) setPayments(payData);
       if (payError) console.error("Payment Fetch Error:", payError);
+
+      // B2. Fetch Razorpay Payments
+      const { data: rzpData } = await supabase
+        .from('razorpay_payments')
+        .select(`*, courses (title)`)
+        .order('created_at', { ascending: false });
+      if (rzpData) setRazorpayPayments(rzpData);
 
       // C. Fetch Lessons
       const { data: lessonData } = await supabase
