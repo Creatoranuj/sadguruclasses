@@ -24,6 +24,7 @@ interface Question {
   marks: number;
   negative_marks: number;
   order_index: number;
+  image_url?: string | null;
 }
 
 interface Attempt {

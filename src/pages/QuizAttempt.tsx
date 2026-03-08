@@ -29,6 +29,7 @@ interface Question {
   negative_marks: number;
   order_index: number;
   explanation?: string | null;
+  image_url?: string | null;
 }
 
 interface Quiz {
