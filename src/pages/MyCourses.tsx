@@ -107,9 +107,13 @@ const CourseCard = memo(({ course, onNavigate, onDelete }: {
       <div className="space-y-2 mb-4">
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">
-            {course.completedLessons}/{course.totalLessons} completed
+            {course.totalLessons === 0
+              ? "No lessons yet"
+              : `${course.completedLessons}/${course.totalLessons} completed`}
           </span>
-          <span className="text-primary font-medium">{course.progressPercent}%</span>
+          <span className="text-primary font-medium">
+            {course.totalLessons === 0 ? "—" : `${course.progressPercent}%`}
+          </span>
         </div>
         <Progress value={course.progressPercent} className="h-1.5" />
       </div>
@@ -210,8 +214,10 @@ const MyCourses = () => {
         if (!course) return null;
 
         const courseLessons = allLessons.filter((l: any) => l.course_id === course.id);
+        const courseLessonIds = new Set(courseLessons.map((l: any) => l.id));
+        // Use lesson_id fallback in case course_id is null in user_progress records
         const completedLessons = progressData.filter(
-          (p: any) => p.course_id === course.id && p.completed
+          (p: any) => p.completed && (p.course_id === course.id || courseLessonIds.has(p.lesson_id))
         );
         const totalLessons = courseLessons.length;
         const progressPercent = totalLessons > 0

@@ -788,12 +788,24 @@ const MyCourseDetail = () => {
             <div className="flex flex-col">
               {/* Video player */}
               <div className="w-full bg-black">
-                <UnifiedVideoPlayer
-                  url={selectedLesson.videoUrl}
-                  title={selectedLesson.title}
-                  onReady={() => console.log('Video ready')}
-                  onProgress={handleVideoProgress}
-                />
+                {(() => {
+                  // Find next lesson in the current chapter/filtered list
+                  const currentIndex = filteredLessons.findIndex(l => l.id === selectedLesson.id);
+                  const nextLesson = currentIndex >= 0 && currentIndex < filteredLessons.length - 1
+                    ? filteredLessons[currentIndex + 1]
+                    : null;
+                  return (
+                    <UnifiedVideoPlayer
+                      url={selectedLesson.videoUrl}
+                      title={selectedLesson.title}
+                      lessonId={selectedLesson.id}
+                      onReady={() => console.log('Video ready')}
+                      onProgress={handleVideoProgress}
+                      onNextVideo={nextLesson ? () => handleContentClick(nextLesson) : undefined}
+                      nextVideoTitle={nextLesson?.title}
+                    />
+                  );
+                })()}
               </div>
 
               {/* Lesson meta */}
