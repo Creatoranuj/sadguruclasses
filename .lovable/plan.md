@@ -1,60 +1,83 @@
 
-## Root Cause Analysis
+## Root Cause: Missing `lovable.toml`
 
-The build fails in **15 seconds** — which means it's failing at the very first step: `npm ci`. The actual Gradle build (which takes minutes) is never even reached.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-**Why `npm ci` fails in 15s:**
-- The repo has BOTH `bun.lock` AND `package-lock.json` — this causes `npm ci` to potentially fail if `package-lock.json` is out of sync
-- More likely: `package-lock.json` doesn't exist in the GitHub repo (it may be in `.gitignore`)
-- `npm ci` requires a valid `package-lock.json` — if missing, it fails immediately with exit code 1
-
-**The fix:** Change `npm ci` → `npm install` in the workflow, AND change `cache: 'npm'` to handle this gracefully. Also need to ensure `package-lock.json` is committed.
-
-**Secondary issue spotted:**
-- The workflow uses `softprops/action-gh-release@v2` but when triggered via `workflow_dispatch` (manual), `github.ref_name` is `main` (not a version tag). This means the APK rename step creates `SadguruCoachingClasses-main.apk` and the release step tries to create a release for `main` branch — which fails because you can't create a release on a branch ref without a tag.
+---
 
 ## Plan
 
-### Fix 1 — `npm ci` → `npm install` (fixes 15s failure)
-In `.github/workflows/build-apk.yml`, change:
-```
-npm ci
-```
-to:
-```
-npm install --legacy-peer-deps
-```
-And remove `cache: 'npm'` from setup-node (or change to npm with package.json).
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-### Fix 2 — Handle `workflow_dispatch` version name
-When triggered manually (no tag), `github.ref_name` = `main`. Fix the release step to use a timestamp-based version if no tag:
-```yaml
-- name: 🏷️ Set version name
-  run: |
-    if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" ]]; then
-      echo "VERSION=v1.0-$(date +%Y%m%d-%H%M)" >> $GITHUB_ENV
-    else
-      echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
-    fi
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-Then use `${{ env.VERSION }}` everywhere instead of `${{ github.ref_name }}`.
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-### Fix 3 — Release step needs a tag (not branch)
-The `softprops/action-gh-release@v2` action needs a git tag. For manual triggers, we need to either:
-- Create a tag in the workflow before the release step, OR
-- Use `actions/upload-artifact` only (skip the release step for manual triggers)
+---
 
-Best approach: Auto-create a tag in the workflow for manual runs.
+### 2. Visual Polish — CSS & Theme Improvements
 
-## Changes to make
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-**File: `.github/workflows/build-apk.yml`**
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-1. Step 2 (setup-node): Remove `cache: 'npm'` line OR keep it — npm cache is fine
-2. Step 3 (install): `npm ci` → `npm install`  
-3. Add new step after checkout: Set VERSION env variable
-4. Replace all `${{ github.ref_name }}` with `${{ env.VERSION }}`
-5. Add step to create git tag for manual dispatch runs (so release step works)
+---
 
-This is a **single file change** to the workflow YAML.
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
