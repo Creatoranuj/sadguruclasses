@@ -1,126 +1,83 @@
 
-## Current State
+## Root Cause: Missing `lovable.toml`
 
-`MyCourseDetail.tsx` (838 lines) has:
-- A chapter sidebar (`<aside>` lines 638–686) that:
-  - On mobile: slides in/out via `courseSidebarOpen` state ✅
-  - On desktop: always visible (`md:translate-x-0`) — **no collapse toggle yet**
-  - Shows chapter code badge + title + lesson count badge — **no progress bar**
-  - **No search box**
-- Lesson player (lines 348–599) — completely untouched
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-## 3 Changes to Make in `MyCourseDetail.tsx`
+---
 
-### 1. Desktop Sidebar Collapse Toggle
+## Plan
 
-**Add state** (line 84, after `courseSidebarOpen`):
-```tsx
-const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
+
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-**Update `<aside>` classNames** (line 638–641) to also handle desktop collapse:
-```tsx
-<aside className={cn(
-  "fixed md:sticky top-0 md:top-auto z-40 h-full flex-shrink-0 bg-card border-r flex flex-col transition-all duration-300",
-  courseSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
-  sidebarCollapsed ? "md:w-0 md:overflow-hidden md:border-r-0" : "w-64 md:w-64"
-)}>
-```
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-**Add desktop toggle button** in the sticky header (line 704–710, after mobile toggle button):
-```tsx
-{/* Desktop sidebar toggle */}
-<button
-  onClick={() => setSidebarCollapsed(prev => !prev)}
-  className="hidden md:flex p-2 rounded-lg border bg-card text-muted-foreground hover:bg-muted transition-colors"
-  title={sidebarCollapsed ? "Show chapters" : "Hide chapters"}
->
-  <PanelLeftOpen className={cn("h-4 w-4 transition-transform duration-300", !sidebarCollapsed && "rotate-180")} />
-</button>
-```
+---
 
-### 2. Progress Bar per Chapter in Sidebar
+### 2. Visual Polish — CSS & Theme Improvements
 
-**Replace** each chapter button in the sidebar (lines 652–681) from a single-row `flex items-center` layout to a `flex-col items-start` layout that includes a mini progress bar below the title row:
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-```tsx
-{chapters.map((chapter) => {
-  const isActive = ...;
-  const pct = chapter.lessonCount > 0
-    ? Math.round((chapter.completedLessons / chapter.lessonCount) * 100)
-    : 0;
-  return (
-    <button key={chapter.id} onClick={...}
-      className={cn("w-full flex flex-col px-3 py-2 rounded-lg text-sm text-left transition-colors", ...)}
-    >
-      {/* Top row: badge + title + count */}
-      <div className="flex items-center gap-2 w-full">
-        <span className={cn("text-xs font-bold px-1.5 py-0.5 rounded shrink-0", ...)}>{chapter.code}</span>
-        <span className="flex-1 truncate leading-snug">{chapter.title}</span>
-        {chapter.lessonCount > 0 && <span className={cn(...)}>{chapter.lessonCount}</span>}
-      </div>
-      {/* Progress row */}
-      {chapter.lessonCount > 0 && (
-        <div className="mt-1.5 w-full space-y-0.5 pl-[calc(1.5rem+8px)]">
-          <div className="h-1 bg-muted rounded-full overflow-hidden">
-            <div
-              className={cn("h-full rounded-full transition-all", pct === 100 ? "bg-green-500" : "bg-primary")}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-muted-foreground">{chapter.completedLessons}/{chapter.lessonCount} done</p>
-        </div>
-      )}
-    </button>
-  );
-})}
-```
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-### 3. Search Box Inside Sidebar
+---
 
-**Add state** (line 84):
-```tsx
-const [sidebarSearch, setSidebarSearch] = useState("");
-```
+### 3. Landing Page & Navigation Visual Fixes
 
-**Add search input** inside the `<aside>`, below the header (after line 647, before `<ScrollArea>`):
-```tsx
-<div className="px-3 py-2 border-b shrink-0">
-  <div className="relative">
-    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-    <input
-      type="text"
-      placeholder="Search chapters..."
-      value={sidebarSearch}
-      onChange={(e) => setSidebarSearch(e.target.value)}
-      className="w-full pl-8 pr-3 py-2 text-xs bg-muted rounded-md border-0 outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-    />
-    {sidebarSearch && (
-      <button onClick={() => setSidebarSearch("")} className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground">
-        <X className="h-3.5 w-3.5" />
-      </button>
-    )}
-  </div>
-</div>
-```
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
 
-**Filter chapters** in the render (before the `chapters.map()` call):
-```tsx
-const filteredSidebarChapters = sidebarSearch.trim()
-  ? chapters.filter(ch =>
-      ch.title.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
-      ch.code.toLowerCase().includes(sidebarSearch.toLowerCase())
-    )
-  : chapters;
-```
+---
 
-Then use `filteredSidebarChapters.map(...)` instead of `chapters.map(...)`.
+### 4. Global Component Polish in `src/index.css`
 
-Also add `Search` to the lucide-react imports (line 10–14).
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
 
-## Files Changed
-| File | Changes |
-|------|---------|
-| `src/pages/MyCourseDetail.tsx` | Add `sidebarCollapsed` + `sidebarSearch` states; update `<aside>` classes; add desktop toggle button; add search input in sidebar; enhance chapter buttons with progress bars; filter sidebar chapters by search |
+---
 
-**Lesson player (lines 348–599) is NOT touched.**
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

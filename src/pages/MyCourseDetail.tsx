@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Play, FileText, BookOpen, Grid3X3,
   Lock, Clock, Star, CheckCircle, MessageCircle, Send,
-  PanelLeftOpen, X, ChevronLeft
+  PanelLeftOpen, PanelLeftClose, X, ChevronLeft, Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -82,6 +82,8 @@ const MyCourseDetail = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [courseSidebarOpen, setCourseSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarSearch, setSidebarSearch] = useState("");
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -636,8 +638,9 @@ const MyCourseDetail = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Chapter Sidebar */}
         <aside className={cn(
-          "fixed md:sticky top-0 md:top-auto z-40 h-full md:h-auto flex-shrink-0 w-64 bg-card border-r flex flex-col transition-transform duration-300",
-          courseSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          "fixed md:sticky top-0 md:top-auto z-40 h-full md:h-auto flex-shrink-0 bg-card border-r flex flex-col transition-all duration-300",
+          courseSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
+          sidebarCollapsed ? "md:w-0 md:overflow-hidden md:border-r-0" : "w-64 md:w-64"
         )}>
           <div className="flex items-center justify-between px-3 py-3 border-b shrink-0">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Subjects</span>
@@ -645,42 +648,105 @@ const MyCourseDetail = () => {
               <X className="h-4 w-4" />
             </button>
           </div>
+
+          {/* Search box */}
+          <div className="px-3 py-2 border-b shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search chapters..."
+                value={sidebarSearch}
+                onChange={(e) => setSidebarSearch(e.target.value)}
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-muted rounded-md border-0 outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+              />
+              {sidebarSearch && (
+                <button
+                  onClick={() => setSidebarSearch("")}
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {chapters.map((chapter) => {
-                const isActive = selectedChapterId === chapter.id || (!selectedChapterId && chapter.id === "__all__");
-                return (
-                  <button
-                    key={chapter.id}
-                    onClick={() => {
-                      setSelectedChapterId(chapter.id === "__all__" ? null : chapter.id);
-                      setCourseSidebarOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors",
-                      isActive
-                        ? "bg-primary/10 text-primary font-medium border-l-2 border-primary pl-2.5"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <span className={cn(
-                      "text-xs font-bold px-1.5 py-0.5 rounded shrink-0",
-                      isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                    )}>
-                      {chapter.code}
-                    </span>
-                    <span className="flex-1 truncate leading-snug">{chapter.title}</span>
-                    {chapter.lessonCount > 0 && (
-                      <span className={cn(
-                        "text-xs px-1 py-0.5 rounded-full shrink-0",
-                        isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                      )}>
-                        {chapter.lessonCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {(() => {
+                const filteredSidebarChapters = sidebarSearch.trim()
+                  ? chapters.filter(ch =>
+                      ch.title.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
+                      ch.code.toLowerCase().includes(sidebarSearch.toLowerCase())
+                    )
+                  : chapters;
+
+                if (filteredSidebarChapters.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground text-center py-4 px-2">
+                      No chapters found
+                    </p>
+                  );
+                }
+
+                return filteredSidebarChapters.map((chapter) => {
+                  const isActive = selectedChapterId === chapter.id || (!selectedChapterId && chapter.id === "__all__");
+                  const pct = chapter.lessonCount > 0
+                    ? Math.round((chapter.completedLessons / chapter.lessonCount) * 100)
+                    : 0;
+                  return (
+                    <button
+                      key={chapter.id}
+                      onClick={() => {
+                        setSelectedChapterId(chapter.id === "__all__" ? null : chapter.id);
+                        setCourseSidebarOpen(false);
+                      }}
+                      className={cn(
+                        "w-full flex flex-col px-3 py-2 rounded-lg text-sm text-left transition-colors",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium border-l-2 border-primary pl-2.5"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      {/* Top row */}
+                      <div className="flex items-center gap-2 w-full">
+                        <span className={cn(
+                          "text-xs font-bold px-1.5 py-0.5 rounded shrink-0",
+                          isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                        )}>
+                          {chapter.code}
+                        </span>
+                        <span className="flex-1 truncate leading-snug">{chapter.title}</span>
+                        {chapter.lessonCount > 0 && (
+                          <span className={cn(
+                            "text-xs px-1 py-0.5 rounded-full shrink-0",
+                            isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                          )}>
+                            {chapter.lessonCount}
+                          </span>
+                        )}
+                      </div>
+                      {/* Progress bar row */}
+                      {chapter.lessonCount > 0 && (
+                        <div className="mt-1.5 w-full space-y-0.5 pl-7">
+                          <div className="h-1 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all duration-500",
+                                pct === 100 ? "bg-green-500" : "bg-primary"
+                              )}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {chapter.completedLessons}/{chapter.lessonCount} done
+                          </p>
+                        </div>
+                      )}
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </ScrollArea>
         </aside>
@@ -701,6 +767,17 @@ const MyCourseDetail = () => {
                   ? `${selectedChapter.code} : ${selectedChapter.title}`
                   : course.title}
               </h1>
+              {/* Desktop sidebar collapse toggle */}
+              <button
+                onClick={() => setSidebarCollapsed(prev => !prev)}
+                className="hidden md:flex p-2 rounded-lg border bg-card text-muted-foreground hover:bg-muted transition-colors"
+                title={sidebarCollapsed ? "Show chapters" : "Hide chapters"}
+              >
+                {sidebarCollapsed
+                  ? <PanelLeftOpen className="h-4 w-4" />
+                  : <PanelLeftClose className="h-4 w-4" />
+                }
+              </button>
               {/* Mobile sidebar toggle */}
               <button
                 onClick={() => setCourseSidebarOpen(true)}
