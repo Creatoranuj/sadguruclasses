@@ -651,11 +651,78 @@ const MahimaGhostPlayer = memo(({
           <div
             className="absolute inset-0 z-40"
             onClick={handleOverlayTap}
-            onTouchStart={handleOverlayTouchStart}
+            onTouchStart={(e) => {
+              // Swipe gesture detection (MX Player-style)
+              const touch = e.touches[0];
+              const container = containerRef.current;
+              if (!container) { handleOverlayTouchStart(e); return; }
+              const rect = container.getBoundingClientRect();
+              const side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+              swipeTouchRef.current = {
+                startY: touch.clientY,
+                startX: touch.clientX,
+                startVal: side === 'left' ? brightness : (isMuted ? 0 : volume),
+                side,
+                locked: false,
+              };
+              handleOverlayTouchStart(e);
+            }}
+            onTouchMove={(e) => {
+              const ref = swipeTouchRef.current;
+              if (!ref) return;
+              const touch = e.touches[0];
+              const deltaY = touch.clientY - ref.startY;
+              const deltaX = touch.clientX - ref.startX;
+              // Ignore if horizontal swipe dominates (seek gesture)
+              if (!ref.locked && Math.abs(deltaX) > Math.abs(deltaY)) return;
+              if (Math.abs(deltaY) < 8) return;
+              // Lock to vertical swipe
+              ref.locked = true;
+              e.stopPropagation();
+              const sensitivity = 0.4; // % change per px
+              const newVal = Math.max(
+                ref.side === 'left' ? 20 : 0,
+                Math.min(ref.side === 'left' ? 150 : 100, ref.startVal - deltaY * sensitivity)
+              );
+              if (ref.side === 'left') {
+                setBrightness(newVal);
+              } else {
+                setPlayerVolume(newVal);
+              }
+              if (swipeIndicatorTimer.current) clearTimeout(swipeIndicatorTimer.current);
+              setSwipeIndicator({ type: ref.side === 'left' ? 'brightness' : 'volume', value: newVal, visible: true });
+            }}
+            onTouchEnd={() => {
+              swipeTouchRef.current = null;
+              if (swipeIndicatorTimer.current) clearTimeout(swipeIndicatorTimer.current);
+              swipeIndicatorTimer.current = setTimeout(() => {
+                setSwipeIndicator(null);
+              }, 1500);
+            }}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
+            {/* Swipe Indicator Pill (brightness / volume) */}
+            {swipeIndicator?.visible && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
+                style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', borderRadius: '16px', padding: '12px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', minWidth: '100px' }}>
+                {swipeIndicator.type === 'brightness'
+                  ? <Sun className="h-6 w-6 text-yellow-400" />
+                  : <Volume2 className="h-6 w-6 text-blue-400" />
+                }
+                <div style={{ width: '96px', height: '6px', background: 'rgba(255,255,255,0.25)', borderRadius: '99px', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    background: 'white',
+                    borderRadius: '99px',
+                    width: `${Math.min(100, Math.max(0, swipeIndicator.type === 'brightness' ? ((swipeIndicator.value - 20) / 130) * 100 : swipeIndicator.value))}%`,
+                    transition: 'width 0.05s linear',
+                  }} />
+                </div>
+                <span style={{ color: 'white', fontSize: '12px', fontWeight: 600 }}>{Math.round(swipeIndicator.value)}%</span>
+              </div>
+            )}
             {/* Center controls: [⏪10s]  [▶ PLAY]  [⏩10s] */}
             <div className="absolute inset-0 flex flex-row items-center justify-evenly px-6 md:px-12">
               {/* Skip back 10s */}
