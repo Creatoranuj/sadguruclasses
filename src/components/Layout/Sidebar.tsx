@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import logo from "@/assets/mahima-logo.png";
+import logo from "@/assets/branding/logo_icon_web.png";
 
 interface SidebarProps {
   isOpen: boolean;

@@ -64,7 +64,7 @@ const queryClient = new QueryClient({
 });
 
 // Logo-based page loader with pulse animation
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 const PageLoader = memo(() => {
   const [showRetry, setShowRetry] = useState(false);

@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Copy, Check, MessageCircle } from "lucide-react";
-import mahimaLogo from "@/assets/mahima-academy-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 interface ShareModalProps {
   open: boolean;

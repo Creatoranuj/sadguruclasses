@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ChevronRight } from "lucide-react";
-import mahimaLogo from "@/assets/mahima-academy-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 interface EndScreenOverlayProps {
   onReplay: () => void;

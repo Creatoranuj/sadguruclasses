@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Smartphone, Monitor, Apple, Download, Share2, MoreVertical, Plus, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 type Platform = "android" | "ios" | "desktop";
 

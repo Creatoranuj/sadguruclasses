@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { Book, BookFormData } from '@/types/books';
-import logo from '@/assets/mahima-logo.png';
+import logo from '@/assets/branding/logo_icon_web.png';
 
 export default function Books() {
   const { isAuthenticated, isAdmin } = useAuth();

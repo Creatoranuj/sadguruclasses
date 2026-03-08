@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EndScreenOverlay from "./EndScreenOverlay";
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 import settingsGearIcon from "@/assets/icons/setting-gear.png";
 import rotationIcon from "@/assets/icons/rotation-icon.png";
 import playButtonIcon from "@/assets/icons/play-button.png";

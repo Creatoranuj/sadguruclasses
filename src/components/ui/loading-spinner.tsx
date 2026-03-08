@@ -1,4 +1,4 @@
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MahimaGhostPlayer } from "@/components/video";
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 const DriveEmbedViewer = lazy(() => import("@/components/course/DriveEmbedViewer"));
 
