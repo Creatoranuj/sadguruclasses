@@ -512,6 +512,100 @@ export type Database = {
           },
         ]
       }
+      live_messages: {
+        Row: {
+          answer: string | null
+          created_at: string | null
+          id: string
+          is_answered: boolean | null
+          message: string
+          session_id: string
+          type: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string | null
+          id?: string
+          is_answered?: boolean | null
+          message: string
+          session_id: string
+          type?: string | null
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string | null
+          id?: string
+          is_answered?: boolean | null
+          message?: string
+          session_id?: string
+          type?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_sessions: {
+        Row: {
+          course_id: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          ended_at: string | null
+          id: string
+          is_active: boolean | null
+          scheduled_at: string | null
+          started_at: string | null
+          title: string
+          youtube_live_id: string
+        }
+        Insert: {
+          course_id?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          title: string
+          youtube_live_id: string
+        }
+        Update: {
+          course_id?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          title?: string
+          youtube_live_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       materials: {
         Row: {
           course_id: number | null
