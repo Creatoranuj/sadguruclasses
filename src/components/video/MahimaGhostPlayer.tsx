@@ -579,7 +579,8 @@ const MahimaGhostPlayer = memo(({
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
             {/* Center controls - Play/Pause + skip buttons */}
-            <div className="absolute inset-0 flex flex-row items-center justify-center gap-16 md:gap-20">
+            {/* Fix 1: Increased gap so skip arrows are well away from play button */}
+            <div className="absolute inset-0 flex flex-row items-center justify-center gap-24 md:gap-28">
               <button
                 className={cn(
                   "flex items-center justify-center bg-transparent border-none",
@@ -645,10 +646,10 @@ const MahimaGhostPlayer = memo(({
           onPointerDown={handleMouseMove}
           onMouseMove={handleMouseMove}
         >
-          {/* Progress Bar */}
+          {/* Fix 2: Taller progress bar touch target for reliable mobile touch */}
           <div
             ref={progressBarRef}
-            className="relative h-6 md:h-7 bg-transparent rounded-full cursor-pointer group/progress mb-2 md:mb-3 touch-none flex items-center"
+            className="relative h-10 md:h-8 bg-transparent rounded-full cursor-pointer group/progress mb-1 md:mb-2 touch-none flex items-center"
             onMouseDown={handleProgressMouseDown}
             onTouchStart={handleProgressTouchStart}
             onMouseMove={handleProgressHover}
@@ -678,14 +679,35 @@ const MahimaGhostPlayer = memo(({
                 {isPlaying ? <Pause className="h-4 w-4 md:h-5 md:w-5" fill="white" /> : <Play className="h-4 w-4 md:h-5 md:w-5 ml-0.5" fill="white" />}
               </Button>
 
-              {/* Volume */}
-              <div className="relative flex items-center" onMouseEnter={() => setShowVolumeSlider(true)} onMouseLeave={() => setShowVolumeSlider(false)}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 text-white hover:bg-white/20" onClick={toggleMute}>
+              {/* Fix 3: Volume — hover on desktop, tap-toggle on mobile; popup opens above */}
+              <div
+                className="relative flex items-center"
+                onMouseEnter={() => setShowVolumeSlider(true)}
+                onMouseLeave={() => setShowVolumeSlider(false)}
+              >
+                <Button
+                  variant="ghost" size="icon"
+                  className="h-8 w-8 md:h-9 md:w-9 text-white hover:bg-white/20"
+                  onClick={(e) => { e.stopPropagation(); setShowVolumeSlider(v => !v); }}
+                >
                   {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </Button>
                 {showVolumeSlider && (
-                  <div className="absolute left-10 bottom-0 bg-black/90 rounded-lg p-2 w-24">
-                    <Slider value={[isMuted ? 0 : volume]} max={100} step={1} onValueChange={(val) => setPlayerVolume(val[0])} className="w-full" />
+                  <div
+                    className="absolute left-0 bottom-full mb-2 bg-black/90 rounded-lg p-3 w-28"
+                    onMouseEnter={() => setShowVolumeSlider(true)}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <Slider
+                      value={[isMuted ? 0 : volume]}
+                      max={100} step={1}
+                      onValueChange={(val) => setPlayerVolume(val[0])}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between mt-1.5">
+                      <span className="text-white/60 text-[10px]">0</span>
+                      <span className="text-white text-[10px] font-semibold">{isMuted ? 0 : volume}%</span>
+                    </div>
                   </div>
                 )}
               </div>

@@ -1,143 +1,83 @@
 
-## Issues Identified
+## Root Cause: Missing `lovable.toml`
 
-### Issue 1 — Skip Arrow Spacing (Too Close to Play Button)
-Line 582 in `MahimaGhostPlayer.tsx`:
-```jsx
-<div className="absolute inset-0 flex flex-row items-center justify-center gap-16 md:gap-20">
-```
-The center controls use `gap-16` (64px) on mobile and `gap-20` (80px) on desktop. The screenshot shows the backward/forward arrows are squeezed right next to the play button. The play button uses `w-20 h-20 md:w-24 md:h-24` (80–96px) and the skip icons use `w-14 h-14 md:w-16 md:h-16` (56–64px). With `gap-16`, total center area = 14+16+20 = 50 tailwind units ≈ 200px + gaps. On a 375px wide phone, this is very tight.
-
-**Fix**: Increase gap to `gap-20 md:gap-24` or better, use `gap-24 md:gap-28` so each arrow is clearly separated from the center play button.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
 ---
 
-### Issue 2 — Progress Bar Not Working Well
-**Root cause**: The progress bar `h-6 md:h-7` touch target (lines 651–671) uses a custom `handleProgressTouchStart` handler. The issue is the thumb calculation:
-```jsx
-style={{ left: `calc(${progressPercentage}% - 7px)` }}
-```
-This uses a hardcoded `-7px` offset but `progressBarRef` is set on the touch-container div, not accounting for inner padding. The touch area has no padding so the `clientX` calculation should be correct. However, on mobile:
-- The `progressBarRef` `getBoundingClientRect()` is correct
-- But the `px-3 md:px-4` padding on the parent (line 640) means the progress bar doesn't start at the visual left edge — it starts 12px in
+## Plan
 
-**More critical fix needed**: The touch target div `h-6 md:h-7` is only 24–28px tall on mobile. This is too small for reliable touch interaction. Should be at minimum `h-10` (40px) for the touch-sensitive region.
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-Also the `onTouchStart` on the progress bar div calls `e.preventDefault()` — but this is inside a `pointer-events-auto` parent while the parent ghost overlay also captures taps. The ghost overlay `onClick={handleOverlayTap}` is at z-40, and the controls bar is at z-50, so `e.stopPropagation()` must be called properly.
-
----
-
-### Issue 3 — Volume Bar Not Working Well
-The volume slider (lines 686–691) only shows on `onMouseEnter/onMouseLeave` — this is **mouse-only**, completely broken on mobile/touch devices. On mobile there is no hover state, so the volume slider is **never visible on touch devices**.
-
-**Fix**: Add a tap-toggle for the volume button on mobile. When the volume button is tapped, `showVolumeSlider` toggles. The slider itself needs to be usable on touch.
-
-Additionally, the volume slider popup `absolute left-10 bottom-0` (line 687) positions to the right of the volume icon. On narrow screens this can go off-screen. Should be `left-0 bottom-full` to popup above.
-
----
-
-## Files to Change
-
-| File | Changes |
-|------|---------|
-| `src/components/video/MahimaGhostPlayer.tsx` | 3 targeted fixes |
-
----
-
-## Exact Changes
-
-### Fix 1 — Increase skip arrow gap (line 582)
-```jsx
-// FROM:
-<div className="absolute inset-0 flex flex-row items-center justify-center gap-16 md:gap-20">
-
-// TO:
-<div className="absolute inset-0 flex flex-row items-center justify-center gap-24 md:gap-28">
-```
-`gap-24` = 96px on mobile, `gap-28` = 112px on desktop. This gives clear visual separation between each skip arrow and the play button.
-
----
-
-### Fix 2 — Progress bar touch target size (line 651)
-```jsx
-// FROM:
-className="relative h-6 md:h-7 bg-transparent rounded-full cursor-pointer group/progress mb-2 md:mb-3 touch-none flex items-center"
-
-// TO:
-className="relative h-10 md:h-8 bg-transparent rounded-full cursor-pointer group/progress mb-1 md:mb-2 touch-none flex items-center"
-```
-Increase to `h-10` (40px) on mobile for a reliable touch target. This is a standard minimum for mobile touchables.
-
----
-
-### Fix 3 — Volume slider: fix mobile touch toggle + reposition popup
-
-**Volume button click handler**: Change from mouse-only hover to click-toggle so it works on mobile:
-```jsx
-// FROM:
-<div className="relative flex items-center" onMouseEnter={() => setShowVolumeSlider(true)} onMouseLeave={() => setShowVolumeSlider(false)}>
-  <Button ... onClick={toggleMute}>
-
-// TO:
-<div className="relative flex items-center">
-  <Button ... onClick={(e) => { e.stopPropagation(); setShowVolumeSlider(v => !v); }}>
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-And add a global click-outside handler to close the volume slider when clicking elsewhere:
-- Add `useEffect` that listens for click outside the volume div and closes it
-- OR simply: keep `onMouseLeave` for desktop AND add `onClick` toggle for mobile — using a `md:` responsive approach is cleanest
-
-Actually the simplest fix that works on both desktop and mobile:
-- Keep `onMouseEnter`/`onMouseLeave` for desktop hover
-- Add `onClick` on the Button that toggles volume slider instead of toggling mute
-- Add separate mute toggle on long-press or a separate icon in the volume popup
-
-But the cleanest UX: on mobile, clicking volume icon toggles the volume panel. On desktop, hovering shows it. Implement with:
-```jsx
-<div 
-  className="relative flex items-center"
-  onMouseEnter={() => setShowVolumeSlider(true)}
-  onMouseLeave={() => setShowVolumeSlider(false)}
->
-  <Button
-    variant="ghost" size="icon"
-    className="h-8 w-8 md:h-9 md:w-9 text-white hover:bg-white/20"
-    onClick={(e) => { e.stopPropagation(); setShowVolumeSlider(v => !v); }}
-  >
-    {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-  </Button>
-  {showVolumeSlider && (
-    <div 
-      className="absolute left-0 bottom-full mb-2 bg-black/90 rounded-lg p-3 w-28"
-      onMouseEnter={() => setShowVolumeSlider(true)}
-      onPointerDown={(e) => e.stopPropagation()}
-    >
-      <Slider value={[isMuted ? 0 : volume]} max={100} step={1} onValueChange={(val) => { setPlayerVolume(val[0]); }} className="w-full" />
-      <div className="flex justify-between mt-1">
-        <span className="text-white text-[10px]">0</span>
-        <span className="text-white text-[10px] font-semibold">{isMuted ? 0 : volume}%</span>
-      </div>
-    </div>
-  )}
-</div>
-```
-
-Key changes:
-1. Popup repositioned from `left-10 bottom-0` → `left-0 bottom-full mb-2` (opens above the button, not to the right — avoids off-screen on narrow displays)
-2. `onClick` on button toggles `showVolumeSlider` instead of calling `toggleMute` — gives mobile users access to the slider
-3. `onPointerDown` on the popup prevents the ghost overlay tap from closing the volume slider
-4. Popup has `onMouseEnter` to keep it open when hovering on desktop
-5. Volume percentage shown in popup
-
-**Mute functionality preserved**: Since clicking the volume button now toggles the slider panel, we expose mute as a separate touch within the panel, OR add a dedicated mute button inside the volume popup. Alternatively: clicking volume icon at volume 0 still effectively mutes. The mute toggle keyboard shortcut (M key) remains.
-
-Actually for simplicity, the cleanest solution: clicking the volume icon toggles the volume panel open/closed. Inside the panel, the slider adjusts volume. Dragging to 0 = mutes. The VolumeX icon still shows when muted to indicate status. The overall UX is standard YouTube-like behavior on mobile. Keep it simple — the `toggleMute` onClick can be removed and replaced with volume panel toggle.
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
 ---
 
-## Summary
+### 2. Visual Polish — CSS & Theme Improvements
 
-3 changes in `MahimaGhostPlayer.tsx`:
-1. Line 582: `gap-16 md:gap-20` → `gap-24 md:gap-28` (wider skip arrow spacing)
-2. Line 651: `h-6 md:h-7` → `h-10 md:h-8` (taller progress bar touch target on mobile)
-3. Lines 682–691: Volume button click → toggles panel instead of mute; panel repositioned from `left-10 bottom-0` to `left-0 bottom-full mb-2` with `onPointerDown` stop propagation; volume % label added
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
