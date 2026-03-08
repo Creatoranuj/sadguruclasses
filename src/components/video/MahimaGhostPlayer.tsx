@@ -72,6 +72,16 @@ const MahimaGhostPlayer = memo(({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
+  // Swipe gesture state (MX Player-style)
+  const [brightness, setBrightness] = useState(100);
+  const [swipeIndicator, setSwipeIndicator] = useState<{
+    type: 'brightness' | 'volume';
+    value: number;
+    visible: boolean;
+  } | null>(null);
+  const swipeTouchRef = useRef<{ startY: number; startX: number; startVal: number; side: 'left' | 'right'; locked: boolean } | null>(null);
+  const swipeIndicatorTimer = useRef<ReturnType<typeof setTimeout>>();
+
   // Rotation state — supports 0, 90, 180, 270 degrees
   const [rotation, setRotation] = useState(0);
 
