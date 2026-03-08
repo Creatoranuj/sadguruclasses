@@ -12,11 +12,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   ArrowLeft, Play, FileText, BookOpen, Grid3X3,
-  Lock, Clock, Download, Eye, Star, CheckCircle, MessageCircle, Send, FolderOpen, ChevronRight
+  Lock, Clock, Download, Star, CheckCircle, MessageCircle, Send, FolderOpen, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import UnifiedVideoPlayer from "@/components/video/UnifiedVideoPlayer";
+import PdfViewer from "@/components/video/PdfViewer";
+import { Breadcrumbs } from "@/components/course/Breadcrumbs";
 
  
   interface Lesson {
@@ -89,6 +91,7 @@ const MyCourseDetail = () => {
    const isPlayerOpen = searchParams.get("lesson") !== null;
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<any[]>([]);
+  const [selectedNoteUrl, setSelectedNoteUrl] = useState<{ url: string; title: string } | null>(null);
  
   useEffect(() => {
     const fetchComments = async () => {
@@ -281,39 +284,13 @@ const MyCourseDetail = () => {
 
     const selectedChapter = chapters.find(ch => ch.id === selectedChapterId);
 
-    // Breadcrumbs
-    const renderBreadcrumbs = () => {
-      const segments: { label: string; onClick?: () => void }[] = [
-        { label: "Dashboard", onClick: () => navigate("/dashboard") },
-        { label: "My Courses", onClick: () => navigate("/my-courses") },
-      ];
-      if (course) {
-        segments.push({
-          label: course.title,
-          onClick: selectedChapterId ? () => setSelectedChapterId(null) : undefined,
-        });
-      }
-      if (selectedChapter) {
-        segments.push({ label: selectedChapter.title });
-      }
-
-      return (
-        <nav className="flex items-center gap-1.5 text-sm px-4 py-3 flex-wrap">
-          {segments.map((seg, i) => (
-            <span key={i} className="flex items-center gap-1.5">
-              {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
-              {seg.onClick ? (
-                <button onClick={seg.onClick} className="text-muted-foreground hover:text-primary transition-colors">
-                  {seg.label}
-                </button>
-              ) : (
-                <span className="font-semibold text-foreground">{seg.label}</span>
-              )}
-            </span>
-          ))}
-        </nav>
-      );
-    };
+    // Breadcrumb segments for main course view
+    const mainBreadcrumbSegments = [
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "My Courses", href: "/my-courses" },
+      ...(course ? [{ label: course.title, href: selectedChapterId ? `/my-courses/${courseId}` : undefined }] : []),
+      ...(selectedChapter ? [{ label: selectedChapter.title }] : []),
+    ];
 
     const renderLessonCard = (lesson: Lesson, typeConfig: any, TypeIcon: any, isLocked: boolean) => (
       <div
@@ -397,19 +374,19 @@ const MyCourseDetail = () => {
    }
  
    if (isPlayerOpen && selectedLesson) {
+     const playerBreadcrumbs = [
+       { label: "My Courses", href: "/my-courses" },
+       { label: course.title, href: `/my-courses/${courseId}` },
+       { label: selectedLesson.title },
+     ];
      return (
        <div className="fixed inset-0 z-50 bg-background flex flex-col">
-         <header className="flex items-center justify-between px-4 py-3 border-b bg-background">
-           <div className="flex items-center gap-3">
-             <Button variant="ghost" size="icon" onClick={handleClosePlayer}>
-               <ArrowLeft className="h-5 w-5" />
-             </Button>
-             <div>
-               <h1 className="font-semibold text-foreground line-clamp-1">
-                 {selectedLesson.title}
-               </h1>
-               <p className="text-xs text-muted-foreground">{course.title}</p>
-             </div>
+         <header className="flex items-center gap-2 border-b bg-background shrink-0">
+           <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={handleClosePlayer}>
+             <ArrowLeft className="h-5 w-5" />
+           </Button>
+           <div className="flex-1 min-w-0 overflow-hidden">
+             <Breadcrumbs segments={playerBreadcrumbs} className="border-b-0 py-3 px-1 bg-transparent backdrop-blur-none" />
            </div>
          </header>
  
@@ -482,29 +459,61 @@ const MyCourseDetail = () => {
                         <div className="h-full bg-primary rounded-full" style={{ width: `${100 / lessons.length}%` }} />
                       </div>
                       <div className="space-y-2">
-                        {lessons.filter(l => l.lectureType === "VIDEO").slice(0, 5).map((lesson) => (
-                          <button
-                            key={lesson.id}
-                            onClick={() => { setSelectedLesson(lesson); setSearchParams({ lesson: lesson.id }); }}
-                            className={cn(
-                              "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
-                              lesson.id === selectedLesson.id ? "bg-primary/10" : "hover:bg-muted"
-                            )}
-                          >
-                            <div className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
-                              lesson.id === selectedLesson.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                            )}>
-                              <Play className="h-4 w-4" />
+                        {lessons.filter(l => l.lectureType === "VIDEO").slice(0, 5).map((lesson) => {
+                          // Resource chips: PDF/DPP/NOTES in same chapter
+                          const resources = lessons.filter(
+                            r => r.chapterId === lesson.chapterId && r.lectureType !== "VIDEO" && r.videoUrl
+                          );
+                          return (
+                            <div key={lesson.id}>
+                              <button
+                                onClick={() => { setSelectedLesson(lesson); setSearchParams({ lesson: lesson.id }); }}
+                                className={cn(
+                                  "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
+                                  lesson.id === selectedLesson.id ? "bg-primary/10" : "hover:bg-muted"
+                                )}
+                              >
+                                <div className={cn(
+                                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                                  lesson.id === selectedLesson.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                )}>
+                                  <Play className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-foreground truncate">{lesson.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {lesson.duration ? `${Math.floor(lesson.duration / 60)}m` : "—"}
+                                  </p>
+                                </div>
+                              </button>
+                              {resources.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 pl-11 pb-1">
+                                  {resources.map(res => (
+                                    <button
+                                      key={res.id}
+                                      onClick={() => {
+                                        if (res.lectureType === "NOTES") {
+                                          setSelectedNoteUrl({ url: res.videoUrl, title: res.title });
+                                        } else {
+                                          window.open(res.videoUrl, "_blank");
+                                        }
+                                      }}
+                                      className={cn(
+                                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors",
+                                        res.lectureType === "PDF" && "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100",
+                                        res.lectureType === "DPP" && "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
+                                        res.lectureType === "NOTES" && "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100",
+                                      )}
+                                    >
+                                      <FileText className="h-2.5 w-2.5" />
+                                      {res.lectureType}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-foreground truncate">{lesson.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {lesson.duration ? `${Math.floor(lesson.duration / 60)}m` : "—"}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -536,30 +545,43 @@ const MyCourseDetail = () => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="notes" className="p-4 mt-0">
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-foreground mb-3">Lecture Notes</h3>
-                    {lessons.filter(l => l.lectureType === "NOTES").length > 0 ? (
-                      lessons.filter(l => l.lectureType === "NOTES").map((note) => (
-                        <a
-                          key={note.id}
-                          href={note.videoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                        >
-                          <FileText className="h-5 w-5 text-purple-500" />
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">{note.title}</p>
-                            <p className="text-xs text-muted-foreground">PDF Notes</p>
+                <TabsContent value="notes" className="mt-0">
+                  {(() => {
+                    const notesList = lessons.filter(l => l.lectureType === "NOTES");
+                    if (notesList.length === 0) {
+                      return (
+                        <div className="p-4">
+                          <p className="text-muted-foreground text-sm">No notes available for this lesson.</p>
+                        </div>
+                      );
+                    }
+                    const activeNote = selectedNoteUrl || { url: notesList[0].videoUrl, title: notesList[0].title };
+                    return (
+                      <div className="flex flex-col">
+                        {notesList.length > 1 && (
+                          <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
+                            {notesList.map(note => (
+                              <button
+                                key={note.id}
+                                onClick={() => setSelectedNoteUrl({ url: note.videoUrl, title: note.title })}
+                                className={cn(
+                                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                                  activeNote.url === note.videoUrl
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-card text-muted-foreground border-border hover:border-primary"
+                                )}
+                              >
+                                {note.title}
+                              </button>
+                            ))}
                           </div>
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        </a>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground text-sm">No notes available for this lesson.</p>
-                    )}
-                  </div>
+                        )}
+                        <div className="px-3 pb-3 pt-2">
+                          <PdfViewer url={activeNote.url} title={activeNote.title} />
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="discussion" className="p-4 mt-0">
@@ -618,11 +640,11 @@ const MyCourseDetail = () => {
        <Header onMenuClick={() => setSidebarOpen(true)} userName={profile?.fullName || "User"} />
  
        <main className="flex-1 overflow-y-auto">
-         <div className="max-w-7xl mx-auto w-full">
- 
-            {renderBreadcrumbs()}
- 
-           <div className="px-4 py-4 border-b">
+        <div className="max-w-7xl mx-auto w-full">
+
+          <Breadcrumbs segments={mainBreadcrumbSegments} />
+
+          <div className="px-4 py-4 border-b">
              <button 
                onClick={() => selectedChapterId ? setSelectedChapterId(null) : navigate("/my-courses")} 
                className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
