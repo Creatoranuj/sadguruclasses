@@ -10,7 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { 
   PlayCircle, Zap, 
-  ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle
+  ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle,
+  MessageCircle, User
 } from "lucide-react";
 import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
@@ -77,8 +78,9 @@ const Dashboard = () => {
             .eq('status', 'active'),
           supabase
             .from('quiz_attempts')
-            .select('id, quiz_id, score, percentage, passed, created_at, quizzes(title, type, total_marks)')
+            .select('id, quiz_id, score, percentage, passed, created_at, submitted_at, quizzes(title, type, total_marks)')
             .eq('user_id', user!.id)
+            .not('submitted_at', 'is', null)
             .order('created_at', { ascending: false })
             .limit(10),
         ]);
