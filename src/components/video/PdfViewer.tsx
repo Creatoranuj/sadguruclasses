@@ -15,6 +15,7 @@ interface PdfViewerProps {
 const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const { addDownload } = useDownloads();
 
   const { embedUrl, openUrl } = useMemo(() => {
     const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);

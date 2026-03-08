@@ -14,6 +14,7 @@ interface DriveEmbedViewerProps {
 
 const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerProps) => {
   const [downloading, setDownloading] = useState(false);
+  const { addDownload } = useDownloads();
   const [isFullscreen, setIsFullscreen] = useState(false);
   // For Archive.org: resolved direct PDF URL (async via metadata API)
   const [archiveDirectUrl, setArchiveDirectUrl] = useState<string | null>(null);
