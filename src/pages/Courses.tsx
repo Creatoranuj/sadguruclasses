@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdminEnrollment } from "@/hooks/useAdminEnrollment";
 import { useAuth } from "@/contexts/AuthContext";
 import Breadcrumbs from "@/components/course/Breadcrumbs";
+import { formatDuration } from "@/components/video/MahimaVideoPlayer";
 
 const Courses = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

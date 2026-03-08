@@ -251,8 +251,9 @@ const LessonView = () => {
         // Fetch Lessons — strip video_url/class_pdf_url from DB query (fetched via Edge Function)
         const { data: lessonData, error: lessonError } = await supabase
           .from('lessons')
-          .select('id, title, is_locked, description, overview, course_id, created_at, like_count')
+          .select('id, title, is_locked, description, overview, course_id, created_at, like_count, position')
           .eq('course_id', Number(courseId))
+          .order('position', { ascending: true })
           .order('created_at', { ascending: true });
         if (lessonError) throw lessonError;
 
@@ -584,7 +585,7 @@ const LessonView = () => {
                     </div>
 
                     {/* TABS COMPONENT */}
-                    <Tabs defaultValue={currentLesson?.class_pdf_url ? "pdf" : "overview"} className="w-full mt-4">
+                    <Tabs key={currentLesson?.id} defaultValue={currentLesson?.class_pdf_url ? "pdf" : "overview"} className="w-full mt-4">
                         <TabsList className={`grid w-full mb-6 ${currentLesson?.class_pdf_url ? "grid-cols-5" : "grid-cols-4"} lg:w-auto lg:inline-flex`}>
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             {currentLesson?.class_pdf_url && (
