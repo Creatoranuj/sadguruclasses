@@ -1,83 +1,115 @@
 
-## Root Cause: Missing `lovable.toml`
+## What's Already Working vs. What Needs to Be Built
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+**Already working (keep as-is):**
+- Manual UPI payment flow in `BuyCourse.tsx` (QR → UTR + screenshot → admin approval)
+- Free course auto-enrollment in `BuyCourse.tsx`
+- Admin payment approval in `Admin.tsx` (approve → enrollment created)
+- `payment_requests` table with full RLS
+
+**What needs to be built (Razorpay as a second option):**
+- 3 Supabase Edge Functions: `create-razorpay-order`, `verify-razorpay-payment`
+- Add Razorpay Checkout button on `BuyCourse.tsx` alongside the existing UPI option
+- New `razorpay_payments` table to track Razorpay transactions separately (so existing `payment_requests` manual flow is untouched)
+- Auto-enrollment on Razorpay payment success (no admin approval needed — Razorpay verifies instantly)
 
 ---
 
-## Plan
+## Database Changes
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+One new table (keeps `payment_requests` for manual UPI unchanged):
 
-```toml
-[run]
-dev = "npm run dev"
+```sql
+CREATE TABLE razorpay_payments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  course_id bigint NOT NULL,
+  razorpay_order_id text NOT NULL,
+  razorpay_payment_id text,
+  amount decimal(10,2) NOT NULL,
+  currency text DEFAULT 'INR',
+  status text DEFAULT 'pending',  -- pending | completed | failed
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+-- RLS: users see own records; admins see all
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+---
+
+## Edge Functions (2 new)
+
+### `create-razorpay-order`
+- Input: `{ course_id }` + JWT auth header
+- Fetches course price from `courses` table
+- Calls Razorpay API: `POST https://api.razorpay.com/v1/orders`
+- Inserts row into `razorpay_payments` with status `pending`
+- Returns: `{ order_id, amount, currency, key_id }`
+
+### `verify-razorpay-payment`
+- Input: `{ razorpay_order_id, razorpay_payment_id, razorpay_signature, course_id }`
+- Verifies HMAC-SHA256 signature using `RAZORPAY_KEY_SECRET`
+- On success: updates `razorpay_payments` status → `completed`, creates enrollment in `enrollments`
+- Returns: `{ success: true, enrollment_id }`
 
 ---
 
-### 2. Visual Polish — CSS & Theme Improvements
+## Frontend Changes
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+### `BuyCourse.tsx` — add Razorpay as a "fast pay" option
+On the `details` step for paid courses, show two payment options side-by-side:
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+```
+┌─────────────────────┬─────────────────────┐
+│  💳 Pay with         │  📱 Pay via UPI      │
+│  Razorpay           │  (Manual)           │
+│  Instant enrollment  │  Admin approval     │
+│  [Pay ₹{price}]     │  [Proceed]          │
+└─────────────────────┴─────────────────────┘
+```
 
----
+Clicking "Pay with Razorpay":
+1. Calls `create-razorpay-order` edge function
+2. Dynamically loads Razorpay checkout script (`https://checkout.razorpay.com/v1/checkout.js`)
+3. Opens Razorpay modal with pre-filled amount, name, description
+4. On payment success callback: calls `verify-razorpay-payment` edge function
+5. On verification success: shows success toast + navigates to course
 
-### 3. Landing Page & Navigation Visual Fixes
-
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
-
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
+### New utility: `src/utils/razorpay.ts`
+Helper to dynamically load the Razorpay script and open checkout.
 
 ---
 
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+## Secrets Needed
+Two secrets must be added to Supabase:
+- `RAZORPAY_KEY_ID` — public key (e.g., `rzp_test_xxxxxxxx`)
+- `RAZORPAY_KEY_SECRET` — secret key (only used server-side in edge functions)
 
 ---
 
-## Files to Modify
+## Files to Create/Edit
 
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+| File | Action |
+|---|---|
+| `supabase/migrations/..._razorpay.sql` | New table `razorpay_payments` |
+| `supabase/functions/create-razorpay-order/index.ts` | New edge function |
+| `supabase/functions/verify-razorpay-payment/index.ts` | New edge function |
+| `src/utils/razorpay.ts` | New — script loader + checkout helper |
+| `src/pages/BuyCourse.tsx` | Edit — add Razorpay payment option alongside existing UPI |
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+**No changes to:** `Admin.tsx`, `payment_requests` table, manual UPI flow — these are kept fully intact.
 
 ---
 
-## Note on Visual Editor
+## Security Notes
+- `RAZORPAY_KEY_SECRET` never leaves the edge function — frontend only receives the `key_id`
+- Signature verification is fully server-side in `verify-razorpay-payment`
+- Enrollment only created after server-side signature verification passes
+- Duplicate enrollment check (`maybeSingle()`) prevents double-enrollment
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+---
+
+## How to Get Razorpay Keys
+1. Sign up at razorpay.com → Dashboard → Settings → API Keys
+2. For testing use "Test Mode" keys (prefix `rzp_test_`)
+3. Add both keys to Supabase Edge Function secrets (I'll prompt you for them after you confirm)
