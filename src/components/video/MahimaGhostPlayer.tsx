@@ -385,14 +385,21 @@ const MahimaGhostPlayer = memo(({
     return () => window.removeEventListener('message', handleMessage);
   }, [onEnded, onDurationReady, isSeeking, duration]);
 
-  // Poll YouTube for time updates
+  // Poll YouTube for real-time progress updates
   useEffect(() => {
     if (!playerReady) return;
-    progressIntervalRef.current = setInterval(() => {
+    // Subscribe to infoDelivery events (fires every ~250ms while playing)
+    const subscribe = () => {
       if (playerRef.current?.contentWindow) {
-        try { playerRef.current.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*"); } catch {}
+        try {
+          playerRef.current.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*");
+          // Also request current time explicitly so the bar updates even when paused
+          playerRef.current.contentWindow.postMessage(JSON.stringify({ event: "command", func: "getCurrentTime", args: "" }), "*");
+        } catch {}
       }
-    }, 500);
+    };
+    subscribe(); // immediate call on ready
+    progressIntervalRef.current = setInterval(subscribe, 250);
     return () => { if (progressIntervalRef.current) clearInterval(progressIntervalRef.current); };
   }, [playerReady]);
 
@@ -629,14 +636,6 @@ const MahimaGhostPlayer = memo(({
              </span>
           </div>
 
-          {/* TOP-RIGHT WATERMARK — covers YouTube "More options" area on hover */}
-          <div
-            className={`absolute top-2 right-2 z-[46] flex items-center gap-1 px-1.5 py-1 select-none pointer-events-none rounded transition-opacity duration-500 ${watermarkVisible ? 'opacity-100' : 'opacity-0'}`}
-            style={{ background: 'rgba(0,0,0,0.4)' }}
-          >
-             <img src={sadguruLogo} alt="Sadguru" className="h-6 w-6 rounded-sm" draggable={false} />
-             <span className="text-white text-[10px] font-semibold tracking-wide opacity-80">SC</span>
-          </div>
 
           {/* GHOST OVERLAY - touchstart for instant response, click for desktop */}
           <div
