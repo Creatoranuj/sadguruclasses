@@ -11,12 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { 
   PlayCircle, Zap, 
   ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle,
-  MessageCircle, User
 } from "lucide-react";
 import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
 import UpcomingSchedule from "@/components/dashboard/UpcomingSchedule";
 
+import BottomNav from "@/components/Layout/BottomNav";
 import cubeIcon from "@/assets/icons/cube-3d.png";
 import checkmarkIcon from "@/assets/icons/checkmark-3d.png";
 import doubtsIcon from "@/assets/icons/doubts-3d.png";
@@ -325,44 +325,7 @@ const Dashboard = () => {
         )}
       </main>
 
-      {!isTeacher && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-30 md:hidden">
-          <div className="flex items-center justify-around h-14 px-1">
-            <button onClick={() => navigate('/dashboard')} className="flex flex-col items-center gap-0.5 flex-1">
-              <img src={homeIcon} alt="Home" width={22} height={22}
-                className={`w-[22px] h-[22px] object-contain ${location.pathname !== '/dashboard' ? 'opacity-40 grayscale' : ''}`}
-                loading="lazy" decoding="async" />
-              <span className={`text-[9px] font-medium ${location.pathname === '/dashboard' ? 'text-accent' : 'text-muted-foreground'}`}>Home</span>
-            </button>
-            <button onClick={() => navigate('/courses')} className="flex flex-col items-center gap-0.5 flex-1">
-              <img src={scienceIcon} alt="Courses" width={22} height={22}
-                className={`w-[22px] h-[22px] object-contain ${location.pathname !== '/courses' ? 'opacity-40 grayscale' : ''}`}
-                loading="lazy" decoding="async" />
-              <span className={`text-[9px] font-medium ${location.pathname === '/courses' ? 'text-accent' : 'text-muted-foreground'}`}>Courses</span>
-            </button>
-            <button onClick={() => navigate('/my-courses')} className="flex flex-col items-center gap-0.5 flex-1">
-              <img src={studentIcon} alt="My Courses" width={22} height={22}
-                className={`w-[22px] h-[22px] object-contain ${location.pathname !== '/my-courses' ? 'opacity-40 grayscale' : ''}`}
-                loading="lazy" decoding="async" />
-              <span className={`text-[9px] font-medium ${location.pathname === '/my-courses' ? 'text-accent' : 'text-muted-foreground'}`}>My Courses</span>
-            </button>
-            <button onClick={() => navigate('/messages')} className="flex flex-col items-center gap-0.5 flex-1">
-              <MessageCircle
-                size={22}
-                className={location.pathname === '/messages' ? 'text-accent' : 'text-muted-foreground opacity-40'}
-              />
-              <span className={`text-[9px] font-medium ${location.pathname === '/messages' ? 'text-accent' : 'text-muted-foreground'}`}>Messages</span>
-            </button>
-            <button onClick={() => navigate('/profile')} className="flex flex-col items-center gap-0.5 flex-1">
-              <User
-                size={22}
-                className={location.pathname === '/profile' ? 'text-accent' : 'text-muted-foreground opacity-40'}
-              />
-              <span className={`text-[9px] font-medium ${location.pathname === '/profile' ? 'text-accent' : 'text-muted-foreground'}`}>Profile</span>
-            </button>
-          </div>
-        </nav>
-      )}
+      <BottomNav />
     </div>
   );
 };

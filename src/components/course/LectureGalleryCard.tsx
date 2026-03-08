@@ -1,6 +1,7 @@
-import { Play, FileText, Lock } from "lucide-react";
+import { Play, FileText, Lock, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import checkmarkIcon from "@/assets/icons/checkmark-3d.png";
 import scienceIcon from "@/assets/icons/science-3d.png";
 import cubeIcon from "@/assets/icons/cube-3d.png";
@@ -13,6 +14,7 @@ interface LectureGalleryCardProps {
   isCompleted?: boolean;
   createdAt?: string | null;
   duration?: number | null;
+  quizId?: string;
   onClick?: () => void;
 }
 
@@ -31,21 +33,25 @@ const formatDuration = (seconds: number | null | undefined): string => {
 };
 
 export const LectureGalleryCard = ({
-  title, lectureType, isLocked, isCompleted, createdAt, duration, onClick,
+  title, lectureType, isLocked, isCompleted, createdAt, duration, quizId, onClick,
 }: LectureGalleryCardProps) => {
+  const navigate = useNavigate();
   const config = typeConfig[lectureType] || typeConfig.VIDEO;
   const dateStr = createdAt ? format(new Date(createdAt), "dd MMM").toUpperCase() : "";
+  const isDppOrTest = lectureType === "DPP" || lectureType === "TEST";
 
   return (
     <div
-      onClick={onClick}
       className={cn(
-        "relative bg-card rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-[0_8px_24px_rgba(0,0,0,0.1)] hover:-translate-y-0.5",
+        "relative bg-card rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-[0_8px_24px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 flex flex-col",
         isLocked && "opacity-60"
       )}
     >
       {/* Thumbnail area */}
-      <div className={cn("relative w-full aspect-video flex items-center justify-center", config.bg)}>
+      <div
+        onClick={onClick}
+        className={cn("relative w-full aspect-video flex items-center justify-center", config.bg)}
+      >
         {lectureType === "VIDEO" ? (
           <div className="flex items-center justify-center">
             {isLocked ? (
@@ -76,7 +82,7 @@ export const LectureGalleryCard = ({
       </div>
 
       {/* Content */}
-      <div className="p-3.5">
+      <div className="p-3.5 flex-1" onClick={onClick}>
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase bg-muted/60 px-1.5 py-0.5 rounded">
             {config.label}
@@ -85,6 +91,17 @@ export const LectureGalleryCard = ({
         </div>
         <h4 className="font-semibold text-sm text-foreground line-clamp-2 leading-snug">{title}</h4>
       </div>
+
+      {/* Quiz button — only for DPP/TEST with a linked published quiz */}
+      {isDppOrTest && quizId && (
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/quiz/${quizId}`); }}
+          className="flex items-center justify-center gap-1.5 w-full py-2 bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+        >
+          <ClipboardList className="h-3.5 w-3.5" />
+          {lectureType === "TEST" ? "Take Test" : "Attempt DPP"}
+        </button>
+      )}
     </div>
   );
 };

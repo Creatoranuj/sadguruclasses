@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Layout/Header";
 import Sidebar from "@/components/Layout/Sidebar";
+import BottomNav from "@/components/Layout/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -183,6 +184,7 @@ const Profile = () => {
           <LogOut className="h-5 w-5" /> Sign Out
         </Button>
       </main>
+      <BottomNav />
     </div>
   );
 };
