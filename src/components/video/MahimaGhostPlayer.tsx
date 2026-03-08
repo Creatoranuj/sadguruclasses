@@ -648,7 +648,7 @@ const MahimaGhostPlayer = memo(({
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
             {/* Center controls: [⏪10s]  [▶ PLAY]  [⏩10s] */}
-            <div className="absolute inset-0 flex flex-row items-center justify-center gap-10 md:gap-14">
+            <div className="absolute inset-0 flex flex-row items-center justify-evenly px-6 md:px-12">
               {/* Skip back 10s */}
               <button
                 className={cn(
