@@ -312,17 +312,25 @@ const MyCourseDetail = () => {
     }
     if (lesson.lectureType === "VIDEO") {
       setSelectedLesson(lesson);
+      setActiveDiscussionTab("overview");
       setSearchParams({ lesson: lesson.id });
     } else {
+      // For PDF/DPP/NOTES: navigate into lesson player state,
+      // set the inline viewer and switch to Resources tab
       if (lesson.videoUrl) {
+        setSelectedLesson(lesson);
         setInlineViewer({ url: lesson.videoUrl, title: lesson.title });
+        setActiveDiscussionTab("resources");
+        setSearchParams({ lesson: lesson.id });
       }
     }
   };
 
   const handleClosePlayer = () => {
     setSelectedLesson(null);
+    setInlineViewer(null);
     setSearchParams({});
+    setLessonSearch("");
   };
 
   // ── AUTO-MARK PROGRESS AT 90% ──────────────────────────────
