@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
+import HeroCarousel from "@/components/dashboard/HeroCarousel";
 import UpcomingSchedule from "@/components/dashboard/UpcomingSchedule";
 import LiveBadge from "@/components/live/LiveBadge";
 
@@ -175,8 +176,9 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            <BatchSelector />
-            <LiveBadge />
+          <BatchSelector />
+          <HeroCarousel />
+          <LiveBadge />
             <UpcomingLiveSessions />
             {myCourses.length > 0 ? (
               <Card

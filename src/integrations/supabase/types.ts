@@ -406,6 +406,54 @@ export type Database = {
           },
         ]
       }
+      hero_banners: {
+        Row: {
+          badge_text: string | null
+          bg_color: string
+          created_at: string
+          cta_link: string
+          cta_text: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          position: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          badge_text?: string | null
+          bg_color?: string
+          created_at?: string
+          cta_link?: string
+          cta_text?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          position?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          badge_text?: string | null
+          bg_color?: string
+          created_at?: string
+          cta_link?: string
+          cta_text?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          position?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       knowledge_base: {
         Row: {
           category: string
