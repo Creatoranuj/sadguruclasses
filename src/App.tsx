@@ -57,6 +57,7 @@ const LiveClass = lazy(() => import("./pages/LiveClass"));
 const AdminLiveManager = lazy(() => import("./pages/AdminLiveManager"));
 const TeacherLiveView = lazy(() => import("./pages/TeacherLiveView"));
 const AdminChatbotSettings = lazy(() => import("./pages/AdminChatbotSettings"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const Downloads = lazy(() => import("./pages/Downloads"));
 const Doubts = lazy(() => import("./pages/Doubts"));
 const ChatWidget = lazy(() => import("./components/chat/ChatWidget"));
