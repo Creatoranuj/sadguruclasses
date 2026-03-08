@@ -1,100 +1,83 @@
 
-## Understanding the current state
+## Root Cause: Missing `lovable.toml`
 
-**QuizResult.tsx currently has:**
-- Simple score circle (% in a circle)
-- 4 stat boxes: Correct, Wrong, Skipped, Time
-- Reattempt + Back buttons
-- Question-by-question answer review (expandable)
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-**QuizAttempt.tsx already:**
-- Submits to `quiz_attempts` with: `score`, `percentage`, `passed`, `answers` (JSON), `time_taken_seconds`
-- `answers` is `Record<string, string>` = `{ questionId: selectedOptionIndex }`
-- Navigates to `/quiz/${quizId}/result/${finalAttemptId}`
+---
 
-**Questions table has:** `marks`, `negative_marks`, `correct_answer`, `options`, `question_type`, `order_index`
-- NO `section` column → we'll use **quiz `type`** as the single section (e.g. "NEET DPP", "Physics Test") OR infer a "section" from question order groups. Since no section data exists, we'll make it smart: group questions into 3 equal sections labeled "Section A", "Section B", "Section C" (or by quiz type if total <= some threshold). This gives a realistic sectional breakdown from real data without needing a DB migration.
+## Plan
 
-**Actually better approach:** Questions have `order_index`. We'll compute sections by dividing questions into groups (e.g., if 90 questions → 3 sections of 30 each, labeled Physics/Chemistry/Biology for NEET, or Section A/B/C for others). This requires NO DB change. The quiz `type` field (dpp/test) determines the section label strategy.
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-## What to build
-
-The redesigned `QuizResult.tsx` (single file change, no DB migration needed):
-
-### Layout (inspired by the screenshots' structure, not copied):
-
-```
-┌─────────────────────────────────────────┐
-│ ← [Quiz Title]              Attempt Badge│
-├─────────────────────────────────────────┤
-│ 🔔 "Rank & Detailed Analysis            │
-│    will be available after all          │
-│    students attempt"                    │
-├─────────────────────────────────────────┤
-│         HERO SCORE CARD (purple/blue    │
-│         gradient)                       │
-│  Quiz Title · X Questions · Y Marks    │
-│  ┌──────────┐  ┌──────────┐            │
-│  │ Score    │  │ Percentile│           │
-│  │ 72/180   │  │  --       │           │
-│  └──────────┘  └──────────┘            │
-│  Rank: Result Awaited                  │
-│  [Reattempt] [View Solution ↓]         │
-├─────────────────────────────────────────┤
-│ [Result Summary] [Leaderboard]          │
-│                                         │
-│ Result Summary tab:                     │
-│  ┌─────────────┬─────────────┐          │
-│  │ ✓ 18 Correct│ Marks: +72  │          │
-│  │ ████░░░░░░  │             │          │
-│  ├─────────────┼─────────────┤          │
-│  │ ✗ 12 Wrong  │ Lost: -24   │          │
-│  │ ███░░░░░░░  │             │          │
-│  ├─────────────┼─────────────┤          │
-│  │ ○ 15 Skipped│ Skipped: 60 │          │
-│  │ ███░░░░░░░  │             │          │
-│  └─────────────┴─────────────┘          │
-│                                         │
-│  ⏱ Time: 42m 30s  📊 Accuracy: 60%     │
-│                                         │
-│  ── Sectional Performance ──            │
-│  [Physics ▼]                            │
-│   Score: 24/60 · Correct: 6 Wrong: 4   │
-│   Accuracy: 60% · Time: ~14m           │
-│  [Chemistry ▼]                          │
-│  [Biology ▼]                            │
-│                                         │
-│  [↓ View Detailed Analysis]             │
-│                                         │
-│ Leaderboard tab:                        │
-│  🏆 Results Awaited                     │
-│     Leaderboard will be published       │
-│     after analysis                      │
-├─────────────────────────────────────────┤
-│ id="answer-review"                      │
-│ Answer Review (existing, kept as-is)    │
-└─────────────────────────────────────────┘
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-### Key computed values (all from real data):
-- `correctCount` = questions where `answers[q.id] === q.correct_answer`
-- `incorrectCount` = answered but wrong
-- `skippedCount` = unanswered
-- `marksObtained` = sum of `q.marks` for correct
-- `marksLost` = sum of `q.negative_marks` for incorrect
-- `marksSkipped` = sum of `q.marks` for skipped questions
-- `accuracy` = `correctCount / (correctCount + incorrectCount) * 100` (excludes skipped)
-- **Sections**: Split questions into equal-sized groups. If quiz.type === 'dpp' or questions.length <= 20 → 1 section. If questions.length >= 45 → 3 sections (Physics / Chemistry / Biology for NEET-style, otherwise Section A/B/C). 21-44 questions → 2 sections. Time per section = proportional by question count.
-- `attemptNumber` = count previous attempts by same user on same quiz + 1 (fetched alongside)
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-### Files to change:
-1. **`src/pages/QuizResult.tsx`** — full redesign (one file, ~350 lines)
-   - Add section breakdown logic (client-side, no DB)
-   - Add tabs (Result Summary / Leaderboard)
-   - Add progress bar rows for correct/incorrect/skipped
-   - Add sectional performance accordion
-   - Add "View Detailed Analysis" scroll button
-   - Keep existing answer review section at bottom
-   - Also fetch attempt count for "Attempt #N" badge
+---
 
-No DB migration needed. No new components needed (self-contained). No changes to QuizAttempt.tsx.
+### 2. Visual Polish — CSS & Theme Improvements
+
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
