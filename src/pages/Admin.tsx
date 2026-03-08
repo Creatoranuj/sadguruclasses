@@ -108,6 +108,7 @@ const Admin = () => {
   const [materialsList, setMaterialsList] = useState<any[]>([]);
   const [notesList, setNotesList] = useState<any[]>([]);
   const [newMaterial, setNewMaterial] = useState({ title: "", description: "", file_url: "", course_id: "" });
+  const [materialFileType, setMaterialFileType] = useState<"PDF" | "NOTES" | "DPP">("PDF");
   const [newNote, setNewNote] = useState({ title: "", pdf_url: "", lesson_id: "" });
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [editMaterialData, setEditMaterialData] = useState({ title: "", description: "", file_url: "" });
