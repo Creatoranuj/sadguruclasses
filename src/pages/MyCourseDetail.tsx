@@ -34,6 +34,7 @@ interface Lesson {
   createdAt: string | null;
   duration: number | null;
   chapterId: string | null;
+  classPdfUrl: string | null;
 }
 
 interface Course {
@@ -187,6 +188,7 @@ const MyCourseDetail = () => {
           overview: l.overview, isLocked: l.is_locked, lectureType: l.lecture_type || "VIDEO",
           position: l.position || idx + 1, youtubeId: l.youtube_id, createdAt: l.created_at,
           duration: l.duration, chapterId: l.chapter_id,
+          classPdfUrl: l.class_pdf_url ?? null,
         }));
         setLessons(mappedLessons);
 
@@ -769,15 +771,14 @@ const MyCourseDetail = () => {
                         {selectedLesson.overview || selectedLesson.description || "No overview available for this lesson."}
                       </p>
                     </div>
-                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-                        <div>
-                          <p className="text-sm text-primary font-medium">You will learn:</p>
-                          <p className="text-sm text-muted-foreground">Basic definitions, Real-world examples, and Problem solving.</p>
+                    {!selectedLesson.overview && !selectedLesson.description && (
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
+                          <p className="text-sm text-primary font-medium">Content coming soon</p>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Other lessons in chapter */}
                     <div className="mt-4">
@@ -842,7 +843,14 @@ const MyCourseDetail = () => {
                 {/* Resources */}
                 <TabsContent value="resources" className="mt-0">
                   {(() => {
-                    const resList = lessons.filter(l => l.lectureType === "PDF" || l.lectureType === "DPP");
+                    const classPdfItem = selectedLesson.classPdfUrl
+                      ? [{ id: 'class-pdf', title: `${selectedLesson.title} - Class PDF`, videoUrl: selectedLesson.classPdfUrl, lectureType: 'PDF' }]
+                      : [];
+                    const chapterResources = lessons.filter(l =>
+                      (l.lectureType === "PDF" || l.lectureType === "DPP") &&
+                      l.chapterId === selectedLesson.chapterId
+                    );
+                    const resList = [...classPdfItem, ...chapterResources];
                     if (resList.length === 0) return (
                       <div className="p-4">
                         <p className="text-muted-foreground text-sm">No resources available for this lesson.</p>
@@ -882,7 +890,9 @@ const MyCourseDetail = () => {
                 {/* Notes */}
                 <TabsContent value="notes" className="mt-0">
                   {(() => {
-                    const notesList = lessons.filter(l => l.lectureType === "NOTES");
+                    const notesList = lessons.filter(l =>
+                      l.lectureType === "NOTES" && l.chapterId === selectedLesson.chapterId
+                    );
                     if (notesList.length === 0) return (
                       <div className="p-4">
                         <p className="text-muted-foreground text-sm">No notes available for this lesson.</p>
