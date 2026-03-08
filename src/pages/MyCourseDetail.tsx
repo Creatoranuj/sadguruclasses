@@ -210,6 +210,7 @@ const MyCourseDetail = () => {
             .eq("course_id", Number(courseId))
             .eq("completed", true);
           completedSet = new Set((progressData || []).map((p: any) => p.lesson_id));
+          setCompletedLessonIds(completedSet);
         }
 
         const lessonCountMap: Record<string, number> = {};
