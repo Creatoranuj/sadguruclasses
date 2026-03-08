@@ -370,7 +370,7 @@ const BuyCourse = () => {
                     <h2 className="font-bold text-sm">{course.title}</h2>
                     <p className="font-bold text-primary">
                       {course.price === 0 ? (
-                        <span className="text-green-600">FREE</span>
+                        <span className="text-[hsl(142,72%,29%)] dark:text-[hsl(142,72%,55%)]">FREE</span>
                       ) : (
                         `₹${course.price}`
                       )}
