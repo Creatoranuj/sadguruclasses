@@ -215,7 +215,7 @@ const ChatWidget = () => {
                 <div key={msg.id} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
                   {msg.role === "assistant" && (
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <Bot className="h-3.5 w-3.5 text-primary" />
+                      <img src={logoIcon} className="w-4 h-4 object-contain" alt="Sarthi" />
                     </div>
                   )}
                   <div className="flex flex-col gap-1 max-w-[82%]">
