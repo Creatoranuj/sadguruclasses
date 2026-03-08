@@ -8,9 +8,12 @@ const DriveEmbedViewer = lazy(() => import("@/components/course/DriveEmbedViewer
 interface UnifiedVideoPlayerProps {
   url: string;
   title?: string;
+  lessonId?: string;
   onEnded?: () => void;
   onReady?: () => void;
   onProgress?: (state: { played: number; playedSeconds: number }) => void;
+  onNextVideo?: () => void;
+  nextVideoTitle?: string;
 }
 
 type Platform = "youtube" | "drive" | "docs" | "vimeo" | "archive" | "direct" | "unknown";
