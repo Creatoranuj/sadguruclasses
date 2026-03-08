@@ -750,6 +750,7 @@ const MyCourseDetail = () => {
                         duration={lesson.duration}
                         createdAt={lesson.createdAt}
                         isLocked={!!lesson.isLocked && !hasPurchased && !isAdminOrTeacher}
+                        isCompleted={completedLessonIds.has(lesson.id)}
                         onClick={() => handleContentClick(lesson)}
                       />
                     ))}
