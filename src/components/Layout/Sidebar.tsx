@@ -24,6 +24,7 @@ const menuItems: MenuItem[] = [
   { icon: GraduationCap, label: "My Courses", path: "/my-courses" },
   { icon: BookOpen, label: "Courses", path: "/courses" },
   { icon: Library, label: "Books", path: "/books" },
+  { icon: Download, label: "Downloads", path: "/downloads" },
   { icon: Bell, label: "Notices", path: "/notices" },
   { icon: Users, label: "Students", path: "/students", adminOrTeacher: true },
   { icon: Calendar, label: "Attendance", path: "/attendance", adminOrTeacher: true },
