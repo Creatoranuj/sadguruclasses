@@ -1,1 +1,4 @@
 project_id = "wegamscqtvqhxowlskfm"
+
+[functions.score-quiz]
+verify_jwt = false

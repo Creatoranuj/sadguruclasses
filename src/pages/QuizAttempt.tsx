@@ -119,37 +119,30 @@ const QuizAttempt = () => {
     if (quizId) localStorage.setItem(`quiz_flagged_${quizId}`, JSON.stringify([...updated]));
   };
 
-  // NOTE: score is 0 here because correct_answer is not in the safe view.
-  // TODO: replace with score-quiz Edge Function to calculate server-side.
   const handleSubmit = async () => {
-    if (!quiz || !user) return;
+    if (!quiz || !user || !quizId) return;
     setSubmitting(true);
     try {
-      const score = 0; // server-side scoring pending
-      const totalMarks = quiz.total_marks || questions.reduce((s, q) => s + q.marks, 0);
-      const percentage = 0;
-      const passed = false;
       const timeTaken = Math.floor((new Date().getTime() - startedAt.current.getTime()) / 1000);
 
-      const { data } = await supabase.from("quiz_attempts").insert({
-        user_id: user.id,
-        quiz_id: quizId,
-        submitted_at: new Date().toISOString(),
-        score,
-        percentage,
-        passed,
-        answers,
-        time_taken_seconds: timeTaken,
-      }).select("id").single();
-      const finalAttemptId = data?.id;
+      const { data, error } = await supabase.functions.invoke("score-quiz", {
+        body: {
+          quiz_id: quizId,
+          answers,
+          time_taken_seconds: timeTaken,
+        },
+      });
+
+      if (error) throw new Error(error.message ?? "Scoring failed");
+      if (!data?.attempt_id) throw new Error("No attempt ID returned from server");
 
       // Clean localStorage
       localStorage.removeItem(`quiz_answers_${quizId}`);
       localStorage.removeItem(`quiz_flagged_${quizId}`);
 
-      navigate(`/quiz/${quizId}/result/${finalAttemptId}`);
+      navigate(`/quiz/${quizId}/result/${data.attempt_id}`);
     } catch (err: any) {
-      toast.error("Submit failed: " + err.message);
+      toast.error("Submit failed: " + (err.message ?? "Unknown error"));
     } finally {
       setSubmitting(false);
     }
