@@ -1,83 +1,57 @@
 
-## Root Cause: Missing `lovable.toml`
+## Problem
+When an Archive.org URL is used (video lesson URL or class PDF URL), the `DriveEmbedViewer` embeds the PDF iframe which shows the **Internet Archive logo/header bar** at the top of the embedded content. The user's screenshot (annotated with red arrows) confirms this.
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+The current code in `DriveEmbedViewer.tsx` (line 184–194) only adds a **watermark at the bottom-right**, but has **no masking overlay for the top** of the iframe where Archive.org's logo appears.
 
----
+For Archive **video** embeds in `UnifiedVideoPlayer.tsx` (line 86), there IS already a black bar: `<div style={{ height: "50px", background: "black" }} />` — but this is only for the video iframe path, not the document/PDF path that goes through `DriveEmbedViewer`.
 
-## Plan
+## Fix — `DriveEmbedViewer.tsx` only
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+Add a **masking overlay `div`** that covers the top of the iframe **only when `isArchive === true`**. This is a transparent-to-the-outside black bar that sits over the Archive.org navbar:
 
-```toml
-[run]
-dev = "npm run dev"
+```
+[Our header bar: title + Download + Fullscreen + Open]
+[iframe content]
+ ┌──────────────────────────────────────┐
+ │ ████████████ MASK TOP ~50px ████████ │  ← absolute div z-30, black, covers Archive logo
+ │  [Archive.org iframe content below]  │
+ │                                      │
+ └──────────────────────────────────────┘
+[Sadguru watermark bottom-right]
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+### Exact change in `DriveEmbedViewer.tsx`
 
----
+**In the `{/* PDF / iframe area */}` section (lines 161–195)**, after the existing iframe render, add a conditional top masking overlay when `isArchive` is true:
 
-### 2. Visual Polish — CSS & Theme Improvements
+```tsx
+{/* Archive.org top-bar mask — hides the IA logo/nav that bleeds through */}
+{isArchive && iframeSrc && (
+  <div
+    className="absolute top-0 left-0 right-0 z-30 pointer-events-none"
+    style={{ height: "52px", background: "black" }}
+    aria-hidden="true"
+  />
+)}
+```
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+This mirrors exactly what `UnifiedVideoPlayer.tsx` already does for Archive video embeds at line 86.
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+### Also improve iframe URL for Archive PDFs
 
----
+Currently line 174:
+```tsx
+src={isArchive ? `${iframeSrc}#toolbar=0&navpanes=0` : iframeSrc}
+```
+This already appends `#toolbar=0&navpanes=0` for archive — good. But the **direct PDF URL** (`https://archive.org/download/id/file.pdf`) renders natively in the browser PDF viewer which shows the browser's own PDF toolbar, not Archive's page. The masking div covers both cases correctly.
 
-### 3. Landing Page & Navigation Visual Fixes
+### Files changed
+- `src/components/course/DriveEmbedViewer.tsx` — 1 addition: conditional top-mask div (~5 lines)
+- No other files needed
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
-
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
-
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
-
----
-
-## Note on Visual Editor
-
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+### Result
+- Archive.org logo/navbar is covered by a black bar matching the app background
+- The Sadguru watermark still shows bottom-right (existing behavior)
+- For non-Archive URLs (Google Drive, direct PDF), no change in appearance
+- The existing Archive loading state, download, fullscreen, open-in-tab buttons are unaffected
