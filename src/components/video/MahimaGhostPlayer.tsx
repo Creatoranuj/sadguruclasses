@@ -400,11 +400,20 @@ const MahimaGhostPlayer = memo(({
   const handleNextVideo = useCallback(() => { setShowEndScreen(false); onNextVideo?.(); }, [onNextVideo]);
 
   // Progress bar handlers
-  const calculateTimeFromPosition = useCallback((clientX: number) => {
+  // When rotated 90°, the progress bar is physically vertical on screen.
+  // We must use clientY mapped to the bar's rendered height instead of clientX/width.
+  const calculateTimeFromPosition = useCallback((clientX: number, clientY?: number) => {
     if (!progressBarRef.current || duration <= 0) return 0;
     const rect = progressBarRef.current.getBoundingClientRect();
+    if (rotation === 90 && clientY !== undefined) {
+      // Bar is rotated: its visual bottom maps to time=0, visual top maps to time=duration
+      // rect is still reported in original (unrotated) screen coords by the browser
+      // In 90° rotation the bar becomes vertical: use clientY within rect.top/bottom
+      const ratio = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+      return ratio * duration;
+    }
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * duration;
-  }, [duration]);
+  }, [duration, rotation]);
 
   const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -638,8 +647,8 @@ const MahimaGhostPlayer = memo(({
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
-            {/* Center controls: [⏪10s]          [▶ PLAY]          [⏩10s] */}
-            <div className="absolute inset-0 flex flex-row items-center justify-between px-10 md:px-20">
+            {/* Center controls: [⏪10s]  [▶ PLAY]  [⏩10s] */}
+            <div className="absolute inset-0 flex flex-row items-center justify-center gap-10 md:gap-14">
               {/* Skip back 10s */}
               <button
                 className={cn(
