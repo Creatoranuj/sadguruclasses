@@ -38,6 +38,14 @@ const studentQuickActions = [
   { iconSrc: checkmarkIcon, label: "Performance", path: "/reports", bg: "bg-green-50 dark:bg-green-950/30" },
 ];
 
+// ── Static outside component — recreated on every render otherwise ─────────
+const teacherFeatures = [
+  { icon: ClipboardCheck, label: "Attendance", color: "text-blue-600 bg-blue-100", path: "/attendance" },
+  { icon: FileText, label: "Report Card", color: "text-purple-600 bg-purple-100", path: "/reports" },
+  { icon: Users, label: "Students", color: "text-green-600 bg-green-100", path: "/students" },
+  { icon: Calendar, label: "Timetable", color: "text-orange-600 bg-orange-100", path: "/timetable" },
+];
+
 interface QuizAttemptRow {
   id: string;
   quiz_id: string;
