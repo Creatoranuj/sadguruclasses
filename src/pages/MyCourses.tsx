@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,7 +34,7 @@ import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 interface EnrolledCourse {
-  enrollmentId: number; // unique enrollment row id for delete
+  enrollmentId: number;
   id: number;
   title: string;
   description: string | null;
@@ -46,22 +46,30 @@ interface EnrolledCourse {
   totalLessons: number;
   completedLessons: number;
   progressPercent: number;
-  isDuplicate: boolean; // flag if same course appears more than once
+  isDuplicate: boolean;
 }
 
 type StatusFilter = "all" | "in-progress" | "completed";
 
-const CourseCard = memo(({ course, onNavigate, onDelete, formatDate }: {
+// ── Static outside component ───────────────────────────────────────────────
+const statusTabs: { id: StatusFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "in-progress", label: "In Progress" },
+  { id: "completed", label: "Completed" },
+];
+
+const formatDate = (dateString: string) =>
+  new Date(dateString).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+const CourseCard = memo(({ course, onNavigate, onDelete }: {
   course: EnrolledCourse;
   onNavigate: (id: number) => void;
   onDelete: (enrollmentId: number, title: string) => void;
-  formatDate: (d: string) => string;
 }) => (
   <Card className={cn(
     "overflow-hidden hover:shadow-lg transition-all cursor-pointer group border-border relative",
     course.isDuplicate && "border-destructive/30 bg-destructive/5"
   )}>
-    {/* Duplicate badge */}
     {course.isDuplicate && (
       <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-destructive/90 text-destructive-foreground text-xs px-2 py-0.5 rounded-full">
         <AlertTriangle className="h-3 w-3" />
@@ -75,6 +83,8 @@ const CourseCard = memo(({ course, onNavigate, onDelete, formatDate }: {
         alt={course.title}
         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
+        loading="lazy"
+        decoding="async"
       />
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
         <PlayCircle className="h-14 w-14 text-white" />
@@ -109,7 +119,6 @@ const CourseCard = memo(({ course, onNavigate, onDelete, formatDate }: {
           {formatDate(course.purchased_at)}
         </span>
         <div className="flex items-center gap-1">
-          {/* Delete/unenroll button — always visible for duplicates, hover-only otherwise */}
           <Button
             size="sm"
             variant="ghost"
@@ -155,15 +164,15 @@ const MyCourses = () => {
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState("recent");
-  const [grades, setGrades] = useState<string[]>([]);
 
-  // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<{ enrollmentId: number; title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchEnrolledCourses = async () => {
+  // ── useCallback so useEffect dep array is stable ──────────────────────────
+  const fetchEnrolledCourses = useCallback(async () => {
     if (!user) { setLoading(false); return; }
     try {
+      // ── 3 queries → 2 parallel groups (enrollments → then progress+lessons) ─
       const { data: enrollments, error } = await supabase
         .from('enrollments')
         .select('*, courses(*)')
@@ -172,32 +181,36 @@ const MyCourses = () => {
 
       if (error) throw error;
 
-      const { data: progressData } = await supabase
-        .from('user_progress')
-        .select('lesson_id, completed, course_id')
-        .eq('user_id', user.id);
-
       const courseIds = (enrollments || []).map((e: any) => e.course_id);
-      const { data: allLessons } = await supabase
-        .from('lessons')
-        .select('id, course_id')
-        .in('course_id', courseIds.length > 0 ? courseIds : [-1]);
 
-      // Count how many times each course_id appears (for duplicate detection)
+      // Fetch progress and lessons in parallel
+      const [progressRes, lessonsRes] = await Promise.all([
+        supabase
+          .from('user_progress')
+          .select('lesson_id, completed, course_id')
+          .eq('user_id', user.id),
+        supabase
+          .from('lessons')
+          .select('id, course_id')
+          .in('course_id', courseIds.length > 0 ? courseIds : [-1]),
+      ]);
+
+      const progressData = progressRes.data || [];
+      const allLessons = lessonsRes.data || [];
+
       const courseIdCounts: Record<number, number> = {};
       (enrollments || []).forEach((e: any) => {
         courseIdCounts[e.course_id] = (courseIdCounts[e.course_id] || 0) + 1;
       });
 
-      // Track which course_ids we've already seen (first one is "original", rest are duplicates)
       const seenCourseIds: Record<number, number> = {};
 
       const enrolledCourses: EnrolledCourse[] = (enrollments || []).map((enrollment: any) => {
         const course = enrollment.courses;
         if (!course) return null;
 
-        const courseLessons = (allLessons || []).filter((l: any) => l.course_id === course.id);
-        const completedLessons = (progressData || []).filter(
+        const courseLessons = allLessons.filter((l: any) => l.course_id === course.id);
+        const completedLessons = progressData.filter(
           (p: any) => p.course_id === course.id && p.completed
         );
         const totalLessons = courseLessons.length;
@@ -226,18 +239,16 @@ const MyCourses = () => {
       }).filter(Boolean) as EnrolledCourse[];
 
       setCourses(enrolledCourses);
-      const uniqueGrades = [...new Set(enrolledCourses.map(c => c.grade).filter(Boolean))] as string[];
-      setGrades(uniqueGrades);
     } catch (error) {
       console.error("Error fetching enrolled courses:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchEnrolledCourses();
-  }, [user]);
+  }, [fetchEnrolledCourses]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -247,46 +258,50 @@ const MyCourses = () => {
         .from('enrollments')
         .delete()
         .eq('id', deleteTarget.enrollmentId)
-        .eq('user_id', user?.id); // safety check
+        .eq('user_id', user?.id);
 
       if (error) throw error;
 
       setCourses(prev => prev.filter(c => c.enrollmentId !== deleteTarget.enrollmentId));
-      toast({
-        title: "Enrollment removed ✓",
-        description: `"${deleteTarget.title}" हटा दिया गया।`,
-      });
+      toast({ title: "Enrollment removed ✓", description: `"${deleteTarget.title}" हटा दिया गया।` });
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Could not remove enrollment. Try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Could not remove enrollment. Try again.", variant: "destructive" });
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
     }
   };
 
-  const filteredCourses = courses
-    .filter(c => {
-      if (searchQuery.trim() && !c.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      if (gradeFilter !== "all" && c.grade !== gradeFilter) return false;
-      if (statusFilter === "completed" && c.progressPercent < 100) return false;
-      if (statusFilter === "in-progress" && (c.progressPercent === 0 || c.progressPercent >= 100)) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === "name") return a.title.localeCompare(b.title);
-      if (sortBy === "progress") return b.progressPercent - a.progressPercent;
-      return new Date(b.purchased_at).getTime() - new Date(a.purchased_at).getTime();
-    });
+  // ── Memoised derived list ─────────────────────────────────────────────────
+  const filteredCourses = useMemo(() =>
+    courses
+      .filter(c => {
+        if (searchQuery.trim() && !c.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        if (gradeFilter !== "all" && c.grade !== gradeFilter) return false;
+        if (statusFilter === "completed" && c.progressPercent < 100) return false;
+        if (statusFilter === "in-progress" && (c.progressPercent === 0 || c.progressPercent >= 100)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "name") return a.title.localeCompare(b.title);
+        if (sortBy === "progress") return b.progressPercent - a.progressPercent;
+        return new Date(b.purchased_at).getTime() - new Date(a.purchased_at).getTime();
+      }),
+    [courses, searchQuery, gradeFilter, statusFilter, sortBy]
+  );
 
-  const duplicateCount = courses.filter(c => c.isDuplicate).length;
+  const grades = useMemo(
+    () => [...new Set(courses.map(c => c.grade).filter(Boolean))] as string[],
+    [courses]
+  );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
+  const duplicateCount = useMemo(
+    () => courses.filter(c => c.isDuplicate).length,
+    [courses]
+  );
+
+  const handleNavigate = useCallback((id: number) => navigate(`/my-courses/${id}`), [navigate]);
+  const handleDelete = useCallback((enrollmentId: number, title: string) => setDeleteTarget({ enrollmentId, title }), []);
 
   if (!user) {
     return (
@@ -303,12 +318,6 @@ const MyCourses = () => {
       </div>
     );
   }
-
-  const statusTabs: { id: StatusFilter; label: string }[] = [
-    { id: "all", label: "All" },
-    { id: "in-progress", label: "In Progress" },
-    { id: "completed", label: "Completed" },
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -345,7 +354,6 @@ const MyCourses = () => {
         </Breadcrumb>
       </div>
 
-      {/* Duplicate warning banner */}
       {duplicateCount > 0 && (
         <div className="container mx-auto px-4 pt-4">
           <div className="flex items-start gap-3 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 text-sm text-destructive">
@@ -454,9 +462,8 @@ const MyCourses = () => {
               <CourseCard
                 key={course.enrollmentId}
                 course={course}
-                onNavigate={(id) => navigate(`/my-courses/${id}`)}
-                onDelete={(enrollmentId, title) => setDeleteTarget({ enrollmentId, title })}
-                formatDate={formatDate}
+                onNavigate={handleNavigate}
+                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -465,18 +472,13 @@ const MyCourses = () => {
 
       <BottomNav />
 
-      {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-destructive" />
-              Enrollment हटाएं?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Remove Enrollment?</AlertDialogTitle>
             <AlertDialogDescription>
-              क्या आप <strong>"{deleteTarget?.title}"</strong> का enrollment हटाना चाहते हैं?
-              <br /><br />
-              यह सिर्फ यह enrollment entry हटाएगा। आपकी progress सुरक्षित रहेगी।
+              Are you sure you want to remove <strong>"{deleteTarget?.title}"</strong> from your courses?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -486,7 +488,7 @@ const MyCourses = () => {
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Removing..." : "हाँ, हटाएं"}
+              {isDeleting ? "Removing..." : "Remove"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

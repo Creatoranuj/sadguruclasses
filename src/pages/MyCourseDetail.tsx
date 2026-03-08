@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,6 +62,7 @@ interface Chapter {
 
 type ContentType = "all" | "lectures" | "pdfs" | "dpp" | "notes";
 
+// ── Static constants outside component — never recreated ──────────────────────
 const typeMapping: Record<ContentType, string[]> = {
   all: [],
   lectures: ["VIDEO"],
@@ -131,28 +132,35 @@ const MyCourseDetail = () => {
     fetchComments();
   }, [selectedLesson]);
 
-  const handlePostComment = async () => {
+  // ── Optimistic comment append — no re-fetch needed ─────────────────────────
+  const handlePostComment = useCallback(async () => {
     if (!newComment.trim() || !selectedLesson || !user) return;
+    const optimisticComment = {
+      id: crypto.randomUUID(),
+      userName: profile?.fullName || "Anonymous",
+      message: newComment.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    setComments(prev => [...prev, optimisticComment]);
+    setNewComment("");
     try {
       const { error } = await supabase.from("comments").insert({
         lesson_id: selectedLesson.id,
         user_name: profile?.fullName || "Anonymous",
-        message: newComment.trim(),
+        message: optimisticComment.message,
         user_id: user.id,
       } as any);
-      if (error) throw error;
-      setNewComment("");
-      const { data } = await supabase.from("comments").select("*")
-        .eq("lesson_id", selectedLesson.id).order("created_at", { ascending: true });
-      if (data) setComments(data.map((c: any) => ({
-        id: c.id, userName: c.user_name, message: c.message, createdAt: c.created_at,
-      })));
+      if (error) {
+        // rollback on failure
+        setComments(prev => prev.filter(c => c.id !== optimisticComment.id));
+        throw error;
+      }
       toast.success("Comment posted!");
     } catch (err) {
       console.error("Error posting comment:", err);
       toast.error("Failed to post comment");
     }
-  };
+  }, [newComment, selectedLesson, user, profile]);
 
   const getYouTubeThumbnail = (url: string) => {
     const pattern = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
@@ -181,20 +189,30 @@ const MyCourseDetail = () => {
           if (enrollment) setHasPurchased(true);
         }
 
-        // Fetch top-level chapters
-        const { data: chaptersData } = await supabase
-          .from("chapters").select("*")
-          .eq("course_id", Number(courseId))
-          .is("parent_id", null)
-          .order("position", { ascending: true });
+        // ── Parallelise independent queries ─────────────────────────────────
+        const [chaptersRes, lessonsRes, progressRes] = await Promise.all([
+          supabase
+            .from("chapters").select("*")
+            .eq("course_id", Number(courseId))
+            .is("parent_id", null)
+            .order("position", { ascending: true }),
+          supabase
+            .from("lessons").select("*").eq("course_id", Number(courseId))
+            .order("position", { ascending: true }),
+          user?.id
+            ? supabase
+                .from("user_progress")
+                .select("lesson_id, last_watched_at")
+                .eq("user_id", user.id)
+                .eq("course_id", Number(courseId))
+                .eq("completed", true)
+                .order("last_watched_at", { ascending: false })
+            : Promise.resolve({ data: null }),
+        ]);
 
-        // Fetch all lessons
-        const { data: lessonsData, error: lessonsErr } = await supabase
-          .from("lessons").select("*").eq("course_id", Number(courseId))
-          .order("position", { ascending: true });
-        if (lessonsErr) throw lessonsErr;
+        if (lessonsRes.error) throw lessonsRes.error;
 
-        const mappedLessons: Lesson[] = (lessonsData || []).map((l: any, idx: number) => ({
+        const mappedLessons: Lesson[] = (lessonsRes.data || []).map((l: any, idx: number) => ({
           id: l.id, title: l.title, videoUrl: l.video_url, description: l.description,
           overview: l.overview, isLocked: l.is_locked, lectureType: l.lecture_type || "VIDEO",
           position: l.position || idx + 1, youtubeId: l.youtube_id, createdAt: l.created_at,
@@ -203,21 +221,11 @@ const MyCourseDetail = () => {
         }));
         setLessons(mappedLessons);
 
-        // Build chapters with lesson counts + completed counts
         let completedSet = new Set<string>();
-        if (user?.id) {
-          const { data: progressData } = await supabase
-            .from("user_progress")
-            .select("lesson_id, last_watched_at")
-            .eq("user_id", user.id)
-            .eq("course_id", Number(courseId))
-            .eq("completed", true)
-            .order("last_watched_at", { ascending: false });
-          completedSet = new Set((progressData || []).map((p: any) => p.lesson_id));
+        if (progressRes.data && progressRes.data.length > 0) {
+          completedSet = new Set(progressRes.data.map((p: any) => p.lesson_id));
           setCompletedLessonIds(completedSet);
-          if (progressData && progressData.length > 0) {
-            setLastWatchedLessonId(progressData[0].lesson_id);
-          }
+          setLastWatchedLessonId(progressRes.data[0].lesson_id);
         }
 
         const lessonCountMap: Record<string, number> = {};
@@ -244,7 +252,7 @@ const MyCourseDetail = () => {
           completedLessons: totalCompleted,
         };
 
-        const mappedChapters: Chapter[] = (chaptersData || []).map((ch: any) => ({
+        const mappedChapters: Chapter[] = (chaptersRes.data || []).map((ch: any) => ({
           id: ch.id,
           code: ch.code,
           title: ch.title,
@@ -274,38 +282,67 @@ const MyCourseDetail = () => {
     }
   }, [searchParams, lessons]);
 
-  const selectedChapter = chapters.find(ch => ch.id === selectedChapterId);
+  // ── Memoised derived values — computed once per dependency change ──────────
+  const selectedChapter = useMemo(
+    () => chapters.find(ch => ch.id === selectedChapterId),
+    [chapters, selectedChapterId]
+  );
 
-  const filteredLessons = lessons.filter((lesson) => {
-    const chapterMatch = !selectedChapterId || selectedChapterId === "__all__"
-      ? true
-      : lesson.chapterId === selectedChapterId;
-    const typeMatch = activeTab === "all" ? true : typeMapping[activeTab].includes(lesson.lectureType || "VIDEO");
-    const searchMatch = lessonSearch.trim()
-      ? lesson.title.toLowerCase().includes(lessonSearch.toLowerCase())
-      : true;
-    return chapterMatch && typeMatch && searchMatch;
-  });
+  const chapterLessons = useMemo(
+    () =>
+      !selectedChapterId || selectedChapterId === "__all__"
+        ? lessons
+        : lessons.filter(l => l.chapterId === selectedChapterId),
+    [lessons, selectedChapterId]
+  );
 
-  const tabCounts = {
-    all: selectedChapterId && selectedChapterId !== "__all__"
-      ? lessons.filter(l => l.chapterId === selectedChapterId).length
-      : lessons.length,
-    lectures: (selectedChapterId && selectedChapterId !== "__all__"
-      ? lessons.filter(l => l.chapterId === selectedChapterId)
-      : lessons).filter(l => l.lectureType === "VIDEO").length,
-    pdfs: (selectedChapterId && selectedChapterId !== "__all__"
-      ? lessons.filter(l => l.chapterId === selectedChapterId)
-      : lessons).filter(l => l.lectureType === "PDF").length,
-    dpp: (selectedChapterId && selectedChapterId !== "__all__"
-      ? lessons.filter(l => l.chapterId === selectedChapterId)
-      : lessons).filter(l => l.lectureType === "DPP").length,
-    notes: (selectedChapterId && selectedChapterId !== "__all__"
-      ? lessons.filter(l => l.chapterId === selectedChapterId)
-      : lessons).filter(l => l.lectureType === "NOTES").length,
-  };
+  const filteredLessons = useMemo(() => {
+    const typeMatch = activeTab === "all"
+      ? chapterLessons
+      : chapterLessons.filter(l => typeMapping[activeTab].includes(l.lectureType || "VIDEO"));
+    if (!lessonSearch.trim()) return typeMatch;
+    const q = lessonSearch.toLowerCase();
+    return typeMatch.filter(l => l.title.toLowerCase().includes(q));
+  }, [chapterLessons, activeTab, lessonSearch]);
 
-  const handleContentClick = (lesson: Lesson) => {
+  const tabCounts = useMemo(() => ({
+    all: chapterLessons.length,
+    lectures: chapterLessons.filter(l => l.lectureType === "VIDEO").length,
+    pdfs: chapterLessons.filter(l => l.lectureType === "PDF").length,
+    dpp: chapterLessons.filter(l => l.lectureType === "DPP").length,
+    notes: chapterLessons.filter(l => l.lectureType === "NOTES").length,
+  }), [chapterLessons]);
+
+  const filteredSidebarChapters = useMemo(() => {
+    if (!sidebarSearch.trim()) return chapters;
+    const q = sidebarSearch.toLowerCase();
+    return chapters.filter(
+      ch => ch.title.toLowerCase().includes(q) || ch.code.toLowerCase().includes(q)
+    );
+  }, [chapters, sidebarSearch]);
+
+  // ── Memoised breadcrumbs ───────────────────────────────────────────────────
+  const chapterBreadcrumbs = useMemo(() => [
+    { label: "My Courses", href: "/my-courses" },
+    ...(course ? [{ label: course.title }] : []),
+  ], [course]);
+
+  const lessonBreadcrumbs = useMemo(() => [
+    { label: "My Courses", href: "/my-courses" },
+    ...(course ? [{ label: course.title, href: `/my-courses/${courseId}` }] : []),
+    ...(selectedChapter && selectedChapter.id !== "__all__"
+      ? [{ label: `${selectedChapter.code} : ${selectedChapter.title}` }]
+      : []),
+  ], [course, courseId, selectedChapter]);
+
+  const playerBreadcrumbs = useMemo(() => [
+    { label: "My Courses", href: "/my-courses" },
+    ...(course ? [{ label: course.title, href: `/my-courses/${courseId}` }] : []),
+    ...(selectedLesson ? [{ label: selectedLesson.title }] : []),
+  ], [course, courseId, selectedLesson]);
+
+  // ── Memoised handlers — stable references across renders ──────────────────
+  const handleContentClick = useCallback((lesson: Lesson) => {
     if (lesson.isLocked && !hasPurchased && !isAdminOrTeacher) {
       toast.error("This content is locked. Please purchase the course.");
       navigate(`/buy-course?id=${courseId}`);
@@ -316,8 +353,6 @@ const MyCourseDetail = () => {
       setActiveDiscussionTab("overview");
       setSearchParams({ lesson: lesson.id });
     } else {
-      // For PDF/DPP/NOTES: navigate into lesson player state,
-      // set the inline viewer and switch to Resources tab
       if (lesson.videoUrl) {
         setSelectedLesson(lesson);
         setInlineViewer({ url: lesson.videoUrl, title: lesson.title });
@@ -325,57 +360,38 @@ const MyCourseDetail = () => {
         setSearchParams({ lesson: lesson.id });
       }
     }
-  };
+  }, [hasPurchased, isAdminOrTeacher, courseId, navigate, setSearchParams]);
 
-  const handleClosePlayer = () => {
+  const handleClosePlayer = useCallback(() => {
     setSelectedLesson(null);
     setInlineViewer(null);
     setSearchParams({});
     setLessonSearch("");
-  };
+  }, [setSearchParams]);
 
-  // ── AUTO-MARK PROGRESS AT 90% ──────────────────────────────
-  const handleVideoProgress = async (state: { played: number; playedSeconds: number }) => {
+  // ── Single upsert replaces SELECT → UPDATE/INSERT pattern ─────────────────
+  const handleVideoProgress = useCallback(async (state: { played: number; playedSeconds: number }) => {
     if (!user || !selectedLesson || !courseId) return;
     if (state.played < 0.9) return;
     if (progressMarkedRef.current.has(selectedLesson.id)) return;
     progressMarkedRef.current.add(selectedLesson.id);
 
     try {
-      const { data: existing } = await supabase
-        .from("user_progress")
-        .select("id, completed")
-        .eq("user_id", user.id)
-        .eq("lesson_id", selectedLesson.id)
-        .maybeSingle();
+      const { error } = await supabase.from("user_progress").upsert({
+        user_id: user.id,
+        lesson_id: selectedLesson.id,
+        course_id: Number(courseId),
+        completed: true,
+        watched_seconds: Math.floor(state.playedSeconds),
+        last_watched_at: new Date().toISOString(),
+      }, { onConflict: "user_id,lesson_id" });
 
-      if (existing?.completed) return;
-
-      if (existing) {
-        await supabase.from("user_progress").update({
-          completed: true,
-          watched_seconds: Math.floor(state.playedSeconds),
-          last_watched_at: new Date().toISOString(),
-        }).eq("id", existing.id);
-      } else {
-        await supabase.from("user_progress").insert({
-          user_id: user.id,
-          lesson_id: selectedLesson.id,
-          course_id: Number(courseId),
-          completed: true,
-          watched_seconds: Math.floor(state.playedSeconds),
-          last_watched_at: new Date().toISOString(),
-        } as any);
-      }
+      if (error) throw error;
 
       const lessonId = selectedLesson.id;
       setCompletedLessonIds(prev => new Set([...prev, lessonId]));
       setChapters(prev => prev.map(ch => {
-        if (ch.id === selectedLesson.chapterId) {
-          if (ch.completedLessons >= ch.lessonCount) return ch;
-          return { ...ch, completedLessons: ch.completedLessons + 1 };
-        }
-        if (ch.id === "__all__") {
+        if (ch.id === selectedLesson.chapterId || ch.id === "__all__") {
           if (ch.completedLessons >= ch.lessonCount) return ch;
           return { ...ch, completedLessons: ch.completedLessons + 1 };
         }
@@ -387,27 +403,7 @@ const MyCourseDetail = () => {
       console.error("Error marking lesson complete:", err);
       progressMarkedRef.current.delete(selectedLesson.id);
     }
-  };
-
-  // Breadcrumbs
-  const chapterBreadcrumbs = [
-    { label: "My Courses", href: "/my-courses" },
-    ...(course ? [{ label: course.title }] : []),
-  ];
-
-  const lessonBreadcrumbs = [
-    { label: "My Courses", href: "/my-courses" },
-    ...(course ? [{ label: course.title, href: `/my-courses/${courseId}` }] : []),
-    ...(selectedChapter && selectedChapter.id !== "__all__"
-      ? [{ label: `${selectedChapter.code} : ${selectedChapter.title}` }]
-      : []),
-  ];
-
-  const playerBreadcrumbs = [
-    { label: "My Courses", href: "/my-courses" },
-    ...(course ? [{ label: course.title, href: `/my-courses/${courseId}` }] : []),
-    ...(selectedLesson ? [{ label: selectedLesson.title }] : []),
-  ];
+  }, [user, selectedLesson, courseId]);
 
   // ── LOADING STATE ──────────────────────────────────────────
   if (loading) {
@@ -509,83 +505,70 @@ const MyCourseDetail = () => {
 
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {(() => {
-                const filteredSidebarChapters = sidebarSearch.trim()
-                  ? chapters.filter(ch =>
-                      ch.title.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
-                      ch.code.toLowerCase().includes(sidebarSearch.toLowerCase())
-                    )
-                  : chapters;
-
-                if (filteredSidebarChapters.length === 0) {
-                  return (
-                    <p className="text-xs text-muted-foreground text-center py-4 px-2">
-                      No chapters found
-                    </p>
-                  );
-                }
-
-                return filteredSidebarChapters.map((chapter) => {
-                  const isActive = selectedChapterId === chapter.id || (!selectedChapterId && chapter.id === "__all__");
-                  const pct = chapter.lessonCount > 0
-                    ? Math.round((chapter.completedLessons / chapter.lessonCount) * 100)
-                    : 0;
-                  return (
-                    <button
-                      key={chapter.id}
-                      onClick={() => {
-                        setSelectedChapterId(chapter.id);
-                        setSelectedLesson(null);
-                        setSearchParams({});
-                        setLessonSearch("");
-                        setCourseSidebarOpen(false);
-                      }}
-                      className={cn(
-                        "w-full flex flex-col px-3 py-2 rounded-lg text-sm text-left transition-colors",
-                        isActive
-                          ? "bg-primary/10 text-primary font-medium border-l-2 border-primary pl-2.5"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      {/* Top row */}
-                      <div className="flex items-center gap-2 w-full">
+              {filteredSidebarChapters.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4 px-2">
+                  No chapters found
+                </p>
+              ) : filteredSidebarChapters.map((chapter) => {
+                const isActive = selectedChapterId === chapter.id || (!selectedChapterId && chapter.id === "__all__");
+                const pct = chapter.lessonCount > 0
+                  ? Math.round((chapter.completedLessons / chapter.lessonCount) * 100)
+                  : 0;
+                return (
+                  <button
+                    key={chapter.id}
+                    onClick={() => {
+                      setSelectedChapterId(chapter.id);
+                      setSelectedLesson(null);
+                      setSearchParams({});
+                      setLessonSearch("");
+                      setCourseSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex flex-col px-3 py-2 rounded-lg text-sm text-left transition-colors",
+                      isActive
+                        ? "bg-primary/10 text-primary font-medium border-l-2 border-primary pl-2.5"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {/* Top row */}
+                    <div className="flex items-center gap-2 w-full">
+                      <span className={cn(
+                        "text-xs font-bold px-1.5 py-0.5 rounded shrink-0",
+                        isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                      )}>
+                        {chapter.code}
+                      </span>
+                      <span className="flex-1 truncate leading-snug">{chapter.title}</span>
+                      {chapter.lessonCount > 0 && (
                         <span className={cn(
-                          "text-xs font-bold px-1.5 py-0.5 rounded shrink-0",
+                          "text-xs px-1 py-0.5 rounded-full shrink-0",
                           isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
                         )}>
-                          {chapter.code}
+                          {chapter.lessonCount}
                         </span>
-                        <span className="flex-1 truncate leading-snug">{chapter.title}</span>
-                        {chapter.lessonCount > 0 && (
-                          <span className={cn(
-                            "text-xs px-1 py-0.5 rounded-full shrink-0",
-                            isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                          )}>
-                            {chapter.lessonCount}
-                          </span>
-                        )}
-                      </div>
-                      {/* Progress bar row */}
-                      {chapter.lessonCount > 0 && (
-                        <div className="mt-1.5 w-full space-y-0.5 pl-7">
-                          <div className="h-1 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                "h-full rounded-full transition-all duration-500",
-                                pct === 100 ? "bg-green-500" : "bg-primary"
-                              )}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            {chapter.completedLessons}/{chapter.lessonCount} done
-                          </p>
-                        </div>
                       )}
-                    </button>
-                  );
-                });
-              })()}
+                    </div>
+                    {/* Progress bar row */}
+                    {chapter.lessonCount > 0 && (
+                      <div className="mt-1.5 w-full space-y-0.5 pl-7">
+                        <div className="h-1 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all duration-500",
+                              pct === 100 ? "bg-green-500" : "bg-primary"
+                            )}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {chapter.completedLessons}/{chapter.lessonCount} done
+                        </p>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </ScrollArea>
         </aside>
@@ -836,194 +819,107 @@ const MyCourseDetail = () => {
                 onDoubts={() => setActiveDiscussionTab("discussion")}
                 onDownloadPdf={selectedLesson.classPdfUrl ? () => { setInlineViewer({ url: selectedLesson.classPdfUrl!, title: `${selectedLesson.title} – Class PDF` }); setActiveDiscussionTab("resources"); } : undefined}
                 hasPdf={!!selectedLesson.classPdfUrl}
-                likesLoading={likesLoading}
-                lessonTitle={selectedLesson.title}
               />
 
-              {/* Tabs: Overview / Resources / Notes / Discussion */}
-              <Tabs value={activeDiscussionTab} onValueChange={setActiveDiscussionTab} className="w-full">
-                <TabsList className="w-full grid grid-cols-4 bg-muted/50 rounded-none border-b h-auto py-0">
-                  <TabsTrigger value="overview" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Overview</TabsTrigger>
-                  <TabsTrigger value="resources" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Resources</TabsTrigger>
-                  <TabsTrigger value="notes" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Notes</TabsTrigger>
-                  <TabsTrigger value="discussion" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Discussion</TabsTrigger>
+              {/* Tabs: Overview / Discussion / Resources / Notes */}
+              <Tabs value={activeDiscussionTab} onValueChange={setActiveDiscussionTab} className="flex-1">
+                <TabsList className="w-full justify-start rounded-none border-b bg-background px-4 gap-1 h-auto py-0">
+                  {[
+                    { id: "overview", label: "Overview" },
+                    { id: "discussion", label: "Discussion" },
+                    { id: "resources", label: "Resources" },
+                    { id: "notes", label: "Notes" },
+                  ].map(t => (
+                    <TabsTrigger
+                      key={t.id}
+                      value={t.id}
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-3 pt-3 text-sm"
+                    >
+                      {t.label}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
 
-                {/* Overview */}
-                <TabsContent value="overview" className="p-4 mt-0">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold text-foreground mb-2">About this lesson</h3>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">
-                        {selectedLesson.overview || selectedLesson.description || "No overview available for this lesson."}
-                      </p>
-                    </div>
-                    {!selectedLesson.overview && !selectedLesson.description && (
-                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                        <div className="flex items-start gap-2">
-                          <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-                          <p className="text-sm text-primary font-medium">Content coming soon</p>
-                        </div>
+                <TabsContent value="overview" className="p-4">
+                  <div className="space-y-3">
+                    {selectedLesson.overview && (
+                      <div>
+                        <h4 className="font-semibold text-foreground mb-1 text-sm">Overview</h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedLesson.overview}</p>
                       </div>
                     )}
-
-                    {/* Course Content playlist with progress */}
-                    <CourseContent
-                      lessons={filteredLessons
-                        .filter(l => l.lectureType === "VIDEO")
-                        .map(l => ({
-                          id: l.id,
-                          title: l.title,
-                          duration: l.duration ?? 0,
-                          isCompleted: completedLessonIds.has(l.id),
-                          isCurrent: l.id === selectedLesson.id,
-                        }))}
-                      completedCount={filteredLessons.filter(l => l.lectureType === "VIDEO" && completedLessonIds.has(l.id)).length}
-                      onLessonClick={(lessonId) => {
-                        const lesson = lessons.find(l => l.id === lessonId);
-                        if (lesson) { setSelectedLesson(lesson); setSearchParams({ lesson: lessonId }); }
-                      }}
-                    />
+                    {selectedLesson.description && (
+                      <div>
+                        <h4 className="font-semibold text-foreground mb-1 text-sm">Description</h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedLesson.description}</p>
+                      </div>
+                    )}
+                    {!selectedLesson.overview && !selectedLesson.description && (
+                      <p className="text-sm text-muted-foreground">No overview available for this lesson.</p>
+                    )}
                   </div>
                 </TabsContent>
 
-                {/* Resources */}
-                <TabsContent value="resources" className="mt-0">
-                  {(() => {
-                    const classPdfItem = selectedLesson.classPdfUrl
-                      ? [{ id: 'class-pdf', title: `${selectedLesson.title} - Class PDF`, videoUrl: selectedLesson.classPdfUrl, lectureType: 'PDF' }]
-                      : [];
-                    const chapterResources = lessons.filter(l =>
-                      (l.lectureType === "PDF" || l.lectureType === "DPP") &&
-                      l.chapterId === selectedLesson.chapterId
-                    );
-                    const resList = [...classPdfItem, ...chapterResources];
-                    if (resList.length === 0) return (
-                      <div className="p-4">
-                        <p className="text-muted-foreground text-sm">No resources available for this lesson.</p>
+                <TabsContent value="discussion" className="p-4 space-y-4">
+                  <h3 className="font-semibold text-foreground">Discussion</h3>
+                  {comments.map((c) => (
+                    <div key={c.id} className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-primary">{c.userName?.charAt(0)?.toUpperCase()}</span>
                       </div>
-                    );
-                    const activeRes = inlineViewer && resList.find(r => r.videoUrl === inlineViewer.url)
-                      ? inlineViewer
-                      : { url: resList[0].videoUrl, title: resList[0].title };
-                    return (
-                      <div className="flex flex-col">
-                        {resList.length > 1 && (
-                          <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
-                            {resList.map(r => (
-                              <button
-                                key={r.id}
-                                onClick={() => setInlineViewer({ url: r.videoUrl, title: r.title })}
-                                className={cn(
-                                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
-                                  activeRes.url === r.videoUrl
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-card text-muted-foreground border-border hover:border-primary"
-                                )}
-                              >
-                                {r.title}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        <div className="px-3 pb-3 pt-2">
-                          <PdfViewer url={activeRes.url} title={activeRes.title} />
-                        </div>
+                      <div className="flex-1 bg-muted rounded-xl px-3 py-2">
+                        <p className="text-xs font-semibold text-foreground">{c.userName}</p>
+                        <p className="text-sm text-foreground mt-0.5">{c.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {c.createdAt ? new Date(c.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
+                        </p>
                       </div>
-                    );
-                  })()}
-                </TabsContent>
-
-                {/* Notes */}
-                <TabsContent value="notes" className="mt-0">
-                  <div className="p-4 space-y-6">
-                    {/* Personal student notes (auto-save) */}
-                    <ObsidianNotes
-                      lessonId={selectedLesson.id}
-                      userId={user?.id}
-                      lessonTitle={selectedLesson.title}
-                    />
-
-                    {/* Class Notes (admin-uploaded PDFs) */}
-                    {(() => {
-                      const notesList = lessons.filter(l =>
-                        l.lectureType === "NOTES" && l.chapterId === selectedLesson.chapterId
-                      );
-                      if (notesList.length === 0) return null;
-                      const activeNote = selectedNoteUrl || { url: notesList[0].videoUrl, title: notesList[0].title };
-                      return (
-                        <div className="border border-border rounded-lg overflow-hidden">
-                          <div className="px-4 py-2 bg-muted/40 border-b border-border">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Class Notes</p>
-                          </div>
-                          {notesList.length > 1 && (
-                            <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
-                              {notesList.map(note => (
-                                <button
-                                  key={note.id}
-                                  onClick={() => setSelectedNoteUrl({ url: note.videoUrl, title: note.title })}
-                                  className={cn(
-                                    "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
-                                    activeNote.url === note.videoUrl
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : "bg-card text-muted-foreground border-border hover:border-primary"
-                                  )}
-                                >
-                                  {note.title}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          <div className="px-3 pb-3 pt-2">
-                            <PdfViewer url={activeNote.url} title={activeNote.title} />
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </TabsContent>
-
-                {/* Discussion */}
-                <TabsContent value="discussion" className="p-4 mt-0">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-foreground">Discussion</h3>
+                    </div>
+                  ))}
+                  {user && (
                     <div className="flex gap-2">
                       <Textarea
-                        placeholder="Ask a question or share your thoughts..."
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
-                        className="resize-none"
-                        rows={2}
+                        placeholder="Write a comment..."
+                        className="flex-1 min-h-[60px] resize-none text-sm"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handlePostComment(); }
+                        }}
                       />
-                      <Button onClick={handlePostComment} size="icon" className="shrink-0">
+                      <Button size="icon" onClick={handlePostComment} disabled={!newComment.trim()} className="shrink-0 self-end">
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="space-y-3">
-                      {comments.length > 0 ? (
-                        comments.map((comment) => (
-                          <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                              <MessageCircle className="h-4 w-4 text-primary" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-foreground text-sm">{comment.userName}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(comment.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{comment.message}</p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-muted-foreground text-sm text-center py-8">
-                          No discussions yet. Be the first to comment!
-                        </p>
-                      )}
-                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="resources" className="p-4">
+                  <div className="space-y-3">
+                    {selectedLesson.classPdfUrl && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl border bg-card">
+                        <FileText className="h-5 w-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">Class PDF</p>
+                          <p className="text-xs text-muted-foreground">Download or view class notes</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => setInlineViewer({ url: selectedLesson.classPdfUrl!, title: `${selectedLesson.title} – Class PDF` })}>
+                          View
+                        </Button>
+                      </div>
+                    )}
+                    {!selectedLesson.classPdfUrl && (
+                      <p className="text-sm text-muted-foreground">No resources attached to this lesson.</p>
+                    )}
                   </div>
+                </TabsContent>
+
+                <TabsContent value="notes" className="p-4">
+                  <ObsidianNotes
+                    lessonId={selectedLesson.id}
+                    userId={user?.id}
+                    lessonTitle={selectedLesson.title}
+                  />
                 </TabsContent>
               </Tabs>
             </div>

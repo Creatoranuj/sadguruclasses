@@ -19,16 +19,17 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// correct_answer & explanation are intentionally omitted —
+// questions are fetched from questions_for_students view (secure, no answers exposed).
+// Score is saved as 0 until the score-quiz edge function is implemented.
 interface Question {
   id: string;
   question_text: string;
   question_type: string;
   options: string[] | null;
-  correct_answer: string;
   marks: number;
   negative_marks: number;
   order_index: number;
-  explanation?: string | null;
   image_url?: string | null;
 }
 
@@ -56,7 +57,6 @@ const QuizAttempt = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
-  const [attemptId, setAttemptId] = useState<string | null>(null);
   const startedAt = useRef<Date>(new Date());
 
   // Load from localStorage on mount
@@ -119,54 +119,29 @@ const QuizAttempt = () => {
     if (quizId) localStorage.setItem(`quiz_flagged_${quizId}`, JSON.stringify([...updated]));
   };
 
-  const calculateScore = useCallback(() => {
-    let score = 0;
-    for (const q of questions) {
-      const userAnswer = answers[q.id];
-      if (userAnswer === undefined || userAnswer === "") continue;
-      if (userAnswer === q.correct_answer) {
-        score += q.marks;
-      } else if (q.negative_marks > 0) {
-        score -= q.negative_marks;
-      }
-    }
-    return Math.max(0, score);
-  }, [questions, answers]);
-
+  // NOTE: score is 0 here because correct_answer is not in the safe view.
+  // TODO: replace with score-quiz Edge Function to calculate server-side.
   const handleSubmit = async () => {
     if (!quiz || !user) return;
     setSubmitting(true);
     try {
-      const score = calculateScore();
+      const score = 0; // server-side scoring pending
       const totalMarks = quiz.total_marks || questions.reduce((s, q) => s + q.marks, 0);
-      const percentage = totalMarks > 0 ? (score / totalMarks) * 100 : 0;
-      const passed = percentage >= quiz.pass_percentage;
+      const percentage = 0;
+      const passed = false;
       const timeTaken = Math.floor((new Date().getTime() - startedAt.current.getTime()) / 1000);
 
-      let finalAttemptId = attemptId;
-
-      if (finalAttemptId) {
-        await supabase.from("quiz_attempts").update({
-          submitted_at: new Date().toISOString(),
-          score,
-          percentage,
-          passed,
-          answers,
-          time_taken_seconds: timeTaken,
-        }).eq("id", finalAttemptId);
-      } else {
-        const { data } = await supabase.from("quiz_attempts").insert({
-          user_id: user.id,
-          quiz_id: quizId,
-          submitted_at: new Date().toISOString(),
-          score,
-          percentage,
-          passed,
-          answers,
-          time_taken_seconds: timeTaken,
-        }).select("id").single();
-        finalAttemptId = data?.id;
-      }
+      const { data } = await supabase.from("quiz_attempts").insert({
+        user_id: user.id,
+        quiz_id: quizId,
+        submitted_at: new Date().toISOString(),
+        score,
+        percentage,
+        passed,
+        answers,
+        time_taken_seconds: timeTaken,
+      }).select("id").single();
+      const finalAttemptId = data?.id;
 
       // Clean localStorage
       localStorage.removeItem(`quiz_answers_${quizId}`);

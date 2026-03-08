@@ -47,7 +47,7 @@ const LessonView = lazy(() => import("./pages/LessonView"));
 const ChapterView = lazy(() => import("./pages/ChapterView"));
 const LectureListing = lazy(() => import("./pages/LectureListing"));
 const MyCourses = lazy(() => import("./pages/MyCourses"));
- const MyCourseDetail = lazy(() => import("./pages/MyCourseDetail"));
+const MyCourseDetail = lazy(() => import("./pages/MyCourseDetail"));
 const AllTests = lazy(() => import("./pages/AllTests"));
 const Install = lazy(() => import("./pages/Install"));
 const QuizAttempt = lazy(() => import("./pages/QuizAttempt"));
@@ -59,7 +59,7 @@ const TeacherLiveView = lazy(() => import("./pages/TeacherLiveView"));
 const AdminChatbotSettings = lazy(() => import("./pages/AdminChatbotSettings"));
 const Downloads = lazy(() => import("./pages/Downloads"));
 const Doubts = lazy(() => import("./pages/Doubts"));
-import ChatWidget from "./components/chat/ChatWidget";
+const ChatWidget = lazy(() => import("./components/chat/ChatWidget"));
 
 // Optimized QueryClient with better caching
 const queryClient = new QueryClient({
