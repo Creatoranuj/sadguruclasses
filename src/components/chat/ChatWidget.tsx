@@ -18,10 +18,10 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://wegamscqtvqhx
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 const QUICK_PROMPTS = [
-  "What courses are available?",
-  "How do I enroll?",
-  "How to attempt a quiz?",
-  "I need help with a mock test",
+  "📚 Kaunsa course lun?",
+  "📝 Mock test mein help chahiye",
+  "🎯 Enroll kaise karein?",
+  "❓ Quiz attempt kaise karein?",
 ];
 
 const ChatWidget = () => {
@@ -30,7 +30,7 @@ const ChatWidget = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "👋 Hi! I'm **Sadguru Chatbot**, your learning assistant. I can help you with courses, quizzes, mock tests, and platform features. How can I help you today?",
+      content: "👋 नमस्ते! मैं **Sadguru Sarthi** हूँ – आपका 24×7 personal learning assistant। 🎓\n\nमैं आपकी मदद कर सकता हूँ:\n- **Courses** और **Syllabus** के बारे में\n- **Mock Test** और **Quiz** में guidance\n- **Platform features** की technical help\n\nआज मैं आपके लिए क्या कर सकता हूँ?",
       timestamp: new Date(),
     },
   ]);
@@ -98,7 +98,7 @@ const ChatWidget = () => {
   const resetChat = () => {
     setMessages([{
       role: "assistant",
-      content: "👋 Hi! I'm **Sadguru Chatbot**. How can I help you with your learning today?",
+      content: "👋 नमस्ते! मैं **Sadguru Sarthi** हूँ – आपका learning companion। नई बातचीत शुरू करते हैं! आज मैं आपकी कैसे मदद कर सकता हूँ? 🎓",
       timestamp: new Date(),
     }]);
   };
@@ -132,7 +132,7 @@ const ChatWidget = () => {
           "hover:scale-110 active:scale-95",
           isOpen && "scale-0 opacity-0 pointer-events-none"
         )}
-        aria-label="Open Sadguru Chatbot"
+        aria-label="Open Sadguru Sarthi"
       >
         <HelpCircle className="w-7 h-7" />
       </button>
@@ -153,8 +153,8 @@ const ChatWidget = () => {
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-foreground">Sadguru Chatbot</p>
-              <p className="text-xs text-muted-foreground">Ask me anything about courses 📚</p>
+              <p className="font-semibold text-sm text-foreground">Sadguru Sarthi 🎓</p>
+              <p className="text-xs text-muted-foreground">सीखने का सच्चा साथी • 24×7 उपलब्ध</p>
             </div>
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={resetChat} title="Reset chat">
               <RotateCcw className="h-3.5 w-3.5" />
@@ -220,7 +220,7 @@ const ChatWidget = () => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-              placeholder="Ask about courses, quizzes..."
+              placeholder="Sarthi se kuch poochein... 🙏"
               className="flex-1 text-sm h-10"
               disabled={isLoading}
             />
