@@ -217,15 +217,8 @@ const MahimaGhostPlayer = memo(({
 
   // Show/hide controls — prevent auto-hide in last 10 seconds
   const handleMouseMove = useCallback(() => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    if (isInLastTenSeconds) return; // Don't auto-hide in last 10 seconds
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying && !showVolumeSlider && !showSpeedMenu && !showDiscussion) {
-        setShowControls(false);
-      }
-    }, 3000);
-  }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion, isInLastTenSeconds]);
+    showControlsNow();
+  }, [showControlsNow]);
 
   // Show controls immediately on any interaction, reset auto-hide timer
   const showControlsNow = useCallback(() => {
