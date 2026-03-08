@@ -3,7 +3,7 @@ import { FileText, ExternalLink, Maximize, Minimize, Download } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { downloadFile } from "@/utils/fileUtils";
 import { toast } from "sonner";
-import mahimaLogo from "@/assets/mahima-academy-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 interface PdfViewerProps {
   url: string;
@@ -113,7 +113,7 @@ const PdfViewer = memo(({ url, title }: PdfViewerProps) => {
           className="absolute bottom-0 left-0 right-0 z-20 flex items-center gap-2 px-4 py-1.5 select-none pointer-events-none"
           style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)" }}
         >
-          <img src={mahimaLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
+          <img src={sadguruLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
           <span className="text-white text-xs font-semibold tracking-wide">
             Sadguru Coaching Classes
           </span>

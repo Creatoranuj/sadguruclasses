@@ -148,20 +148,20 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
           </div>
         )}
 
-        {/* Archive.org left-side controls panel overlay */}
+        {/* Archive.org left-side bookmark strip overlay — only 28px to cover the narrow icon column */}
         {isArchive && (
           <div
-            className="absolute top-9 left-0 bottom-8 w-11 z-10 select-none pointer-events-none"
-            style={{ background: "hsl(var(--card))" }}
+            className="absolute top-9 left-0 bottom-0 z-10 select-none pointer-events-none"
+            style={{ width: "28px", background: "hsl(var(--card))" }}
           />
         )}
 
         <iframe
           src={embedUrl}
-          className="w-full h-full border-0"
-          style={isArchive ? { marginTop: "36px", height: "calc(100% - 36px)" } : undefined}
+          className="absolute inset-0 w-full h-full border-0"
+          style={isArchive ? { top: "36px", height: "calc(100% - 36px)" } : undefined}
           title={title || "Document Preview"}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
           loading="eager"
           allowFullScreen
         />
