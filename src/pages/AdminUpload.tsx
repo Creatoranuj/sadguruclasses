@@ -15,6 +15,7 @@ import {
   Upload, Video, FileText, LogOut, Trash2,
   BookOpen, Shield, Loader2, FileUp, Link as LinkIcon,
   ChevronRight, ClipboardCheck, Plus, FolderPlus, FolderOpen, GripVertical, Camera,
+  Pencil, X, Save,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import MediaPreview from "@/components/admin/MediaPreview";

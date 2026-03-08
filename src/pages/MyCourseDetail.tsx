@@ -105,6 +105,7 @@ const MyCourseDetail = () => {
   const [inlineViewer, setInlineViewer] = useState<{ url: string; title: string } | null>(null);
   const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
   const [activeDiscussionTab, setActiveDiscussionTab] = useState("overview");
+  const [lastWatchedLessonId, setLastWatchedLessonId] = useState<string | null>(null);
 
   // Lesson likes — keyed to the selected lesson
   const { likeCount, hasLiked, toggleLike, loading: likesLoading } = useLessonLikes(selectedLesson?.id);
