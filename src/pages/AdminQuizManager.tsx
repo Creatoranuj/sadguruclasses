@@ -165,6 +165,12 @@ const AdminQuizManager = () => {
   const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
   const [savingQuiz, setSavingQuiz] = useState(false);
 
+  // Attempts sheet
+  const [attemptsQuizId, setAttemptsQuizId] = useState<string | null>(null);
+  const [attemptsQuizTitle, setAttemptsQuizTitle] = useState("");
+  const [attempts, setAttempts] = useState<any[]>([]);
+  const [loadingAttempts, setLoadingAttempts] = useState(false);
+
   // Collapsible questions
   const [expandedQuestions, setExpandedQuestions] = useState<Record<number, boolean>>({ 0: true });
 
