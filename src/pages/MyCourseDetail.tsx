@@ -350,6 +350,8 @@ const MyCourseDetail = () => {
         } as any);
       }
 
+      const lessonId = selectedLesson.id;
+      setCompletedLessonIds(prev => new Set([...prev, lessonId]));
       setChapters(prev => prev.map(ch => {
         if (ch.id === selectedLesson.chapterId) {
           if (ch.completedLessons >= ch.lessonCount) return ch;
