@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { X, Send, Loader2, Bot, RotateCcw, HelpCircle, ThumbsUp, ThumbsDown, Sparkles } from "lucide-react";
+import { X, Send, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
+import logoIcon from "@/assets/branding/logo_icon_web.png";
 
 interface Message {
   role: "user" | "assistant";
