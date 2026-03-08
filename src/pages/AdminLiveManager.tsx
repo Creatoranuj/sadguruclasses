@@ -48,6 +48,7 @@ const AdminLiveManager = () => {
     youtube_live_id: "",
     scheduled_at: "",
     course_id: "",
+    recording_url: "",
   });
 
   const [previewSession, setPreviewSession] = useState<LiveSession | null>(null);
