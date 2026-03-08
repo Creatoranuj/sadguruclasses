@@ -65,6 +65,7 @@ const LectureListing = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [hasPurchased, setHasPurchased] = useState(false);
   const [showSubChapters, setShowSubChapters] = useState(false);
+  const [lessonQuizMap, setLessonQuizMap] = useState<Record<string, string>>({});
 
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const isModalOpen = searchParams.get("lecture") !== null;
@@ -166,6 +167,27 @@ const LectureListing = () => {
     };
     fetchData();
   }, [courseId, chapterId, user]);
+
+  // Fetch quizzes linked to lessons (DPP/TEST)
+  useEffect(() => {
+    if (lessons.length === 0) return;
+    const lessonIds = lessons
+      .filter(l => l.lecture_type === "DPP" || l.lecture_type === "TEST")
+      .map(l => l.id);
+    if (lessonIds.length === 0) return;
+    supabase
+      .from("quizzes")
+      .select("id, lesson_id")
+      .in("lesson_id", lessonIds)
+      .eq("is_published", true)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, string> = {};
+          data.forEach((q: any) => { if (q.lesson_id) map[q.lesson_id] = q.id; });
+          setLessonQuizMap(map);
+        }
+      });
+  }, [lessons]);
 
   const handleLectureClick = (lesson: Lesson) => {
     if (lesson.is_locked && !hasPurchased && !isAdminOrTeacher) {
