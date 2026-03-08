@@ -173,9 +173,11 @@ const App = () => (
                   <Route path="/materials" element={<Materials />} />
                   <Route path="/syllabus" element={<Syllabus />} />
                   
-                  <Route path="*" element={<NotFound />} />
+                   <Route path="/admin/chatbot" element={<AdminChatbotSettings />} />
+                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
+              <ChatWidget />
             </BrowserRouter>
           </TooltipProvider>
         </BatchProvider>
