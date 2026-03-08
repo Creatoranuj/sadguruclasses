@@ -93,7 +93,7 @@ const AdminQuizManager = () => {
   }, []);
 
   const fetchQuizzes = async () => {
-    const { data } = await supabase.from("quizzes").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("quizzes").select("*, lessons(title)").order("created_at", { ascending: false });
     setQuizzes((data || []) as Quiz[]);
   };
 
