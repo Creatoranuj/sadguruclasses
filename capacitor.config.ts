@@ -9,7 +9,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // removed so the APK bundles the built dist/ files and works self-contained.
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.33478fb970204ec9be5f04cb93d2fa17',
+  appId: 'com.sadguru.classes',
   appName: 'Sadguru Coaching Classes',
   webDir: 'dist',
   android: {
