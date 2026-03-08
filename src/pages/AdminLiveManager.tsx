@@ -249,6 +249,9 @@ const AdminLiveManager = () => {
                           <Square className="h-3 w-3" /> End Live
                         </Button>
                       )}
+                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Teacher View" onClick={() => window.open(`/teacher/live/${session.id}`, "_blank")}>
+                        <GraduationCap className="h-4 w-4 text-primary" />
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8" title="Preview session" onClick={() => { setPreviewSession(session); setShowPreview(true); }}>
                         <Eye className="h-4 w-4" />
                       </Button>
