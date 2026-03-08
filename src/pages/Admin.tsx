@@ -842,7 +842,7 @@ const Admin = () => {
 
         {/* TABS SECTION */}
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'library') fetchLibraryData(); }} className="w-full space-y-6">
-          <TabsList className="bg-white p-1 border rounded-lg w-full md:w-auto grid grid-cols-10 h-auto">
+          <TabsList className="bg-card p-1 border rounded-lg w-full md:w-auto grid grid-cols-11 h-auto">
             <TabsTrigger value="payments" className="py-2">Payments <Badge variant="destructive" className="ml-2">{statsData.pendingPayments}</Badge></TabsTrigger>
             <TabsTrigger value="users" className="py-2">Users</TabsTrigger>
             <TabsTrigger value="teachers" className="py-2 flex items-center gap-1"><GraduationCap className="h-4 w-4" />Teachers</TabsTrigger>
@@ -853,6 +853,7 @@ const Admin = () => {
             <TabsTrigger value="library" className="py-2"><Library className="h-4 w-4 mr-1" />Library</TabsTrigger>
             <TabsTrigger value="social" className="py-2"><ExternalLink className="h-4 w-4 mr-1" />Social</TabsTrigger>
             <TabsTrigger value="live" className="py-2 gap-1 text-destructive data-[state=active]:text-destructive"><Radio className="h-4 w-4" />Live</TabsTrigger>
+            <TabsTrigger value="banners" className="py-2 gap-1"><ImageIcon className="h-4 w-4" />Banners</TabsTrigger>
           </TabsList>
 
           {/* --- TAB 1: UNIFIED PAYMENTS --- */}
