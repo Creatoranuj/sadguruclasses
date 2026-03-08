@@ -1,83 +1,82 @@
 
-## Root Cause: Missing `lovable.toml`
+## Summary of Current State
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+### What's already done (verified by reading code):
+1. **`formatTime` in MahimaGhostPlayer.tsx** — Already correctly implemented at line 413–420. Returns `H:MM:SS` or `M:SS` format. NO change needed here.
+2. **`formatTime` in MahimaVideoPlayer.tsx** — Also correctly implemented at lines 204–211. Same correct format.
+3. **Dashboard deduplication** — Already implemented at lines 91–99 in Dashboard.tsx using a `Set<number>`. Works correctly.
+4. **DB unique constraint** — Migration was already run in a previous session.
+
+### The REAL issues the user is reporting (based on screenshot):
+
+Looking at the reference screenshot `Screenshot_20260303-053754.Brave.png`, the desired lesson page layout shows:
+- Video player with `0:04:30 / 1:56:54` timestamp format at bottom left
+- **Title above video**: "Plant Growth and Development 1" with date `23/01/2026`
+- **Below video**: `👍 130 Likes` | `? Doubts` (two large pill buttons)
+- **Lesson info section**: Large bold title + teacher name, then `Biology · 12 · neet_ug` with Download + Class PDF buttons
+- **The timestamp format** `0:04:30` is `H:MM:SS` — already correct in code
+
+**What's actually broken or missing compared to the screenshot:**
+
+1. **Lesson card sidebar**: Currently the sidebar shows plain text list. The screenshot shows a richer style (the sidebar is the right panel course content list in LessonView).
+
+2. **The LessonActionBar** currently shows 4 small buttons: Likes, Comments, Doubts, Class PDF. The screenshot shows **2 large pill buttons** side by side: `👍 130 Likes` and `? Doubts`.
+
+3. **The lesson info area** below the action bar needs the **Download** button alongside Class PDF.
+
+4. **Date in video subtitle** — currently shows `toLocaleDateString()` which may not match `23/01/2026` format (needs `dd/MM/yyyy`).
+
+5. **Dashboard "Continue where you left"** — only shows ONE course card at top. The "My Batches" section below shows a grid of all courses. This matches what we have, but the user says thumbnails are still duplicating.
+
+### Plan:
+
+#### 1. Fix `LessonActionBar` to match the reference screenshot
+The reference shows two large pill buttons: **Likes** and **Doubts** (not 4 buttons). Redesign the action bar to:
+- Large pill buttons with icon + count
+- Style: `👍 130 Likes` and `? Doubts`
+
+#### 2. Add "Download" button to lesson info section
+The reference shows `Download` | `Class PDF` buttons in the info area below the action bar.
+
+#### 3. Fix date format in video subtitle
+Change `toLocaleDateString()` → `toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })` to get `23/01/2026` format.
+
+#### 4. Dashboard — ensure no duplicates
+The code already deduplicates. The issue is likely that the "My Batches" grid below the main card also shows all enrolled courses (as intended), but visually looks like duplicates. User may be seeing the top "Continue Learning" card PLUS the "My Batches" grid showing the same course. This is by design but may confuse — we should remove the "My Batches" section OR merge them into one unified list.
+
+#### 5. Lesson sidebar cards — match reference style
+The reference screenshot shows each lesson in the right sidebar as a card-style item. Currently the sidebar has plain list items. The current code already has a decent list style, but we can improve it.
 
 ---
 
-## Plan
+## Files to change:
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+### `src/components/video/LessonActionBar.tsx`
+Redesign to 2 primary pill buttons (Likes + Doubts) + optional Download/PDF buttons, matching reference screenshot style.
 
-```toml
-[run]
-dev = "npm run dev"
+### `src/pages/LessonView.tsx`
+- Fix date format for subtitle to `dd/MM/yyyy`
+- Add `Download` button to lesson info section (opens PDF in new tab as download)
+- Remove `onComments` separate button (merge into Doubts)
+
+### `src/pages/Dashboard.tsx`
+- Remove the "My Batches" section (lines 313–336) so the same course doesn't appear twice on the page — once in the top "Continue Learning" hero card and again in the grid
+
+---
+
+## Summary of what changes vs stays the same
+
+```text
+CHANGES:
+  LessonActionBar.tsx   Redesign to 2 large pill buttons (Likes + Doubts)
+  LessonView.tsx        Fix subtitle date format + add Download button
+  Dashboard.tsx         Remove duplicate "My Batches" grid below hero card
+
+STAYS THE SAME:
+  formatTime in MahimaGhostPlayer — already correct H:MM:SS
+  formatTime in MahimaVideoPlayer — already correct H:MM:SS
+  Dashboard deduplication logic — already correct
+  DB unique constraint — already applied
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
-
----
-
-### 2. Visual Polish — CSS & Theme Improvements
-
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
-
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
-
----
-
-### 3. Landing Page & Navigation Visual Fixes
-
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
-
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
-
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
-
----
-
-## Note on Visual Editor
-
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+No database changes needed.
