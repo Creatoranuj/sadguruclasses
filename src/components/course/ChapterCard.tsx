@@ -51,8 +51,8 @@ export const ChapterCard = ({
           isComplete ? "text-green-600 font-medium" : "text-muted-foreground"
         )}>
           {isComplete
-            ? `✓ All ${lectureCount} lectures completed`
-            : `Lectures : ${completedLectures}/${lectureCount}`
+            ? `✓ All ${lectureCount} lessons done`
+            : `Progress : ${completedLectures}/${lectureCount}`
           }
           {!isComplete && dppCount > 0 && ` • DPP : ${completedDpp}/${dppCount}`}
         </p>

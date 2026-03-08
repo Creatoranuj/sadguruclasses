@@ -1,130 +1,83 @@
 
-## Problem Diagnosis
+## Root Cause: Missing `lovable.toml`
 
-### Progress Bar Issues (3 bugs)
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-**Bug 1 — `handleVideoProgress` chapter counter is broken for `__all__`**
-Lines 449–468: The `setChapters` updater creates `newCompleted` from `prev.reduce<string[]>((acc, _) => acc, [])` which is an empty array — it never reads `completedLessonIds`. So the `__all__` chapter's `completedLessons` count never correctly reflects the real completed set. It just does `+1` if `completedLessons < lessonCount`, which is fine for single completions, but after a page reload the DB data repopulates `completedLessonIds` while `chapters.completedLessons` is rebuilt from scratch in `fetchData`. These two can drift.
-
-**Bug 2 — Both `handleVideoProgress` and `handleManualComplete` increment chapters by +1 using `prev` state** — they never cross-check against the real `completedLessonIds` Set. If the same lesson is somehow called twice (component remount, hot-reload), the count goes to `lessonCount+1`.
-
-**Fix**: Derive chapter counts **directly from `completedLessonIds` + `lessons`** instead of blind `+1`. Create a helper `recomputeChapters(completedSet, allLessons, chaptersRaw)` that computes exact counts from source of truth. Call it in both `handleVideoProgress` and `handleManualComplete` after updating `completedLessonIds`.
-
-**Bug 3 — `ChapterCard` displays "Lectures: X/Y"** but Y includes PDFs/DPPs/NOTES in the count (all lesson types share `lessonCount`). The label says "Lectures" but means all lesson types. This is misleading. Fix: change label to "Lessons:" or "Progress:".
-
-### Video Player Issues (3 bugs)
-
-**Bug 4 — `onClick={handleOverlayTap}` + `onTouchStart` both fire on mobile**
-On touch devices, both events fire. `handleOverlayTap` checks `!('ontouchstart' in window)` to skip on touch — but this is fine. The real issue: when user taps play button inside the ghost overlay at `z-40`, the click propagates up to the ghost div's `onClick`, which calls `handleOverlayTap`, which on desktop toggles controls (fine). But the center Play button itself has `e.stopPropagation()` so this is already handled. ✓ Not a real bug.
-
-**Bug 5 — Bottom controls bar is outside the inner `<div style={rotationStyle}>` but inside the outer container**
-Looking at lines 952–1080: The `BOTTOM CONTROLS BAR` div is at line 953 inside the rotation div (line 602). Wait — checking structure: line 602 opens the rotation div, line 941 closes `</div>` for the ghost overlay, then line 943 is `{showEndScreen...}`, then line 952 is `{/* BOTTOM CONTROLS BAR */}`. Then line 1081 closes with `</div>` for controls, line 1082 has discussion, and line 1138 closes the rotation container.
-
-Actually the controls ARE inside the rotation div — this is correct. ✓
-
-**Real Bug 5 — Progress bar visual glitch**: The `progressPercentage` is derived from `currentTime/duration * 100`. The `currentTime` updates every 250ms via `setInterval` polling. But `setCurrentTime` inside `handleMessage` only fires when `!isSeeking`. This should be fine, but when `duration` is 0 (before `infoDelivery` fires), the `progressPercentage = 0` — fine.
-
-**Real Bug 6 — The thumb `left: calc(${progressPercentage}% - 7px)` overflows** at 100% (goes 7px past the right edge). Should use `calc(${progressPercentage}% - ${progressPercentage * 0.14}px)` or just clamp with `max-w` and `min`. Better fix: use a proper thumb position that stays within bounds: `left: clamp(0px, calc(${progressPercentage}% - 7px), calc(100% - 14px))`.
-
-**Real Bug 7 — Controls bar `pb-2 md:pb-3` with `pt-8`** — on mobile the `pt-8` (32px) top padding for the gradient is applied to the control bar, but the progress bar is inside this. The visible track has `top-1/2 -translate-y-1/2` which should center it in the `h-10` container. This looks fine visually.
-
-**Real Bug 8 — The player center buttons** (skip back/forward and play/pause) are inside the ghost overlay `<div className="absolute inset-0 z-40">`. Their `onClick` has `e.stopPropagation()` which stops bubbling to the ghost div. On mobile, `onTouchStart` on the ghost div fires for these buttons too since they're children — the double-tap detection, long-press timer all trigger when tapping play. This is the core "play button works late" issue residual: the `playerReady` guard in `playVideo()` is fine, but the `longPressTimerRef` starts on every touch of play button and only cancels if finger moves >10px. Tapping play quickly won't move, so `longPressTimerRef` fires after 500ms and activates 2x speed! 
-
-**Bug 8 Fix**: Check if the touch originated from a button/interactive child element and skip swipe/long-press logic in that case. Or: cancel long-press when any `onClick` fires on the center buttons.
+---
 
 ## Plan
 
-### File 1: `src/pages/MyCourseDetail.tsx`
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-**Change 1 — Add `recomputeChapters` helper** after the `tabs` constant (line ~80):
-```ts
-const recomputeChapterCounts = (
-  completedSet: Set<string>,
-  allLessons: Lesson[],
-  prevChapters: Chapter[]
-): Chapter[] => {
-  return prevChapters.map(ch => {
-    if (ch.id === "__all__") {
-      return { ...ch, completedLessons: allLessons.filter(l => completedSet.has(l.id)).length };
-    }
-    const chLessons = allLessons.filter(l => l.chapterId === ch.id);
-    return { ...ch, completedLessons: chLessons.filter(l => completedSet.has(l.id)).length };
-  });
-};
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-**Change 2 — Fix `handleVideoProgress`** (lines 449–468): Replace the broken chapter updater with `recomputeChapterCounts`. Use the functional `setCompletedLessonIds` + `setChapters` pattern:
-```ts
-setCompletedLessonIds(prev => {
-  if (prev.has(lessonId)) return prev;
-  const next = new Set([...prev, lessonId]);
-  setChapters(chs => recomputeChapterCounts(next, lessons, chs));
-  return next;
-});
-```
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-**Change 3 — Fix `handleManualComplete`** (lines 380–392): Same pattern:
-```ts
-setCompletedLessonIds(prev => {
-  if (prev.has(lessonId)) return prev;
-  const next = new Set([...prev, lessonId]);
-  setChapters(chs => recomputeChapterCounts(next, lessons, chs));
-  return next;
-});
-```
-And in the rollback, similarly recompute by removing `lessonId` from prev:
-```ts
-setCompletedLessonIds(prev => {
-  const next = new Set(prev);
-  next.delete(lessonId);
-  setChapters(chs => recomputeChapterCounts(next, lessons, chs));
-  return next;
-});
-```
+---
 
-**Change 4 — Fix `ChapterCard` label** in `MyCourseDetail.tsx` — the `ChapterCard` receives `lectureCount={chapter.lessonCount}` and `completedLectures={chapter.completedLessons}`. The `ChapterCard` itself shows "Lectures: X/Y". Update `ChapterCard.tsx` label from `Lectures :` to `Progress :` and update the completion text from "All N lectures completed" to "All N lessons completed".
+### 2. Visual Polish — CSS & Theme Improvements
 
-### File 2: `src/components/video/MahimaGhostPlayer.tsx`
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-**Change 5 — Fix long-press activating on play/skip button taps**: In `onTouchStart` on the ghost overlay, add a check: if the touch target is a `button` element or has a `button` ancestor inside the ghost div, skip the long-press timer and double-tap logic:
-```ts
-onTouchStart={(e) => {
-  // If touch is on an interactive child button, skip gesture logic
-  const target = e.target as HTMLElement;
-  if (target.closest('button') && target.closest('button') !== e.currentTarget) {
-    handleOverlayTouchStart(e);
-    return;
-  }
-  // ... rest of gesture logic
-```
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-**Change 6 — Progress bar thumb clamping**: Change line 980 from:
-```
-style={{ left: `calc(${progressPercentage}% - 7px)` }}
-```
-to:
-```
-style={{ left: `clamp(0px, calc(${progressPercentage}% - 7px), calc(100% - 14px))` }}
-```
+---
 
-**Change 7 — Player visual polish**:
-- Remove the `aspect-video` inner container class issue: when not fullscreen the inner div uses `aspect-video`, which is correct. No change needed here.
-- Add `will-change: width` to the progress fill divs for GPU-accelerated animation.
-- The `showControls` fade has `duration-200` for show and `duration-500` for hide — already done in previous version. ✓
-- Ensure the buffered and played track inner divs also use `transition-none` for the played track so it doesn't lag behind real-time updates: change `transition-all` on the blue played bar to `transition-none` (it should update instantly, not animate, since it's live data).
+### 3. Landing Page & Navigation Visual Fixes
 
-### File 3: `src/components/course/ChapterCard.tsx`
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
 
-**Change 8 — Label fix**: Update "Lectures :" → "Progress :" and "All N lectures completed" → "All N lessons done".
+---
 
-## Summary of Changes
+### 4. Global Component Polish in `src/index.css`
 
-| File | Lines | Change |
-|---|---|---|
-| `MyCourseDetail.tsx` | ~80 | Add `recomputeChapterCounts` helper function |
-| `MyCourseDetail.tsx` | 380–392 | `handleManualComplete` — use `recomputeChapterCounts` for accuracy |
-| `MyCourseDetail.tsx` | 441–468 | `handleVideoProgress` — use `recomputeChapterCounts` for accuracy |
-| `MahimaGhostPlayer.tsx` | 690–742 | Skip gesture logic when touch is on a child button |
-| `MahimaGhostPlayer.tsx` | 975–976 | Remove `transition-all` from live progress bar fill; add `will-change` |
-| `MahimaGhostPlayer.tsx` | 980 | Clamp thumb position to prevent overflow at 100% |
-| `ChapterCard.tsx` | 52–56 | Fix "Lectures" label to "Lessons" for correctness |
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
