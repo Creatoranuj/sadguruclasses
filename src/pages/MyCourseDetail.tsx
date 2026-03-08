@@ -73,7 +73,8 @@ const MyCourseDetail = () => {
     const navigate = useNavigate();
     const { courseId } = useParams();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { user, profile } = useAuth();
+    const { user, profile, isAdmin, isTeacher } = useAuth();
+    const isAdminOrTeacher = isAdmin || isTeacher;
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [course, setCourse] = useState<Course | null>(null);
