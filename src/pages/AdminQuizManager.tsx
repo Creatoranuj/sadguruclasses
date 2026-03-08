@@ -897,6 +897,53 @@ const AdminQuizManager = () => {
                     className="mt-1 h-11"
                   />
                 </div>
+
+                {/* Image upload for question */}
+                <div>
+                  <Label className="text-xs">Question Image (optional)</Label>
+                  <div className="mt-1 space-y-2">
+                    {(q.image_url || q._imageFile) ? (
+                      <div className="relative rounded-lg overflow-hidden border bg-muted/30">
+                        <img
+                          src={q._imageFile ? URL.createObjectURL(q._imageFile) : q.image_url}
+                          alt="Question"
+                          className="max-h-40 w-full object-contain"
+                        />
+                        <button
+                          onClick={() => {
+                            updateQuestionForm(qIdx, "image_url", "");
+                            updateQuestionForm(qIdx, "_imageFile", null);
+                          }}
+                          className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-2 cursor-pointer border-2 border-dashed border-border rounded-lg p-3 hover:border-primary/50 transition-colors">
+                        <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Upload image for this question</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) updateQuestionForm(qIdx, "_imageFile", file);
+                          }}
+                        />
+                      </label>
+                    )}
+                    {!q._imageFile && !q.image_url && (
+                      <Input
+                        value={q.image_url || ""}
+                        onChange={e => updateQuestionForm(qIdx, "image_url", e.target.value)}
+                        placeholder="Or paste image URL..."
+                        className="h-9 text-xs"
+                      />
+                    )}
+                  </div>
+                </div>
               </SortableQuestion>
             ))}
           </SortableContext>
