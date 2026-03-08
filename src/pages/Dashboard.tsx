@@ -4,15 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Layout/Header";
 import Sidebar from "@/components/Layout/Sidebar";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { 
   PlayCircle, Zap, 
-  ClipboardCheck, FileText, Users, Calendar
+  ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle
 } from "lucide-react";
-import refreshLogo from "@/assets/refresh-logo.png";
+import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
 import UpcomingSchedule from "@/components/dashboard/UpcomingSchedule";
 
