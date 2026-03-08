@@ -134,7 +134,7 @@ const Admin = () => {
     if (user && isAdmin) {
       fetchDashboardData();
     }
-  }, [paymentStatusFilter, user, isAdmin]);
+  }, [user, isAdmin]);
 
   // Fetch chapters when selected course changes
   useEffect(() => {

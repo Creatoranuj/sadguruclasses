@@ -989,7 +989,7 @@ const MyCourseDetail = () => {
                       url={selectedLesson.videoUrl}
                       title={selectedLesson.title}
                       lessonId={selectedLesson.id}
-                      onReady={() => console.log('Video ready')}
+                      onReady={() => {}}
                       onProgress={handleVideoProgress}
                       onNextVideo={nextLesson ? () => handleContentClick(nextLesson) : undefined}
                       nextVideoTitle={nextLesson?.title}

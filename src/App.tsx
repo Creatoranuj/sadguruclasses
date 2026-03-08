@@ -60,7 +60,7 @@ const AdminChatbotSettings = lazy(() => import("./pages/AdminChatbotSettings"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const Downloads = lazy(() => import("./pages/Downloads"));
 const Doubts = lazy(() => import("./pages/Doubts"));
-const ChatWidget = lazy(() => import("./components/chat/ChatWidget"));
+import ChatWidget from "./components/chat/ChatWidget";
 
 // Optimized QueryClient with better caching
 const queryClient = new QueryClient({
