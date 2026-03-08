@@ -1,80 +1,83 @@
 
-## Assessment
+## Root Cause: Missing `lovable.toml`
 
-### What already exists
-1. **`Admin.tsx` Users tab** (lines 955–1067) — already has inline role selector (Student/Teacher/Admin) via `handleChangeRole` with `upsert` on `user_roles`. Works but is buried in a generic "Users" tab alongside search, export, and join date.
-2. **`Sidebar.tsx`** — already correctly hides Students & Attendance behind `adminOrTeacher` flag using `isAdmin || isTeacher`.
-3. **`AuthContext.tsx`** — already exposes `isTeacher: role === "teacher"`.
-4. The `user_roles` table has the `app_role` enum: `admin | teacher | student`.
-5. The Admin panel has 8 tabs: Payments, Users, Courses, Content, Upload, Schedule, Library, Social.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-### What the user is asking for
-A dedicated, clearly labelled **"Teachers" tab** (or page section) in the Admin Panel for role management — separate from the general Users list — so it's obvious and purpose-built for assigning/revoking teacher roles.
+---
 
-### Plan
+## Plan
 
-**One file to edit: `src/pages/Admin.tsx`**
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-Add a 9th tab: **"Teachers"** between Users and Courses.
-
-The Teachers tab will have two cards side-by-side:
-1. **Active Teachers** — shows all users currently with `role = 'teacher'`, with a "Revoke" button per row to demote back to student.
-2. **Promote to Teacher** — shows all users with `role = 'student'`, searchable, with a "Make Teacher" button per row.
-
-Both cards reuse the existing `usersList` state (already fetched in `fetchDashboardData`). No new DB queries needed.
-
-#### Tab list change (line 801–808)
-Add `<TabsTrigger value="teachers">` with a `GraduationCap` icon between Users and Courses. The tab list currently uses `grid-cols-8` — change to `grid-cols-9`.
-
-#### New state
-```typescript
-const [teacherSearch, setTeacherSearch] = useState("");
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-#### New computed lists (using existing `usersList`)
-```typescript
-const activeTeachers = usersList.filter(u => u.role === 'teacher');
-const promotableStudents = useMemo(() =>
-  usersList.filter(u => (u.role === 'student' || !u.role) &&
-    (u.full_name?.toLowerCase().includes(teacherSearch.toLowerCase()) ||
-     u.email?.toLowerCase().includes(teacherSearch.toLowerCase()))
-  ), [usersList, teacherSearch]);
-```
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-#### Teacher tab JSX
-```text
-<TabsContent value="teachers">
-  <div className="grid md:grid-cols-2 gap-6">
-    
-    Card 1: Active Teachers
-    - Header: "Active Teachers (N)" in green, GraduationCap icon
-    - List: avatar initial, name, email
-    - Each row: "Revoke" button (red) → calls handleChangeRole(id, 'student')
-    
-    Card 2: Promote to Teacher
-    - Header: "Assign Teacher Role", search input
-    - Filtered list of students
-    - Each row: "Make Teacher" button (green) → calls handleChangeRole(id, 'teacher')
-    
-  </div>
-</TabsContent>
-```
+---
 
-#### After role change
-`handleChangeRole` already calls `setUsersList` to update local state immediately, so both cards will re-render with the correct user instantly (student moves to teachers card, teacher moves back to students list) — no extra logic needed.
+### 2. Visual Polish — CSS & Theme Improvements
 
-### Import to add
-`GraduationCap` is already imported on line 2 of Sidebar.tsx but NOT in Admin.tsx. Need to add it to the lucide-react import on line 20 of Admin.tsx.
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-### No DB migrations needed — `user_roles` table already has proper RLS (admins can manage all roles).
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-### Summary of changes
+---
 
-| File | Lines | Change |
-|------|-------|--------|
-| `src/pages/Admin.tsx` | Line 20 | Add `GraduationCap` to lucide-react import |
-| `src/pages/Admin.tsx` | Line 60 | Add `teacherSearch` state |
-| `src/pages/Admin.tsx` | ~lines 280–300 | Add `activeTeachers` + `promotableStudents` computed values |
-| `src/pages/Admin.tsx` | Line 799 | Change `grid-cols-8` → `grid-cols-9` |
-| `src/pages/Admin.tsx` | Line 801–808 | Add new Teachers TabsTrigger |
-| `src/pages/Admin.tsx` | ~line 1068 | Add new Teachers TabsContent |
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
