@@ -1,83 +1,81 @@
 
-## Root Cause: Missing `lovable.toml`
+## Goal
+Add MX Player-style swipe gestures to the video player:
+- **Left half swipe up/down** → Brightness control (CSS filter on container)
+- **Right half swipe down/up** → Volume control (calls `setPlayerVolume`)
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+## Implementation Plan
 
----
-
-## Plan
-
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
-
-```toml
-[run]
-dev = "npm run dev"
+### New State Variables (add near line 73)
+```ts
+const [brightness, setBrightness] = useState(100); // 0–150 range
+const [swipeIndicator, setSwipeIndicator] = useState<{
+  type: 'brightness' | 'volume';
+  value: number;
+  visible: boolean;
+} | null>(null);
+const swipeTouchRef = useRef<{ startY: number; startX: number; startVal: number; side: 'left' | 'right' } | null>(null);
+const swipeIndicatorTimer = useRef<ReturnType<typeof setTimeout>>();
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+### Brightness Effect
+Apply the brightness CSS filter on the video container div (line 568):
+```tsx
+style={{ ...rotationStyle, filter: `brightness(${brightness}%)` }}
+```
 
----
+### Swipe Gesture Handlers on the Ghost Overlay (lines 640–697)
+Add `onTouchStart`, `onTouchMove`, `onTouchEnd` to the ghost overlay div. Key logic:
 
-### 2. Visual Polish — CSS & Theme Improvements
+**onTouchStart:**
+- Record `startY`, `startX`, determine `side` = left/right half of container width
+- Record `startVal` = current brightness or volume
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+**onTouchMove:**
+- If `|deltaY| < 10` and `|deltaX| > |deltaY|` → horizontal swipe, ignore (likely seeking intent)
+- If `|deltaY| >= 10`: lock to vertical swipe mode
+  - Left side: adjust brightness by `deltaY * -0.5` (swipe up = brighter)
+  - Right side: adjust volume by `deltaY * -0.5` (swipe up = louder)
+  - Show swipe indicator overlay
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+**onTouchEnd:**
+- Commit the value
+- Hide indicator after 1.5s timeout
 
----
+### Visual Indicator Overlay (inside ghost overlay)
+Small centered pill that appears during swipe:
+```tsx
+{swipeIndicator?.visible && (
+  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-black/70 backdrop-blur-sm rounded-2xl px-5 py-3 flex flex-col items-center gap-1 pointer-events-none">
+    {swipeIndicator.type === 'brightness' ? <Sun className="h-6 w-6 text-yellow-400" /> : <Volume2 className="h-6 w-6 text-blue-400" />}
+    <div className="w-24 h-1.5 bg-white/30 rounded-full overflow-hidden">
+      <div className="h-full bg-white rounded-full transition-all" style={{ width: `${Math.min(100, Math.max(0, swipeIndicator.type === 'brightness' ? (swipeIndicator.value / 150) * 100 : swipeIndicator.value))}%` }} />
+    </div>
+    <span className="text-white text-xs font-semibold">{Math.round(swipeIndicator.value)}%</span>
+  </div>
+)}
+```
 
-### 3. Landing Page & Navigation Visual Fixes
+### Import Addition
+Add `Sun` to the lucide-react import at line 2.
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+### Files Changed
+| File | Lines | Change |
+|------|-------|--------|
+| `MahimaGhostPlayer.tsx` | 2–5 | Add `Sun` to lucide imports |
+| `MahimaGhostPlayer.tsx` | ~73 | Add `brightness`, `swipeIndicator` state + `swipeTouchRef`, `swipeIndicatorTimer` refs |
+| `MahimaGhostPlayer.tsx` | 568 | Apply `filter: brightness(${brightness}%)` to video container |
+| `MahimaGhostPlayer.tsx` | 640–647 | Add swipe touch handlers to ghost overlay div |
+| `MahimaGhostPlayer.tsx` | ~648 | Add swipe indicator JSX inside ghost overlay |
 
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
-
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
-
----
-
-## Note on Visual Editor
-
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+### Behavior Summary
+```text
+Swipe UP on LEFT half   → Brightness ↑ (max 150%)
+Swipe DOWN on LEFT half → Brightness ↓ (min 20%)
+Swipe UP on RIGHT half  → Volume ↑ (max 100%)
+Swipe DOWN on RIGHT half→ Volume ↓ (min 0%)
+```
+- Short horizontal swipes are ignored (won't conflict with seek)
+- Indicator pill shows icon + bar + percentage in center of screen
+- Fades out 1.5s after swipe ends
+- Works in both portrait and rotated (landscape) mode
