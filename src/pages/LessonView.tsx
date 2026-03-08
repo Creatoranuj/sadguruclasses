@@ -247,7 +247,7 @@ const LessonView = () => {
         // Fetch Lessons — strip video_url/class_pdf_url from DB query (fetched via Edge Function)
         const { data: lessonData, error: lessonError } = await supabase
           .from('lessons')
-          .select('id, title, is_locked, description, course_id, created_at, like_count')
+          .select('id, title, is_locked, description, overview, course_id, created_at, like_count')
           .eq('course_id', Number(courseId))
           .order('created_at', { ascending: true });
         if (lessonError) throw lessonError;
@@ -492,12 +492,15 @@ const LessonView = () => {
                     likeCount={likeCount}
                     hasLiked={hasLiked}
                     onLike={toggleLike}
+                    onComments={() => {
+                      const t = document.querySelector('[value="doubts"]') as HTMLElement;
+                      if (t) { t.click(); setTimeout(() => t.scrollIntoView({ behavior: 'smooth' }), 100); }
+                    }}
                     onDoubts={() => {
-                      const tabsTrigger = document.querySelector('[value="doubts"]') as HTMLElement;
-                      if (tabsTrigger) tabsTrigger.click();
+                      const t = document.querySelector('[value="doubts"]') as HTMLElement;
+                      if (t) { t.click(); setTimeout(() => t.scrollIntoView({ behavior: 'smooth' }), 100); }
                     }}
                     onDownloadPdf={currentLesson.class_pdf_url ? () => {
-                      // Switch to the inline PDF tab instead of opening a new tab
                       const pdfTab = document.querySelector('[value="pdf"]') as HTMLElement;
                       if (pdfTab) { pdfTab.click(); window.scrollTo({ top: 500, behavior: 'smooth' }); }
                       else window.open(currentLesson.class_pdf_url!, '_blank');
