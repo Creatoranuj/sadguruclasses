@@ -575,7 +575,7 @@ const MahimaGhostPlayer = memo(({
         style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}
       >
         {/* Video Container */}
-        <div className={isFullscreen ? 'mahima-video-container' : 'aspect-video'} style={{ position: 'relative', ...rotationStyle }}>
+        <div className={isFullscreen ? 'mahima-video-container' : 'aspect-video'} style={{ position: 'relative', ...rotationStyle, filter: `brightness(${brightness}%)` }}>
           {/* Loading spinner — stays visible until playerReady to hide YouTube's red play button */}
           {(!playerReady || isBuffering) && (
             <div className="absolute inset-0 flex items-center justify-center bg-black z-30 pointer-events-none">
