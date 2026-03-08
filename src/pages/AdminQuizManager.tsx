@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronLeft, Eye, EyeOff, Save, Loader2,
   ClipboardList, FlaskConical, Edit2, ArrowLeft, Check, X, Link2,
-  ChevronDown, ChevronUp, GripVertical, Users,
+  ChevronDown, ChevronUp, GripVertical, Users, ImagePlus, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -58,6 +58,8 @@ interface QuestionForm {
   explanation: string;
   marks: number;
   negative_marks: number;
+  image_url?: string;
+  _imageFile?: File | null;
 }
 
 const defaultQuestion = (): QuestionForm => ({
@@ -68,6 +70,8 @@ const defaultQuestion = (): QuestionForm => ({
   explanation: "",
   marks: 4,
   negative_marks: 1,
+  image_url: "",
+  _imageFile: null,
 });
 
 // ─── Sortable Question Card ─────────────────────────────────────────────────
