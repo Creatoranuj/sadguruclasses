@@ -1806,6 +1806,27 @@ const Admin = () => {
             <SocialLinksManager />
           </TabsContent>
 
+          {/* --- TAB: LIVE CLASSES --- */}
+          <TabsContent value="live">
+            <div className="flex flex-col items-center gap-4 py-8 px-4 text-center">
+              <div className="p-4 rounded-2xl bg-destructive/10">
+                <Radio className="h-10 w-10 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground mb-1">Live Class Manager</h2>
+                <p className="text-muted-foreground text-sm max-w-sm">
+                  Schedule live YouTube sessions, go live with one click, manage chat and answer student doubts in real-time.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate("/admin/live")}
+                className="inline-flex items-center gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors"
+              >
+                <Radio className="h-4 w-4" /> Open Live Manager
+              </button>
+            </div>
+          </TabsContent>
+
         </Tabs>
       </main>
     </div>
