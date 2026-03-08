@@ -8,6 +8,7 @@ import sadguruLogo from "@/assets/branding/logo_primary_web.png";
 interface PdfViewerProps {
   url: string;
   title?: string;
+  onDownloaded?: (info: { title: string; url: string; filename: string }) => void;
 }
 
 const PdfViewer = memo(({ url, title }: PdfViewerProps) => {
