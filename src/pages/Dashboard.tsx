@@ -15,6 +15,7 @@ import {
 import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
 import UpcomingSchedule from "@/components/dashboard/UpcomingSchedule";
+import LiveBadge from "@/components/live/LiveBadge";
 
 import BottomNav from "@/components/Layout/BottomNav";
 import cubeIcon from "@/assets/icons/cube-3d.png";

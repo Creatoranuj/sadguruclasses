@@ -130,7 +130,8 @@ const App = () => (
                   <Route path="/admin/upload" element={<AdminUpload />} />
                   <Route path="/admin/cms" element={<AdminCMS />} />
                   <Route path="/admin/schedule" element={<AdminSchedule />} />
-                  <Route path="/admin/quiz" element={<AdminQuizManager />} />
+                   <Route path="/admin/quiz" element={<AdminQuizManager />} />
+                   <Route path="/admin/live" element={<AdminLiveManager />} />
                   
                   {/* Protected Routes */}
                   <Route path="/dashboard" element={<Dashboard />} />
@@ -154,7 +155,8 @@ const App = () => (
                   <Route path="/quiz/:quizId/result/:attemptId" element={<QuizResult />} />
 
                   {/* Feature Pages */}
-                  <Route path="/all-tests" element={<AllTests />} />
+                   <Route path="/all-tests" element={<AllTests />} />
+                   <Route path="/live/:sessionId" element={<LiveClass />} />
                   <Route path="/attendance" element={<Attendance />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/students" element={<Students />} />
