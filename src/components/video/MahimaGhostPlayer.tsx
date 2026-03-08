@@ -582,7 +582,7 @@ const MahimaGhostPlayer = memo(({
              <span className="text-white text-[10px] font-semibold tracking-wide opacity-80">SC</span>
           </div>
 
-          {/* GHOST OVERLAY - single-tap toggles controls only */}
+          {/* GHOST OVERLAY - touchstart for instant response, click for desktop */}
           <div
             className="absolute inset-0 z-40"
             onClick={handleOverlayTap}
