@@ -668,18 +668,23 @@ const MahimaGhostPlayer = memo(({
               const rect = container.getBoundingClientRect();
 
               // ── Rotation-aware side detection ─────────────────────────────
-              // When rotated 90°: DOM "left" is visual "top" → finger on visual left = high clientY
-              // When rotated 270°: DOM "left" is visual "bottom" → finger on visual left = low clientY
               let side: 'left' | 'right';
               if (rotation === 90) {
-                // Visual left = DOM top = low clientY
                 side = touch.clientY - rect.top < rect.height / 2 ? 'left' : 'right';
               } else if (rotation === 270) {
-                // Visual left = DOM bottom = high clientY
                 side = touch.clientY - rect.top > rect.height / 2 ? 'left' : 'right';
               } else {
                 side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
               }
+              // ─────────────────────────────────────────────────────────────
+
+              // ── Long-press 2x speed (YouTube-style hold) ─────────────────
+              clearTimeout(longPressTimerRef.current);
+              longPressTimerRef.current = setTimeout(() => {
+                longPressSpeedBeforeRef.current = playbackSpeed;
+                sendCommand("setPlaybackRate", 2);
+                setIsLongPressSpeed(true);
+              }, 500);
               // ─────────────────────────────────────────────────────────────
 
               // ── Double-tap detection ──────────────────────────────────────
@@ -687,6 +692,7 @@ const MahimaGhostPlayer = memo(({
               const last = lastTapRef.current;
               if (last && now - last.time < 300 && last.side === side) {
                 clearTimeout(doubleTapTimerRef.current);
+                clearTimeout(longPressTimerRef.current); // cancel long-press on double-tap
                 lastTapRef.current = null;
                 if (side === 'left') skipBackward();
                 else skipForward();
@@ -709,13 +715,23 @@ const MahimaGhostPlayer = memo(({
               handleOverlayTouchStart(e);
             }}
             onTouchMove={(e) => {
+              // If finger moved significantly, cancel long-press
               const ref = swipeTouchRef.current;
+              if (ref) {
+                const t = e.touches[0];
+                const movedX = Math.abs(t.clientX - ref.startX);
+                const movedY = Math.abs(t.clientY - ref.startY);
+                if (movedX > 10 || movedY > 10) {
+                  clearTimeout(longPressTimerRef.current);
+                }
+              }
+
               if (!ref) return;
               const touch = e.touches[0];
               const deltaY = touch.clientY - ref.startY;
               const deltaX = touch.clientX - ref.startX;
 
-              // Rotation-aware axis guard: when rotated, physical swipe "up/down" maps to X-axis in DOM
+              // Rotation-aware axis guard
               if (rotation === 90 || rotation === 270) {
                 if (!ref.locked && Math.abs(deltaY) > Math.abs(deltaX)) return;
               } else {
@@ -725,11 +741,11 @@ const MahimaGhostPlayer = memo(({
               // Rotation-aware effective delta (physical "up" = increase value)
               let effectiveDelta: number;
               if (rotation === 90) {
-                effectiveDelta = -deltaX; // physical up = swipe right → DOM +X → negate for increase
+                effectiveDelta = -deltaX;
               } else if (rotation === 270) {
-                effectiveDelta = deltaX;  // physical up = swipe left → DOM -X → keep for increase
+                effectiveDelta = deltaX;
               } else {
-                effectiveDelta = -deltaY; // normal: swipe up = negative deltaY → negate for increase
+                effectiveDelta = -deltaY;
               }
 
               if (Math.abs(effectiveDelta) < 8) return;
@@ -746,9 +762,26 @@ const MahimaGhostPlayer = memo(({
               setSwipeIndicator({ type: ref.side === 'left' ? 'brightness' : 'volume', value: newVal, visible: true });
             }}
             onTouchEnd={() => {
+              // Cancel long-press timer
+              clearTimeout(longPressTimerRef.current);
+              // If we were in long-press 2x mode, restore original speed
+              if (isLongPressSpeed) {
+                sendCommand("setPlaybackRate", longPressSpeedBeforeRef.current);
+                setPlaybackSpeed(longPressSpeedBeforeRef.current);
+                setIsLongPressSpeed(false);
+              }
               swipeTouchRef.current = null;
               if (swipeIndicatorTimer.current) clearTimeout(swipeIndicatorTimer.current);
               swipeIndicatorTimer.current = setTimeout(() => setSwipeIndicator(null), 1500);
+            }}
+            onTouchCancel={() => {
+              clearTimeout(longPressTimerRef.current);
+              if (isLongPressSpeed) {
+                sendCommand("setPlaybackRate", longPressSpeedBeforeRef.current);
+                setPlaybackSpeed(longPressSpeedBeforeRef.current);
+                setIsLongPressSpeed(false);
+              }
+              swipeTouchRef.current = null;
             }}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDragStart={(e) => e.preventDefault()}
