@@ -129,37 +129,7 @@ const BuyCourse = () => {
     }
   }, [isAdmin, course, courseId, loading, adminAutoEnrolled, adminEnroll]);
 
-  const handleFreeEnrollment = async (courseIdNum: number) => {
-    if (!user) return;
-    try {
-      const { data: existing } = await supabase
-        .from("enrollments")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("course_id", courseIdNum)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (existing) {
-        toast.info("You're already enrolled in this course!");
-        navigate(`/classes/${courseIdNum}/lessons`);
-        return;
-      }
-
-      const { error } = await supabase
-        .from("enrollments")
-        .insert({ user_id: user.id, course_id: courseIdNum, status: "active" });
-
-      if (error) throw error;
-
-      playSuccessSound();
-      toast.success("Free enrollment successful! Starting your course...");
-      navigate(`/classes/${courseIdNum}/lessons`);
-    } catch (error: any) {
-      console.error("Free enrollment error:", error);
-      toast.error("Failed to enroll. Please try again.");
-    }
-  };
+  // handleFreeEnrollment is defined above as handleFreeEnrollmentEarly (hoisting fix)
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
