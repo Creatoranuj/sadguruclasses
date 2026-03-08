@@ -156,10 +156,15 @@ export const LectureModal = ({ isOpen, onClose, lesson, userId }: LectureModalPr
 
   if (!isOpen || !lesson) return null;
 
+  // Detect content types
+  const isDocEmbed = /drive\.google\.com/.test(lesson.video_url)
+    || /\.pdf($|\?)/i.test(lesson.video_url)
+    || /archive\.org/.test(lesson.video_url);
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-3 border-b bg-background">
+      <header className="flex items-center gap-3 px-4 py-3 border-b bg-background shrink-0">
         <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -168,9 +173,12 @@ export const LectureModal = ({ isOpen, onClose, lesson, userId }: LectureModalPr
         </h1>
       </header>
 
-      {/* Video / Drive Player */}
+      {/* Video / Drive / Archive Player */}
       <div 
-        className="relative bg-black w-full max-h-[60vh] mahima-player select-none"
+        className={cn(
+          "relative bg-black w-full mahima-player select-none",
+          isDocEmbed ? "flex-1 min-h-0" : "max-h-[60vh]"
+        )}
         onContextMenu={(e) => e.preventDefault()}
         style={{ 
           WebkitTouchCallout: 'none',
@@ -178,8 +186,8 @@ export const LectureModal = ({ isOpen, onClose, lesson, userId }: LectureModalPr
           touchAction: 'manipulation'
         }}
       >
-        {(/drive\.google\.com/.test(lesson.video_url) || /\.pdf($|\?)/i.test(lesson.video_url)) ? (
-          <Suspense fallback={<Skeleton className="aspect-[4/3] w-full" />}>
+        {isDocEmbed ? (
+          <Suspense fallback={<Skeleton className="w-full h-full" />}>
             <DriveEmbedViewer url={lesson.video_url} title={lesson.title} />
           </Suspense>
         ) : youtubeId ? (
@@ -199,15 +207,6 @@ export const LectureModal = ({ isOpen, onClose, lesson, userId }: LectureModalPr
               title={lesson.title}
             />
           </div>
-        ) : /archive\.org/.test(lesson.video_url) ? (
-          <div className="aspect-video w-full">
-            <iframe
-              src={lesson.video_url.replace('/details/', '/embed/')}
-              className="w-full h-full border-0"
-              allowFullScreen
-              title={lesson.title}
-            />
-          </div>
         ) : /\.(mp4|webm)($|\?)/i.test(lesson.video_url) ? (
           <video
             src={lesson.video_url}
@@ -220,13 +219,13 @@ export const LectureModal = ({ isOpen, onClose, lesson, userId }: LectureModalPr
           </video>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-white/50">
-            Unsupported video format
+            Unsupported format
           </div>
         )}
       </div>
 
-      {/* Collapsible Notes Section - Hidden for PDF/Drive content */}
-      {!(/drive\.google\.com/.test(lesson.video_url) || /\.pdf($|\?)/i.test(lesson.video_url)) && (
+      {/* Collapsible Notes Section - Hidden for PDF/Drive/Archive content */}
+      {!isDocEmbed && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Collapse Toggle */}
           <button
