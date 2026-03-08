@@ -180,6 +180,15 @@ const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerPro
           />
         )}
 
+        {/* Archive.org top-bar mask — hides the IA logo/nav that bleeds through */}
+        {isArchive && iframeSrc && (
+          <div
+            className="absolute top-0 left-0 right-0 z-30 pointer-events-none"
+            style={{ height: "52px", background: "hsl(var(--background))" }}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Sadguru Coaching Classes watermark — bottom-right, always visible */}
         <div
           className="absolute bottom-3 right-3 z-20 flex items-center gap-2 select-none pointer-events-none"
