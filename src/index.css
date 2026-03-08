@@ -197,7 +197,15 @@
   animation: mahima-ring 1.8s ease-in-out infinite;
 }
 
-/* ========== VIDEO PLAYER - ANTI-PIRACY STYLES ========== */
+/* Alias classes for Dashboard.tsx loader animation */
+.sadhguru-loader-logo {
+  animation: mahima-pulse 1.8s ease-in-out infinite;
+}
+.sadhguru-loader-ring {
+  animation: mahima-ring 1.8s ease-in-out infinite;
+}
+
+
 .secure-video-player,
 .student-video-player,
 .mahima-player,
