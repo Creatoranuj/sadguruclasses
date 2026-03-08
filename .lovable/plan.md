@@ -1,50 +1,83 @@
 
-## User's Two Requests
+## Root Cause: Missing `lovable.toml`
 
-### 1. Play button works late (800ms hardcoded delay)
-**Root cause**: `onLoad` fires when the iframe HTML loads, but there's a hardcoded `setTimeout(..., 800)` before `setPlayerReady(true)`. The player has no YouTube API "ready" signal so we rely on timing.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-**Fix**: Reduce the delay from 800ms → 300ms. Also add a listener for YouTube's `onReady` event (`data.event === 'onReady'`) in the existing `handleMessage` useEffect — when that fires, immediately set `playerReady = true` and cancel the fallback timer. This means on fast connections it becomes ready in ~200ms instead of 800ms.
+---
 
-### 2. Player polish & clean view (applied to both players)
+## Plan
 
-**Problems identified in current UI:**
-- Loading spinner uses `z-30` but sits below the ghost overlay `z-40` — spinner may not block clicks properly
-- No custom thumbnail/poster before first play — just a black screen with spinner
-- Controls bar is somewhat cluttered — time display uses `font-mono` but inconsistent sizes
-- Play button in center uses a large PNG icon (80×80) which can look heavy
-- Bottom controls row gap spacing is inconsistent between mobile/desktop
-- Buffered track bar color is very faint (`white/20`) — barely visible
-- Speed menu only shows `1, 1.5, 2, 3` — no 0.75x or 1.25x
-- Volume slider popup has no animation / feels abrupt
-- `BrandingOverlay` in `UnifiedVideoPlayer` (Vimeo/Archive/Direct) has a generic gray background instead of matching the main player's style
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-**Polish changes planned:**
+```toml
+[run]
+dev = "npm run dev"
+```
 
-#### `MahimaGhostPlayer.tsx`
-1. **Faster ready** — reduce 800ms → 300ms, add `onReady` event listener to set playerReady immediately
-2. **Thumbnail poster** — show YouTube thumbnail `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` as a background image under the spinner until playerReady, giving a proper "pre-play" preview
-3. **Spinner layer** — raise spinner to `z-40` (above controls but below ghost overlay at `z-50`) so it properly blocks
-4. **Smoother controls fade** — extend controls auto-hide transition from `duration-300` → `duration-200` on show, `duration-500` on hide using separate classes
-5. **Progress bar buffered** — change buffered track from `bg-white/20` → `bg-white/35` for better visibility
-6. **Center play icon** — keep existing icons but add a subtle `backdrop-blur-sm` background circle behind play button for cleaner look
-7. **Speed menu** — add `0.75` and `1.25` options: `[0.75, 1, 1.25, 1.5, 2, 3]`
-8. **Bottom bar spacing** — unify `gap-1.5` consistently, remove the double `md:gap-2` inconsistencies
-9. **Control bar gradient** — deepen from `from-black/90` → `from-black/95` for better text/icon readability
-10. **Volume slider** — add a smooth CSS transition on the popup with `animate-in fade-in slide-in-from-bottom-2` (already available via Tailwind)
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-#### `UnifiedVideoPlayer.tsx` — `BrandingOverlay`
-- Change the branding overlay bottom bar from gray `rgba(128,128,128,0.65)` → `rgba(30,30,30,0.85)` to match main player's dark style
+---
 
-## Files to Change
-| File | Changes |
-|------|---------|
-| `src/components/video/MahimaGhostPlayer.tsx` | Faster ready (300ms + onReady event), thumbnail poster, spinner z-index, polish items above |
-| `src/components/video/UnifiedVideoPlayer.tsx` | Match branding overlay color to main player style |
+### 2. Visual Polish — CSS & Theme Improvements
 
-## What stays the same
-- All gesture logic (double-tap, swipe, long-press) — untouched
-- Rotation logic — untouched
-- Progress logic — untouched
-- LectureCard — not touched (separate Mark as Complete feature)
-- No new dependencies needed
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
