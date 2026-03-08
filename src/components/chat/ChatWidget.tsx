@@ -271,7 +271,7 @@ const ChatWidget = () => {
               {isLoading && (
                 <div className="flex gap-2 justify-start">
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Bot className="h-3.5 w-3.5 text-primary" />
+                    <img src={logoIcon} className="w-4 h-4 object-contain" alt="Sarthi" />
                   </div>
                   <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
                     {[0, 1, 2].map(i => (
