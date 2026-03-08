@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { cn } from "@/lib/utils";
 import { X, Send, RotateCcw, ThumbsUp, ThumbsDown, Mic, MicOff, Paperclip, ImageIcon } from "lucide-react";
 import logoIcon from "@/assets/sarthi-avatar.png"; // Sarthi guru avatar
@@ -374,7 +374,7 @@ const ChatWidget = () => {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4" ref={scrollRef as any}>
+          <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
             <div className="space-y-3 pb-2">
               {messages.map((msg) => (
                 <div key={msg.id} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
