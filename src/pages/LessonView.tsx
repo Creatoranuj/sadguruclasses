@@ -72,6 +72,9 @@ const LessonView = () => {
   // Archive.org books state (stored per lesson in localStorage for now)
   const [archiveBooks, setArchiveBooks] = useState<ArchiveBook[]>([]);
   
+  // Lesson overview override map (avoids page reload after admin saves topics)
+  const [lessonOverviewMap, setLessonOverviewMap] = useState<Record<string, string>>({});
+  
   // Comments hook
   const { comments, loading: commentsLoading, createComment, fetchComments } = useComments(currentLesson?.id || undefined);
   
@@ -403,8 +406,8 @@ const LessonView = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
@@ -416,19 +419,19 @@ const LessonView = () => {
   const progressPercentage = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       
       {/* --- HEADER (Clean & Minimal) --- */}
-      <header className="bg-white border-b h-16 flex items-center px-4 lg:px-6 sticky top-0 z-30 shadow-sm">
+      <header className="bg-card border-b h-16 flex items-center px-4 lg:px-6 sticky top-0 z-30 shadow-sm">
         <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="mr-2">
-          <ArrowLeft className="h-5 w-5 text-gray-600" />
+          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </Button>
         <div className="flex-1">
-            <h1 className="text-sm lg:text-base font-bold text-gray-800 line-clamp-1">
+            <h1 className="text-sm lg:text-base font-bold text-foreground line-clamp-1">
                 {course.title}
             </h1>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Class {course.grade}</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Class {course.grade}</span>
                 <span>• {lessons.length} Lessons</span>
             </div>
         </div>
@@ -449,7 +452,7 @@ const LessonView = () => {
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         
         {/* --- LEFT: VIDEO PLAYER & TABS (Cinema Area) --- */}
-        <main className="flex-1 overflow-y-auto bg-white lg:bg-gray-100 p-0 lg:p-6">
+        <main className="flex-1 overflow-y-auto bg-card lg:bg-muted/20 p-0 lg:p-6">
             <div className="max-w-5xl mx-auto space-y-6">
                 
                 {/* VIDEO CONTAINER */}
@@ -614,8 +617,13 @@ const LessonView = () => {
                             {/* Topics Covered timeline */}
                             <TopicsCovered
                               lessonId={currentLesson?.id || ''}
-                              overview={(currentLesson as any)?.overview || null}
+                              overview={lessonOverviewMap[currentLesson?.id || ''] ?? currentLesson?.overview ?? null}
                               isAdmin={isAdminOrTeacher}
+                              onSaved={(newOverview) => {
+                                if (currentLesson?.id) {
+                                  setLessonOverviewMap(prev => ({ ...prev, [currentLesson.id]: newOverview }));
+                                }
+                              }}
                             />
                         </TabsContent>
 
@@ -628,18 +636,18 @@ const LessonView = () => {
                             />
                           </TabsContent>
                         )}
-                        <TabsContent value="resources" className="bg-white p-6 rounded-xl border shadow-sm">
+                        <TabsContent value="resources" className="bg-card p-6 rounded-xl border border-border shadow-sm">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <Library className="h-5 w-5 text-indigo-600" />
-                                    <h3 className="font-semibold text-lg">Reference Books</h3>
+                                    <Library className="h-5 w-5 text-primary" />
+                                    <h3 className="font-semibold text-lg text-foreground">Reference Books</h3>
                                     {archiveBooks.length > 0 && (
                                         <Badge variant="secondary" className="ml-2">
                                             {archiveBooks.length} {archiveBooks.length === 1 ? 'book' : 'books'}
                                         </Badge>
                                     )}
                                 </div>
-                                <p className="text-sm text-gray-500 mb-4">
+                                <p className="text-sm text-muted-foreground mb-4">
                                     Access reference books and study materials from Archive.org. Click on a book to expand the reader.
                                 </p>
                                 <ArchiveBookList
@@ -671,17 +679,17 @@ const LessonView = () => {
                         </TabsContent>
 
                         {/* Discussion Tab - Functional */}
-                        <TabsContent value="doubts" className="bg-white p-6 rounded-xl border shadow-sm">
+                        <TabsContent value="doubts" className="bg-card p-6 rounded-xl border border-border shadow-sm">
                             <div className="space-y-6">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <MessageCircle className="h-5 w-5 text-indigo-600" />
+                                <h3 className="font-semibold text-lg flex items-center gap-2 text-foreground">
+                                    <MessageCircle className="h-5 w-5 text-primary" />
                                     Discussion ({comments.length})
                                 </h3>
 
                                 {/* Post Comment Box */}
                                 {user ? (
                                     <div className="flex gap-3">
-                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
                                             {(profile?.fullName || user.email)?.charAt(0)?.toUpperCase() || '?'}
                                         </div>
                                         <div className="flex-1 space-y-2">
@@ -691,7 +699,6 @@ const LessonView = () => {
                                                 onChange={(e) => setNewComment(e.target.value)}
                                                 className="min-h-[80px] resize-none"
                                             />
-                                            {/* Image preview */}
                                             {commentImagePreview && (
                                                 <div className="relative inline-block">
                                                     <img src={commentImagePreview} alt="Preview" className="max-w-xs max-h-32 rounded-lg border" />
@@ -714,7 +721,7 @@ const LessonView = () => {
                                                         onChange={handleCommentImageSelect}
                                                     />
                                                 </label>
-                                                <Button 
+                                                <Button
                                                     onClick={handlePostComment}
                                                     disabled={isPostingComment || uploadingImage || (!newComment.trim() && !commentImage)}
                                                     size="sm"
@@ -731,8 +738,8 @@ const LessonView = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center py-4 bg-gray-50 rounded-lg">
-                                        <p className="text-gray-500 text-sm">Please login to post comments</p>
+                                    <div className="text-center py-4 bg-muted/30 rounded-lg">
+                                        <p className="text-muted-foreground text-sm">Please login to post comments</p>
                                         <Button variant="link" onClick={() => navigate('/login')}>
                                             Login now
                                         </Button>
@@ -743,35 +750,35 @@ const LessonView = () => {
                                 <div className="space-y-4">
                                     {commentsLoading ? (
                                         <div className="text-center py-8">
-                                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
+                                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                                         </div>
                                     ) : comments.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <MessageCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <MessageCircle className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
                                             <p>No comments yet. Be the first to start a discussion!</p>
                                         </div>
                                     ) : (
                                         comments.map((comment) => (
-                                            <div key={comment.id} className="flex gap-3 p-4 bg-gray-50 rounded-lg">
-                                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center text-blue-600 font-bold text-xs flex-shrink-0">
+                                            <div key={comment.id} className="flex gap-3 p-4 bg-muted/30 rounded-lg">
+                                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
                                                     {comment.userName?.charAt(0)?.toUpperCase() || '?'}
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-medium text-gray-900 text-sm">
+                                                        <span className="font-medium text-foreground text-sm">
                                                             {comment.userName}
                                                         </span>
-                                                        <span className="text-xs text-gray-400">
+                                                        <span className="text-xs text-muted-foreground">
                                                             {formatRelativeTime(comment.createdAt)}
                                                         </span>
                                                     </div>
-                                                    <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                                                    <p className="text-foreground text-sm whitespace-pre-wrap">
                                                         {comment.message}
                                                     </p>
                                                     {comment.imageUrl && (
-                                                        <img 
-                                                            src={comment.imageUrl} 
-                                                            alt="Comment attachment" 
+                                                        <img
+                                                            src={comment.imageUrl}
+                                                            alt="Comment attachment"
                                                             className="mt-2 max-w-xs rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
                                                             onClick={() => window.open(comment.imageUrl!, '_blank')}
                                                         />
@@ -789,18 +796,18 @@ const LessonView = () => {
         </main>
 
         {/* --- RIGHT: SIDEBAR PLAYLIST (Udemy Style) --- */}
-        <aside className="w-full lg:w-96 bg-white border-l flex flex-col h-[50vh] lg:h-auto">
-            <div className="p-4 border-b bg-gray-50/50">
-                <h3 className="font-bold text-gray-800 mb-2">Course Content</h3>
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+        <aside className="w-full lg:w-96 bg-card border-l border-border flex flex-col h-[50vh] lg:h-auto">
+            <div className="p-4 border-b border-border bg-muted/20">
+                <h3 className="font-bold text-foreground mb-2">Course Content</h3>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                     <span>{progressPercentage}% Completed</span>
                     <span>{completedCount}/{lessons.length}</span>
                 </div>
-                <Progress value={progressPercentage} className="h-2 bg-gray-200" />
+                <Progress value={progressPercentage} className="h-2" />
             </div>
 
             <ScrollArea className="flex-1">
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-border">
                     {lessons.map((lesson, index) => {
                         const isActive = currentLesson?.id === lesson.id;
                         const isLocked = !canAccessLesson(lesson);
@@ -809,36 +816,36 @@ const LessonView = () => {
                             <div
                                 key={lesson.id}
                                 className={cn(
-                                    "flex items-start gap-3 p-3 cursor-pointer border-l-2 transition-all hover:bg-gray-50",
-                                    isActive ? "bg-indigo-50 border-indigo-600" : "border-transparent",
-                                    isLocked && "opacity-60 bg-gray-50/50"
+                                    "flex items-start gap-3 p-3 cursor-pointer border-l-2 transition-all hover:bg-muted/30",
+                                    isActive ? "bg-primary/5 border-primary" : "border-transparent",
+                                    isLocked && "opacity-60 bg-muted/20"
                                 )}
                                 onClick={() => handleLessonClick(lesson)}
                             >
                                 <div className="mt-1">
                                     {isActive ? (
-                                        <div className="h-6 w-6 rounded-full bg-indigo-600 flex items-center justify-center animate-pulse">
-                                            <Play className="h-3 w-3 text-white fill-white" />
+                                        <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center animate-pulse">
+                                            <Play className="h-3 w-3 text-primary-foreground fill-primary-foreground" />
                                         </div>
                                     ) : isLocked ? (
-                                        <div className="h-6 w-6 rounded-full border-2 border-gray-300 flex items-center justify-center">
-                                            <Lock className="h-3 w-3 text-gray-400" />
+                                        <div className="h-6 w-6 rounded-full border-2 border-border flex items-center justify-center">
+                                            <Lock className="h-3 w-3 text-muted-foreground" />
                                         </div>
                                     ) : isCompleted ? (
                                         <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
                                             <CheckCircle className="h-4 w-4 text-white fill-white" />
                                         </div>
                                     ) : (
-                                        <div className="h-6 w-6 rounded-full border-2 border-gray-300 flex items-center justify-center text-xs font-medium text-gray-500">
+                                        <div className="h-6 w-6 rounded-full border-2 border-border flex items-center justify-center text-xs font-medium text-muted-foreground">
                                             {index + 1}
                                         </div>
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h4 className={cn("text-sm font-medium mb-1", isActive ? "text-indigo-700" : "text-gray-700")}>
+                                    <h4 className={cn("text-sm font-medium mb-1", isActive ? "text-primary" : "text-foreground")}>
                                         {lesson.title}
                                     </h4>
-                                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                         {isCompleted && <span className="text-green-600 font-medium">✓ Completed</span>}
                                         {isLocked && <span className="flex items-center gap-0.5"><Lock className="h-3 w-3" />Locked</span>}
                                     </div>
@@ -881,13 +888,19 @@ interface TopicsCoveredProps {
   lessonId: string;
   overview: string | null;
   isAdmin: boolean;
+  onSaved?: (newOverview: string) => void;
 }
 
-const TopicsCovered = ({ lessonId, overview, isAdmin }: TopicsCoveredProps) => {
+const TopicsCovered = ({ lessonId, overview, isAdmin, onSaved }: TopicsCoveredProps) => {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(overview || "");
   const [saving, setSaving] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+
+  // Sync editText when overview prop changes
+  useEffect(() => {
+    setEditText(overview || "");
+  }, [overview]);
 
   // Parse "timestamp|topic" lines from overview
   const topics = (overview || "")
@@ -906,8 +919,8 @@ const TopicsCovered = ({ lessonId, overview, isAdmin }: TopicsCoveredProps) => {
       await supabase.from("lessons").update({ overview: editText }).eq("id", lessonId);
       toast.success("Topics saved!");
       setEditing(false);
-      // Optimistically update
-      window.location.reload();
+      // Update parent state instead of reloading
+      onSaved?.(editText);
     } catch {
       toast.error("Failed to save topics");
     } finally {

@@ -119,7 +119,7 @@ const Courses = () => {
         { label: "All Courses" },
       ]} />
 
-      <main className="flex-1 p-4 space-y-4">
+      <main className="flex-1 p-4 space-y-4 pb-20 md:pb-4">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             {loading ? "Loading..." : `${filteredCourses.length} courses available`}

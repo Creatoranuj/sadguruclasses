@@ -240,7 +240,7 @@ const MyCourses = () => {
         </Breadcrumb>
       </div>
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-6 pb-20 md:pb-6">
         <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-none">
           {statusTabs.map((tab) => (
             <button
