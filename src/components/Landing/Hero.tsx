@@ -36,30 +36,30 @@ const Hero = memo(({ data, stats = [] }: HeroProps) => {
       <div className="container mx-auto px-4 sm:px-6 py-16 md:py-24 relative">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Text content */}
-          <div className="text-center lg:text-left space-y-6">
+          <div className="text-center lg:text-left space-y-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
               <Sparkles className="h-4 w-4" />
               <span>UP & State Board | Classes 9-12</span>
             </div>
 
             {/* Dynamic Title */}
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-              {data?.title || "Learning Made Fun & Easy"}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
+              {data?.title || "Welcome to Sadguru Coaching Classes"}
             </h1>
 
             {/* Subheading */}
-            <p className="text-base md:text-lg text-primary font-semibold tracking-wide">
+            <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 font-medium tracking-wide">
               India's Most Affordable Learning Platform
             </p>
 
             {/* Dynamic Subtitle */}
-            <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0">
+            <p className="text-lg text-muted-foreground max-w-lg mx-auto lg:mx-0">
               {data?.subtitle || "Join Sadguru Coaching Classes for world-class education."}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link to="/signup">
-                <Button size="lg" className="w-full sm:w-auto h-12 min-w-[160px] rounded-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground gap-2 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-semibold">
+                <Button size="lg" className="w-full sm:w-auto min-w-[160px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-md hover:shadow-lg transition-all duration-200 font-semibold px-6 py-3">
                   {data?.cta_text || "Get Started"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
