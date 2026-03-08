@@ -481,6 +481,9 @@ const AdminQuizManager = () => {
                   </div>
                   {/* Action buttons - stack on mobile */}
                   <div className="flex flex-col sm:flex-row items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openAttempts(quiz)} title="View Attempts">
+                      <Users className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => loadQuizForEdit(quiz)} title="Edit questions">
                       <Edit2 className="h-4 w-4" />
                     </Button>
@@ -496,6 +499,94 @@ const AdminQuizManager = () => {
             ))
           )}
         </main>
+
+        {/* ─── Attempts Sheet ─────────────────────────────────────── */}
+        <Sheet open={!!attemptsQuizId} onOpenChange={(open) => { if (!open) setAttemptsQuizId(null); }}>
+          <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+            <SheetHeader className="px-4 py-4 border-b shrink-0">
+              <SheetTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                Attempts — {attemptsQuizTitle}
+              </SheetTitle>
+            </SheetHeader>
+
+            <ScrollArea className="flex-1">
+              {loadingAttempts ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : attempts.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground px-4">
+                  <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium text-sm">No attempts yet</p>
+                  <p className="text-xs mt-1">Students haven't submitted this quiz yet.</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {attempts.map((attempt) => {
+                    const submittedDate = attempt.submitted_at
+                      ? new Date(attempt.submitted_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                      : "—";
+                    const submittedTime = attempt.submitted_at
+                      ? new Date(attempt.submitted_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+                      : "";
+                    const pct = attempt.percentage != null ? Math.round(attempt.percentage) : null;
+
+                    return (
+                      <div key={attempt.id} className="px-4 py-3 flex items-center gap-3">
+                        {/* Avatar placeholder */}
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm">
+                          {attempt.student_name.charAt(0).toUpperCase()}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{attempt.student_name}</p>
+                          <p className="text-xs text-muted-foreground">{submittedDate} · {submittedTime}</p>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-semibold">{attempt.score ?? "—"}</span>
+                            {pct != null && (
+                              <span className="text-xs text-muted-foreground">({pct}%)</span>
+                            )}
+                          </div>
+                          {attempt.passed != null && (
+                            <Badge
+                              variant={attempt.passed ? "default" : "destructive"}
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {attempt.passed ? (
+                                <><Check className="h-2.5 w-2.5 mr-0.5" />Pass</>
+                              ) : (
+                                <><X className="h-2.5 w-2.5 mr-0.5" />Fail</>
+                              )}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Summary footer */}
+            {!loadingAttempts && attempts.length > 0 && (
+              <div className="px-4 py-3 border-t bg-muted/30 shrink-0">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Total: <strong className="text-foreground">{attempts.length}</strong></span>
+                  <span>Passed: <strong className="text-foreground">{attempts.filter(a => a.passed).length}</strong></span>
+                  <span>Avg: <strong className="text-foreground">
+                    {attempts.filter(a => a.percentage != null).length > 0
+                      ? Math.round(attempts.filter(a => a.percentage != null).reduce((s, a) => s + a.percentage, 0) / attempts.filter(a => a.percentage != null).length)
+                      : "—"}%
+                  </strong></span>
+                </div>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
       </div>
     );
   }
