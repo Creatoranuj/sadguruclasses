@@ -661,20 +661,32 @@ const MahimaGhostPlayer = memo(({
               const container = containerRef.current;
               if (!container) { handleOverlayTouchStart(e); return; }
               const rect = container.getBoundingClientRect();
-              const side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+
+              // ── Rotation-aware side detection ─────────────────────────────
+              // When rotated 90°: DOM "left" is visual "top" → finger on visual left = high clientY
+              // When rotated 270°: DOM "left" is visual "bottom" → finger on visual left = low clientY
+              let side: 'left' | 'right';
+              if (rotation === 90) {
+                // Visual left half = high clientY in DOM space
+                side = touch.clientY - rect.top > rect.height / 2 ? 'left' : 'right';
+              } else if (rotation === 270) {
+                side = touch.clientY - rect.top < rect.height / 2 ? 'left' : 'right';
+              } else {
+                side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+              }
+              // ─────────────────────────────────────────────────────────────
 
               // ── Double-tap detection ──────────────────────────────────────
               const now = Date.now();
               const last = lastTapRef.current;
               if (last && now - last.time < 300 && last.side === side) {
-                // Double-tap confirmed — skip 10s
                 clearTimeout(doubleTapTimerRef.current);
                 lastTapRef.current = null;
                 if (side === 'left') skipBackward();
                 else skipForward();
                 setDoubleTapRipple({ side, key: now });
-                setTimeout(() => setDoubleTapRipple(null), 700);
-                return; // don't start swipe / show controls
+                setTimeout(() => setDoubleTapRipple(null), 750);
+                return;
               }
               lastTapRef.current = { time: now, side };
               doubleTapTimerRef.current = setTimeout(() => { lastTapRef.current = null; }, 300);
