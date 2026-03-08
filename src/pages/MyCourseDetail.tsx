@@ -545,30 +545,43 @@ const MyCourseDetail = () => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="notes" className="p-4 mt-0">
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-foreground mb-3">Lecture Notes</h3>
-                    {lessons.filter(l => l.lectureType === "NOTES").length > 0 ? (
-                      lessons.filter(l => l.lectureType === "NOTES").map((note) => (
-                        <a
-                          key={note.id}
-                          href={note.videoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                        >
-                          <FileText className="h-5 w-5 text-purple-500" />
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">{note.title}</p>
-                            <p className="text-xs text-muted-foreground">PDF Notes</p>
+                <TabsContent value="notes" className="mt-0">
+                  {(() => {
+                    const notesList = lessons.filter(l => l.lectureType === "NOTES");
+                    if (notesList.length === 0) {
+                      return (
+                        <div className="p-4">
+                          <p className="text-muted-foreground text-sm">No notes available for this lesson.</p>
+                        </div>
+                      );
+                    }
+                    const activeNote = selectedNoteUrl || { url: notesList[0].videoUrl, title: notesList[0].title };
+                    return (
+                      <div className="flex flex-col">
+                        {notesList.length > 1 && (
+                          <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
+                            {notesList.map(note => (
+                              <button
+                                key={note.id}
+                                onClick={() => setSelectedNoteUrl({ url: note.videoUrl, title: note.title })}
+                                className={cn(
+                                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                                  activeNote.url === note.videoUrl
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-card text-muted-foreground border-border hover:border-primary"
+                                )}
+                              >
+                                {note.title}
+                              </button>
+                            ))}
                           </div>
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        </a>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground text-sm">No notes available for this lesson.</p>
-                    )}
-                  </div>
+                        )}
+                        <div className="px-3 pb-3 pt-2">
+                          <PdfViewer url={activeNote.url} title={activeNote.title} />
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="discussion" className="p-4 mt-0">
