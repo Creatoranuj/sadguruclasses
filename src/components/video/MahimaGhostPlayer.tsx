@@ -298,6 +298,27 @@ const MahimaGhostPlayer = memo(({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [togglePlay, skipForward, skipBackward, toggleMute, toggleFullscreen, setPlayerVolume, volume]);
 
+  // Back-button intercept: when rotated, first step resets rotation to 0° instead of navigating away
+  useEffect(() => {
+    if (rotation === 0) return;
+    // Push a dummy history entry so the back button fires popstate here
+    window.history.pushState({ rotationGuard: true }, '');
+    const handlePopState = (e: PopStateEvent) => {
+      if (rotation !== 0) {
+        setRotation(0);
+        // Exit fullscreen if still in it
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+          setIsFullscreen(false);
+        }
+        // Re-push guard so a second back actually navigates
+        // (don't re-push — let the next back go through naturally)
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [rotation]);
+
   // Anti-piracy + fullscreen listener
   useEffect(() => {
     const container = containerRef.current;
