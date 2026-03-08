@@ -1,13 +1,13 @@
-import { forwardRef, useMemo } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import logoIcon from "@/assets/branding/logo_primary_web.png";
 import SocialLinks from "./SocialLinks";
 
-const Footer = forwardRef<HTMLElement>((_, ref) => {
+const Footer = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
 
   return (
-    <footer ref={ref} className="bg-card border-t border-border py-12" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
+    <footer className="bg-card border-t border-border py-12" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-4 gap-8">
           {/* Brand */}
