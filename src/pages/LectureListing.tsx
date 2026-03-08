@@ -397,6 +397,7 @@ const LectureListing = () => {
                       duration={lesson.duration}
                       createdAt={lesson.created_at}
                       isLocked={!!lesson.is_locked && !hasPurchased && !isAdminOrTeacher}
+                      quizId={lessonQuizMap[lesson.id]}
                       onClick={() => handleLectureClick(lesson)}
                     />
                   ))}
@@ -409,6 +410,7 @@ const LectureListing = () => {
                   hasPurchased={hasPurchased}
                   isAdminOrTeacher={isAdminOrTeacher}
                   onLectureClick={handleLectureClick}
+                  lessonQuizMap={lessonQuizMap}
                 />
               )}
             </div>
