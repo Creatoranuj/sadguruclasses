@@ -66,18 +66,13 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
     return { embedUrl: url, openUrl: url, canRender: false, isArchive: false, archiveId: null };
   }, [url]);
 
-  // Resolve Archive.org direct PDF URL on first render
-  useMemo(() => {
+  // Resolve Archive.org direct PDF URL on mount / when archiveId changes
+  useEffect(() => {
     if (!isArchive || !archiveId) return;
     setArchiveLoading(true);
     getArchiveDownloadUrl(archiveId)
-      .then((directUrl) => {
-        setArchiveDirectUrl(directUrl);
-      })
-      .catch(() => {
-        // Fallback: {id}.pdf pattern
-        setArchiveDirectUrl(`https://archive.org/download/${archiveId}/${archiveId}.pdf`);
-      })
+      .then((directUrl) => setArchiveDirectUrl(directUrl))
+      .catch(() => setArchiveDirectUrl(`https://archive.org/download/${archiveId}/${archiveId}.pdf`))
       .finally(() => setArchiveLoading(false));
   }, [isArchive, archiveId]);
 
