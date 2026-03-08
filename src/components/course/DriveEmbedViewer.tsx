@@ -1,9 +1,9 @@
-import { memo, useMemo, useState } from "react";
-import { ExternalLink, Download, Maximize, Minimize, FileText } from "lucide-react";
+import { memo, useMemo, useState, useEffect } from "react";
+import { ExternalLink, Download, Maximize, Minimize, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadFile, extractArchiveId, extractDocsId, getArchiveDownloadUrl } from "@/utils/fileUtils";
 import { toast } from "sonner";
-import sadguruLogo from "@/assets/branding/logo_icon_web.png";
+import sadguruLogo from "@/assets/branding/logo_primary_web.png";
 
 interface DriveEmbedViewerProps {
   url: string;
@@ -13,6 +13,9 @@ interface DriveEmbedViewerProps {
 const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
   const [downloading, setDownloading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // For Archive.org: resolved direct PDF URL (async via metadata API)
+  const [archiveDirectUrl, setArchiveDirectUrl] = useState<string | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
 
   const { embedUrl, openUrl, canRender, isArchive, archiveId } = useMemo(() => {
     // Google Drive
@@ -43,11 +46,11 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
       };
     }
 
-    // Archive.org
+    // Archive.org — detect & flag; direct PDF resolved asynchronously
     const aid = extractArchiveId(url);
     if (aid) {
       return {
-        embedUrl: `https://archive.org/embed/${aid}`,
+        embedUrl: "",
         openUrl: `https://archive.org/details/${aid}`,
         canRender: true,
         isArchive: true,
@@ -63,13 +66,22 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
     return { embedUrl: url, openUrl: url, canRender: false, isArchive: false, archiveId: null };
   }, [url]);
 
+  // Resolve Archive.org direct PDF URL on mount / when archiveId changes
+  useEffect(() => {
+    if (!isArchive || !archiveId) return;
+    setArchiveLoading(true);
+    getArchiveDownloadUrl(archiveId)
+      .then((directUrl) => setArchiveDirectUrl(directUrl))
+      .catch(() => setArchiveDirectUrl(`https://archive.org/download/${archiveId}/${archiveId}.pdf`))
+      .finally(() => setArchiveLoading(false));
+  }, [isArchive, archiveId]);
+
   const handleDownload = async () => {
     setDownloading(true);
     try {
       if (isArchive && archiveId) {
-        // Use metadata API to find the real PDF file
         toast.info("Finding PDF file…");
-        const directUrl = await getArchiveDownloadUrl(archiveId);
+        const directUrl = archiveDirectUrl || await getArchiveDownloadUrl(archiveId);
         await downloadFile(directUrl, title ? `${title}.pdf` : `${archiveId}.pdf`);
       } else {
         await downloadFile(url, title ? `${title}.pdf` : undefined);
@@ -83,6 +95,9 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
   };
 
   if (!canRender) return null;
+
+  // The PDF src to embed (for Archive: direct URL; for others: embedUrl)
+  const iframeSrc = isArchive ? (archiveDirectUrl || "") : embedUrl;
 
   return (
     <div
@@ -104,12 +119,16 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
             size="sm"
             className="h-8 px-2 text-muted-foreground hover:text-foreground"
             onClick={handleDownload}
-            disabled={downloading}
+            disabled={downloading || (isArchive && archiveLoading)}
             title="Download PDF"
           >
-            <Download className="w-4 h-4" />
+            {downloading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
             <span className="ml-1 hidden sm:inline text-xs">
-              {downloading ? "Finding…" : "Download"}
+              {downloading ? "Downloading…" : "Download"}
             </span>
           </Button>
           <Button
@@ -133,48 +152,40 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
         </div>
       </div>
 
-      {/* Iframe container */}
+      {/* PDF / iframe area */}
       <div className="relative flex-1 min-h-0">
-        {/* Archive.org top branding suppression overlay */}
-        {isArchive && (
-          <div
-            className="absolute top-0 left-0 right-0 h-9 z-10 flex items-center px-3 gap-2 select-none pointer-events-none"
-            style={{ background: "hsl(var(--card))" }}
-          >
-            <img src={sadguruLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
-            <span className="text-xs font-semibold text-foreground tracking-wide">
-              Sadguru Coaching Classes
-            </span>
+        {/* Archive.org: loading state while resolving direct PDF URL */}
+        {isArchive && archiveLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-card z-10 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading PDF…</p>
           </div>
         )}
 
-        {/* Archive.org left-side bookmark strip overlay — only 28px to cover the narrow icon column */}
-        {isArchive && (
-          <div
-            className="absolute top-9 left-0 bottom-0 z-10 select-none pointer-events-none"
-            style={{ width: "28px", background: "hsl(var(--card))" }}
+        {/* Render PDF iframe once URL is known */}
+        {iframeSrc && (
+          <iframe
+            key={iframeSrc}
+            src={isArchive ? `${iframeSrc}#toolbar=0&navpanes=0` : iframeSrc}
+            className="absolute inset-0 w-full h-full border-0"
+            title={title || "Document Preview"}
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+            loading="eager"
+            allowFullScreen
           />
         )}
 
-        <iframe
-          src={embedUrl}
-          className="absolute inset-0 w-full h-full border-0"
-          style={isArchive ? { top: "36px", height: "calc(100% - 36px)" } : undefined}
-          title={title || "Document Preview"}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-          loading="eager"
-          allowFullScreen
-        />
-
-        {/* Bottom branding gradient */}
+        {/* Sadguru Coaching Classes watermark — bottom-right, always visible */}
         <div
-          className="absolute bottom-0 left-0 right-0 z-20 flex items-center gap-2 px-4 py-1.5 select-none pointer-events-none"
-          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)" }}
+          className="absolute bottom-3 right-3 z-20 flex items-center gap-2 select-none pointer-events-none"
+          aria-hidden="true"
         >
-          <img src={sadguruLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
-          <span className="text-white text-xs font-semibold tracking-wide">
-            Sadguru Coaching Classes
-          </span>
+          <img
+            src={sadguruLogo}
+            alt=""
+            className="h-7 sm:h-9 w-auto opacity-40 drop-shadow-md"
+            draggable={false}
+          />
         </div>
       </div>
     </div>
