@@ -75,7 +75,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
-        const [enrollmentsRes, attemptsRes] = await Promise.all([
+        const [enrollmentsRes, attemptsRes, doubtsRes] = await Promise.all([
           supabase
             .from('enrollments')
             .select('*, courses(*)')
@@ -88,6 +88,13 @@ const Dashboard = () => {
             .not('submitted_at', 'is', null)
             .order('created_at', { ascending: false })
             .limit(10),
+          supabase
+            .from('doubt_sessions')
+            .select('id, subject, scheduled_at, zoom_join_url, status')
+            .eq('student_id', user!.id)
+            .in('status', ['scheduled', 'active'])
+            .order('scheduled_at', { ascending: true })
+            .limit(3),
         ]);
 
         if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {
@@ -115,6 +122,9 @@ const Dashboard = () => {
 
         if (attemptsRes.data) {
           setQuizAttempts(attemptsRes.data as QuizAttemptRow[]);
+        }
+        if (doubtsRes.data) {
+          setUpcomingDoubts(doubtsRes.data);
         }
       } catch (error) {
         console.error("Error loading dashboard:", error);
