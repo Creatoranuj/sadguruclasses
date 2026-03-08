@@ -95,7 +95,6 @@ const MyCourseDetail = () => {
   const [chapterTab, setChapterTab] = useState<"chapters" | "material">("chapters");
 
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const isPlayerOpen = searchParams.get("lesson") !== null;
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<any[]>([]);
   const [selectedNoteUrl, setSelectedNoteUrl] = useState<{ url: string; title: string } | null>(null);
@@ -306,6 +305,59 @@ const MyCourseDetail = () => {
     setSearchParams({});
   };
 
+  // ── AUTO-MARK PROGRESS AT 90% ──────────────────────────────
+  const handleVideoProgress = async (state: { played: number; playedSeconds: number }) => {
+    if (!user || !selectedLesson || !courseId) return;
+    if (state.played < 0.9) return;
+    if (progressMarkedRef.current.has(selectedLesson.id)) return;
+    progressMarkedRef.current.add(selectedLesson.id);
+
+    try {
+      const { data: existing } = await supabase
+        .from("user_progress")
+        .select("id, completed")
+        .eq("user_id", user.id)
+        .eq("lesson_id", selectedLesson.id)
+        .maybeSingle();
+
+      if (existing?.completed) return;
+
+      if (existing) {
+        await supabase.from("user_progress").update({
+          completed: true,
+          watched_seconds: Math.floor(state.playedSeconds),
+          last_watched_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+      } else {
+        await supabase.from("user_progress").insert({
+          user_id: user.id,
+          lesson_id: selectedLesson.id,
+          course_id: Number(courseId),
+          completed: true,
+          watched_seconds: Math.floor(state.playedSeconds),
+          last_watched_at: new Date().toISOString(),
+        } as any);
+      }
+
+      setChapters(prev => prev.map(ch => {
+        if (ch.id === selectedLesson.chapterId) {
+          if (ch.completedLessons >= ch.lessonCount) return ch;
+          return { ...ch, completedLessons: ch.completedLessons + 1 };
+        }
+        if (ch.id === "__all__") {
+          if (ch.completedLessons >= ch.lessonCount) return ch;
+          return { ...ch, completedLessons: ch.completedLessons + 1 };
+        }
+        return ch;
+      }));
+
+      toast.success("Lesson marked as complete! 🎉");
+    } catch (err) {
+      console.error("Error marking lesson complete:", err);
+      progressMarkedRef.current.delete(selectedLesson.id);
+    }
+  };
+
   // Breadcrumbs
   const chapterBreadcrumbs = [
     { label: "My Courses", href: "/my-courses" },
@@ -318,6 +370,12 @@ const MyCourseDetail = () => {
     ...(selectedChapter && selectedChapter.id !== "__all__"
       ? [{ label: `${selectedChapter.code} : ${selectedChapter.title}` }]
       : []),
+  ];
+
+  const playerBreadcrumbs = [
+    { label: "My Courses", href: "/my-courses" },
+    ...(course ? [{ label: course.title, href: `/my-courses/${courseId}` }] : []),
+    ...(selectedLesson ? [{ label: selectedLesson.title }] : []),
   ];
 
   // ── LOADING STATE ──────────────────────────────────────────
@@ -342,316 +400,6 @@ const MyCourseDetail = () => {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-muted-foreground">Course not found</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── AUTO-MARK PROGRESS AT 90% ──────────────────────────────
-  const handleVideoProgress = async (state: { played: number; playedSeconds: number }) => {
-    if (!user || !selectedLesson || !courseId) return;
-    if (state.played < 0.9) return;
-    if (progressMarkedRef.current.has(selectedLesson.id)) return;
-    progressMarkedRef.current.add(selectedLesson.id);
-
-    try {
-      // Check if record already exists
-      const { data: existing } = await supabase
-        .from("user_progress")
-        .select("id, completed")
-        .eq("user_id", user.id)
-        .eq("lesson_id", selectedLesson.id)
-        .maybeSingle();
-
-      if (existing?.completed) return; // already marked complete
-
-      if (existing) {
-        await supabase.from("user_progress").update({
-          completed: true,
-          watched_seconds: Math.floor(state.playedSeconds),
-          last_watched_at: new Date().toISOString(),
-        }).eq("id", existing.id);
-      } else {
-        await supabase.from("user_progress").insert({
-          user_id: user.id,
-          lesson_id: selectedLesson.id,
-          course_id: Number(courseId),
-          completed: true,
-          watched_seconds: Math.floor(state.playedSeconds),
-          last_watched_at: new Date().toISOString(),
-        } as any);
-      }
-
-      // Update sidebar chapter progress in-place
-      setChapters(prev => prev.map(ch => {
-        if (ch.id === selectedLesson.chapterId) {
-          if (ch.completedLessons >= ch.lessonCount) return ch;
-          return { ...ch, completedLessons: ch.completedLessons + 1 };
-        }
-        if (ch.id === "__all__") {
-          if (ch.completedLessons >= ch.lessonCount) return ch;
-          return { ...ch, completedLessons: ch.completedLessons + 1 };
-        }
-        return ch;
-      }));
-
-      toast.success("Lesson marked as complete! 🎉");
-    } catch (err) {
-      console.error("Error marking lesson complete:", err);
-      progressMarkedRef.current.delete(selectedLesson.id); // allow retry on error
-    }
-  };
-
-  // ── LESSON PLAYER VIEW ─────────────────────────────────────
-  if (isPlayerOpen && selectedLesson) {
-    const playerBreadcrumbs = [
-      { label: "My Courses", href: "/my-courses" },
-      { label: course.title, href: `/my-courses/${courseId}` },
-      { label: selectedLesson.title },
-    ];
-    return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col">
-        <header className="flex items-center gap-2 border-b bg-background shrink-0">
-          <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={handleClosePlayer}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <Breadcrumbs segments={playerBreadcrumbs} className="border-b-0 py-3 px-1 bg-transparent backdrop-blur-none" />
-          </div>
-        </header>
-
-        <div className="flex-1 bg-black flex flex-col overflow-hidden">
-          <div className="w-full">
-            <UnifiedVideoPlayer
-              url={selectedLesson.videoUrl}
-              title={selectedLesson.title}
-              onReady={() => console.log('Video ready')}
-              onProgress={handleVideoProgress}
-            />
-          </div>
-
-          <ScrollArea className="flex-1 bg-card">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg text-foreground mb-1">{selectedLesson.title}</h2>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  {selectedLesson.duration ? `${Math.floor(selectedLesson.duration / 60)}m` : "—"}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                  4.8 Rating
-                </span>
-              </div>
-            </div>
-
-            <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="w-full grid grid-cols-4 bg-muted/50 rounded-none border-b h-auto py-0">
-                <TabsTrigger value="overview" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm">Overview</TabsTrigger>
-                <TabsTrigger value="resources" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm">Resources</TabsTrigger>
-                <TabsTrigger value="notes" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm">Notes</TabsTrigger>
-                <TabsTrigger value="discussion" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm">Discussion</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="p-4 mt-0">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">About this lesson</h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-line">
-                      {selectedLesson.overview || selectedLesson.description || "No overview available for this lesson."}
-                    </p>
-                  </div>
-                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm text-primary font-medium">You will learn:</p>
-                        <p className="text-sm text-muted-foreground">Basic definitions, Real-world examples, and Problem solving.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold text-foreground">Course Content</h3>
-                      <span className="text-xs text-muted-foreground">{lessons.length} Lessons</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden mb-4">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${100 / lessons.length}%` }} />
-                    </div>
-                    <div className="space-y-2">
-                      {lessons.filter(l => l.lectureType === "VIDEO").slice(0, 5).map((lesson) => {
-                        const resources = lessons.filter(
-                          r => r.chapterId === lesson.chapterId && r.lectureType !== "VIDEO" && r.videoUrl
-                        );
-                        return (
-                          <div key={lesson.id}>
-                            <button
-                              onClick={() => { setSelectedLesson(lesson); setSearchParams({ lesson: lesson.id }); }}
-                              className={cn(
-                                "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
-                                lesson.id === selectedLesson.id ? "bg-primary/10" : "hover:bg-muted"
-                              )}
-                            >
-                              <div className={cn(
-                                "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                                lesson.id === selectedLesson.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                              )}>
-                                <Play className="h-4 w-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-foreground truncate">{lesson.title}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {lesson.duration ? `${Math.floor(lesson.duration / 60)}m` : "—"}
-                                </p>
-                              </div>
-                            </button>
-                            {resources.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 pl-11 pb-1">
-                                {resources.map(res => (
-                                  <button
-                                    key={res.id}
-                                    onClick={() => setInlineViewer({ url: res.videoUrl, title: res.title })}
-                                    className={cn(
-                                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors",
-                                      res.lectureType === "PDF" && "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100",
-                                      res.lectureType === "DPP" && "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
-                                      res.lectureType === "NOTES" && "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100",
-                                    )}
-                                  >
-                                    <FileText className="h-2.5 w-2.5" />
-                                    {res.lectureType}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="resources" className="mt-0">
-                {(() => {
-                  const resList = lessons.filter(l => l.lectureType === "PDF" || l.lectureType === "DPP");
-                  if (resList.length === 0) return (
-                    <div className="p-4">
-                      <p className="text-muted-foreground text-sm">No resources available for this lesson.</p>
-                    </div>
-                  );
-                  const activeRes = inlineViewer && resList.find(r => r.videoUrl === inlineViewer.url)
-                    ? inlineViewer
-                    : { url: resList[0].videoUrl, title: resList[0].title };
-                  return (
-                    <div className="flex flex-col">
-                      {resList.length > 1 && (
-                        <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
-                          {resList.map(r => (
-                            <button
-                              key={r.id}
-                              onClick={() => setInlineViewer({ url: r.videoUrl, title: r.title })}
-                              className={cn(
-                                "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
-                                activeRes.url === r.videoUrl
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-card text-muted-foreground border-border hover:border-primary"
-                              )}
-                            >
-                              {r.title}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <div className="px-3 pb-3 pt-2">
-                        <PdfViewer url={activeRes.url} title={activeRes.title} />
-                      </div>
-                    </div>
-                  );
-                })()}
-              </TabsContent>
-
-              <TabsContent value="notes" className="mt-0">
-                {(() => {
-                  const notesList = lessons.filter(l => l.lectureType === "NOTES");
-                  if (notesList.length === 0) return (
-                    <div className="p-4">
-                      <p className="text-muted-foreground text-sm">No notes available for this lesson.</p>
-                    </div>
-                  );
-                  const activeNote = selectedNoteUrl || { url: notesList[0].videoUrl, title: notesList[0].title };
-                  return (
-                    <div className="flex flex-col">
-                      {notesList.length > 1 && (
-                        <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
-                          {notesList.map(note => (
-                            <button
-                              key={note.id}
-                              onClick={() => setSelectedNoteUrl({ url: note.videoUrl, title: note.title })}
-                              className={cn(
-                                "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
-                                activeNote.url === note.videoUrl
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-card text-muted-foreground border-border hover:border-primary"
-                              )}
-                            >
-                              {note.title}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <div className="px-3 pb-3 pt-2">
-                        <PdfViewer url={activeNote.url} title={activeNote.title} />
-                      </div>
-                    </div>
-                  );
-                })()}
-              </TabsContent>
-
-              <TabsContent value="discussion" className="p-4 mt-0">
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-foreground">Discussion</h3>
-                  <div className="flex gap-2">
-                    <Textarea
-                      placeholder="Ask a question or share your thoughts..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      className="resize-none"
-                      rows={2}
-                    />
-                    <Button onClick={handlePostComment} size="icon" className="shrink-0">
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="space-y-3">
-                    {comments.length > 0 ? (
-                      comments.map((comment) => (
-                        <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <MessageCircle className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-foreground text-sm">{comment.userName}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(comment.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground">{comment.message}</p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground text-sm text-center py-8">
-                        No discussions yet. Be the first to comment!
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </ScrollArea>
         </div>
       </div>
     );
@@ -756,6 +504,8 @@ const MyCourseDetail = () => {
                       key={chapter.id}
                       onClick={() => {
                         setSelectedChapterId(chapter.id);
+                        setSelectedLesson(null);
+                        setSearchParams({});
                         setCourseSidebarOpen(false);
                       }}
                       className={cn(
@@ -811,18 +561,28 @@ const MyCourseDetail = () => {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto min-w-0 bg-background">
           {/* Sticky header */}
-          <header className="px-4 pt-5 pb-3 sticky top-0 z-20 bg-background">
+          <header className="px-4 pt-5 pb-3 sticky top-0 z-20 bg-background border-b">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => selectedChapterId ? setSelectedChapterId(null) : navigate("/my-courses")}
+                onClick={() => {
+                  if (selectedLesson) {
+                    handleClosePlayer();
+                  } else if (selectedChapterId) {
+                    setSelectedChapterId(null);
+                  } else {
+                    navigate("/my-courses");
+                  }
+                }}
                 className="text-primary hover:opacity-80 transition-opacity"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
               <h1 className="text-lg font-semibold text-foreground line-clamp-1 flex-1">
-                {selectedChapter && selectedChapter.id !== "__all__"
-                  ? `${selectedChapter.code} : ${selectedChapter.title}`
-                  : course.title}
+                {selectedLesson
+                  ? selectedLesson.title
+                  : selectedChapter && selectedChapter.id !== "__all__"
+                    ? `${selectedChapter.code} : ${selectedChapter.title}`
+                    : course.title}
               </h1>
               {/* Desktop sidebar collapse toggle */}
               <button
@@ -847,14 +607,13 @@ const MyCourseDetail = () => {
 
           {/* Breadcrumbs */}
           <Breadcrumbs
-            segments={selectedChapterId ? lessonBreadcrumbs : chapterBreadcrumbs}
+            segments={selectedLesson ? playerBreadcrumbs : selectedChapterId ? lessonBreadcrumbs : chapterBreadcrumbs}
             className="sticky top-[60px] z-10"
           />
 
-          {/* Chapter list view */}
-          {!selectedChapterId && (
+          {/* ── STATE 1: Chapter grid ── */}
+          {!selectedChapterId && !selectedLesson && (
             <>
-              {/* Subjects / Study Material tabs */}
               <div className="flex gap-6 px-5 border-b border-border">
                 <button
                   onClick={() => setChapterTab("chapters")}
@@ -904,8 +663,8 @@ const MyCourseDetail = () => {
             </>
           )}
 
-          {/* Lesson list view - when a chapter is selected */}
-          {selectedChapterId && (
+          {/* ── STATE 2: Lesson list ── */}
+          {selectedChapterId && !selectedLesson && (
             <>
               {/* Tab bar */}
               <div className="flex gap-3 px-5 py-2 overflow-x-auto scrollbar-none">
@@ -962,6 +721,246 @@ const MyCourseDetail = () => {
                 )}
               </div>
             </>
+          )}
+
+          {/* ── STATE 3: Inline lesson player ── */}
+          {selectedLesson && (
+            <div className="flex flex-col">
+              {/* Video player */}
+              <div className="w-full bg-black">
+                <UnifiedVideoPlayer
+                  url={selectedLesson.videoUrl}
+                  title={selectedLesson.title}
+                  onReady={() => console.log('Video ready')}
+                  onProgress={handleVideoProgress}
+                />
+              </div>
+
+              {/* Lesson meta */}
+              <div className="px-4 py-3 border-b bg-card">
+                <h2 className="font-semibold text-lg text-foreground mb-1">{selectedLesson.title}</h2>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {selectedLesson.duration ? `${Math.floor(selectedLesson.duration / 60)}m` : "—"}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    4.8 Rating
+                  </span>
+                </div>
+              </div>
+
+              {/* Tabs: Overview / Resources / Notes / Discussion */}
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="w-full grid grid-cols-4 bg-muted/50 rounded-none border-b h-auto py-0">
+                  <TabsTrigger value="overview" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Overview</TabsTrigger>
+                  <TabsTrigger value="resources" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Resources</TabsTrigger>
+                  <TabsTrigger value="notes" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Notes</TabsTrigger>
+                  <TabsTrigger value="discussion" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Discussion</TabsTrigger>
+                </TabsList>
+
+                {/* Overview */}
+                <TabsContent value="overview" className="p-4 mt-0">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-2">About this lesson</h3>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line">
+                        {selectedLesson.overview || selectedLesson.description || "No overview available for this lesson."}
+                      </p>
+                    </div>
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-primary font-medium">You will learn:</p>
+                          <p className="text-sm text-muted-foreground">Basic definitions, Real-world examples, and Problem solving.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Other lessons in chapter */}
+                    <div className="mt-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold text-foreground">More in this chapter</h3>
+                        <span className="text-xs text-muted-foreground">{filteredLessons.length} Lessons</span>
+                      </div>
+                      <div className="space-y-2">
+                        {filteredLessons.filter(l => l.lectureType === "VIDEO").slice(0, 5).map((lesson) => {
+                          const resources = filteredLessons.filter(
+                            r => r.chapterId === lesson.chapterId && r.lectureType !== "VIDEO" && r.videoUrl
+                          );
+                          return (
+                            <div key={lesson.id}>
+                              <button
+                                onClick={() => { setSelectedLesson(lesson); setSearchParams({ lesson: lesson.id }); }}
+                                className={cn(
+                                  "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
+                                  lesson.id === selectedLesson.id ? "bg-primary/10" : "hover:bg-muted"
+                                )}
+                              >
+                                <div className={cn(
+                                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                                  lesson.id === selectedLesson.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                )}>
+                                  <Play className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-foreground truncate">{lesson.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {lesson.duration ? `${Math.floor(lesson.duration / 60)}m` : "—"}
+                                  </p>
+                                </div>
+                              </button>
+                              {resources.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 pl-11 pb-1">
+                                  {resources.map(res => (
+                                    <button
+                                      key={res.id}
+                                      onClick={() => setInlineViewer({ url: res.videoUrl, title: res.title })}
+                                      className={cn(
+                                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors",
+                                        res.lectureType === "PDF" && "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100",
+                                        res.lectureType === "DPP" && "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
+                                        res.lectureType === "NOTES" && "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100",
+                                      )}
+                                    >
+                                      <FileText className="h-2.5 w-2.5" />
+                                      {res.lectureType}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Resources */}
+                <TabsContent value="resources" className="mt-0">
+                  {(() => {
+                    const resList = lessons.filter(l => l.lectureType === "PDF" || l.lectureType === "DPP");
+                    if (resList.length === 0) return (
+                      <div className="p-4">
+                        <p className="text-muted-foreground text-sm">No resources available for this lesson.</p>
+                      </div>
+                    );
+                    const activeRes = inlineViewer && resList.find(r => r.videoUrl === inlineViewer.url)
+                      ? inlineViewer
+                      : { url: resList[0].videoUrl, title: resList[0].title };
+                    return (
+                      <div className="flex flex-col">
+                        {resList.length > 1 && (
+                          <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
+                            {resList.map(r => (
+                              <button
+                                key={r.id}
+                                onClick={() => setInlineViewer({ url: r.videoUrl, title: r.title })}
+                                className={cn(
+                                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                                  activeRes.url === r.videoUrl
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-card text-muted-foreground border-border hover:border-primary"
+                                )}
+                              >
+                                {r.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="px-3 pb-3 pt-2">
+                          <PdfViewer url={activeRes.url} title={activeRes.title} />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </TabsContent>
+
+                {/* Notes */}
+                <TabsContent value="notes" className="mt-0">
+                  {(() => {
+                    const notesList = lessons.filter(l => l.lectureType === "NOTES");
+                    if (notesList.length === 0) return (
+                      <div className="p-4">
+                        <p className="text-muted-foreground text-sm">No notes available for this lesson.</p>
+                      </div>
+                    );
+                    const activeNote = selectedNoteUrl || { url: notesList[0].videoUrl, title: notesList[0].title };
+                    return (
+                      <div className="flex flex-col">
+                        {notesList.length > 1 && (
+                          <div className="flex flex-wrap gap-2 px-4 py-2 border-b bg-muted/30">
+                            {notesList.map(note => (
+                              <button
+                                key={note.id}
+                                onClick={() => setSelectedNoteUrl({ url: note.videoUrl, title: note.title })}
+                                className={cn(
+                                  "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                                  activeNote.url === note.videoUrl
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-card text-muted-foreground border-border hover:border-primary"
+                                )}
+                              >
+                                {note.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="px-3 pb-3 pt-2">
+                          <PdfViewer url={activeNote.url} title={activeNote.title} />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </TabsContent>
+
+                {/* Discussion */}
+                <TabsContent value="discussion" className="p-4 mt-0">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-foreground">Discussion</h3>
+                    <div className="flex gap-2">
+                      <Textarea
+                        placeholder="Ask a question or share your thoughts..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        className="resize-none"
+                        rows={2}
+                      />
+                      <Button onClick={handlePostComment} size="icon" className="shrink-0">
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="space-y-3">
+                      {comments.length > 0 ? (
+                        comments.map((comment) => (
+                          <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <MessageCircle className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-foreground text-sm">{comment.userName}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(comment.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{comment.message}</p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground text-sm text-center py-8">
+                          No discussions yet. Be the first to comment!
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
           )}
         </main>
       </div>
