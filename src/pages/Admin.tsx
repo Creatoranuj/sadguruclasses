@@ -672,11 +672,11 @@ const Admin = () => {
       title: newMaterial.title,
       description: newMaterial.description || null,
       file_url: newMaterial.file_url,
-      file_type: newMaterial.file_url.match(/\.(\w+)($|\?)/)?.[1]?.toUpperCase() || 'PDF',
+      file_type: materialFileType,
       course_id: newMaterial.course_id ? parseInt(newMaterial.course_id) : null,
     });
     if (error) toast.error(error.message);
-    else { toast.success("Material added!"); setNewMaterial({ title: "", description: "", file_url: "", course_id: "" }); fetchLibraryData(); }
+    else { toast.success("Material added!"); setNewMaterial({ title: "", description: "", file_url: "", course_id: "" }); setMaterialFileType("PDF"); fetchLibraryData(); }
   };
 
   const handleDeleteMaterial = async (id: string) => {

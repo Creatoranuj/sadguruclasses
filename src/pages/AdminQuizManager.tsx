@@ -194,6 +194,10 @@ const AdminQuizManager = () => {
   const [questionForms, setQuestionForms] = useState<QuestionForm[]>([defaultQuestion()]);
   const [savingQuestions, setSavingQuestions] = useState(false);
 
+  // Bulk image import
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkImageUrls, setBulkImageUrls] = useState("");
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
