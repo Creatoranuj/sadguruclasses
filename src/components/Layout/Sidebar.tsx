@@ -113,21 +113,36 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             );
           })}
 
-          {/* Admin Panel Link — admin only */}
+          {/* Admin Links — admin only */}
           {isAuthenticated && isAdmin && (
-            <Link
-              to="/admin"
-              onClick={onClose}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 mx-2 mt-2 rounded-xl transition-colors",
-                getIsActive("/admin")
-                  ? "bg-primary/15 text-primary font-semibold"
-                  : "bg-primary/10 text-primary hover:bg-primary/20"
-              )}
-            >
-              <ShieldCheck className="h-5 w-5" />
-              <span className="font-medium">Admin Panel</span>
-            </Link>
+            <>
+              <Link
+                to="/admin"
+                onClick={onClose}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 mx-2 mt-2 rounded-xl transition-colors",
+                  location.pathname === "/admin"
+                    ? "bg-primary/15 text-primary font-semibold"
+                    : "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
+              >
+                <ShieldCheck className="h-5 w-5" />
+                <span className="font-medium">Admin Panel</span>
+              </Link>
+              <Link
+                to="/admin/chatbot"
+                onClick={onClose}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 mx-2 mt-1 rounded-xl transition-colors",
+                  getIsActive("/admin/chatbot")
+                    ? "bg-primary/15 text-primary font-semibold"
+                    : "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
+              >
+                <Bot className="h-5 w-5" />
+                <span className="font-medium">Chatbot Settings</span>
+              </Link>
+            </>
           )}
         </nav>
 
