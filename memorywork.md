@@ -1,5 +1,20 @@
 # Memorywork – Changes Log
 
+## Date: 2026-03-08 (Session 3 – Reports Analytics, ChapterCard Progress Tracking, AdminQuizManager Lesson Link)
+
+### Changes Made
+
+| File | Changes |
+|------|---------|
+| `src/pages/Reports.tsx` | Full rewrite — replaced all mock/hardcoded data with real Supabase queries. Added: quiz stats (total attempts, avg %, best %, pass rate), Recharts bar chart of last 5 quiz scores (green=pass, red=fail), full attempts list with date/score/pass-fail badges, real enrollment progress bars from `progress_percentage`. |
+| `src/components/course/ChapterCard.tsx` | Added `isComplete` + `progressPct` logic. Green `CheckCircle2` badge replaces code badge when all lessons done. Green right icon replaces `ChevronRight` when complete. Green animated progress bar at card bottom. Border tint green when complete. |
+| `src/pages/AdminQuizManager.tsx` | Added `Link2` icon import. Extended `Quiz` interface with `lessons?: { title: string } \| null`. Updated `fetchQuizzes` to `.select("*, lessons(title)")`. Added linked lesson display in quiz list card. |
+
+### No DB Changes Required
+All tables (`quiz_attempts`, `quizzes`, `user_progress`, `lessons`) already exist with correct RLS.
+
+---
+
 ## Date: 2026-03-08 (Session 2 – Final Polish: Watermark Fix, profiles_public RLS, Quiz Integrity)
 
 ### Changes Made
