@@ -252,7 +252,7 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
       </span>
     );
     if (saveStatus === 'saved') return (
-      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+      <span className="flex items-center gap-1 text-xs text-primary">
         <CheckCircle className="w-3 h-3" />
         Saved ✓
       </span>
