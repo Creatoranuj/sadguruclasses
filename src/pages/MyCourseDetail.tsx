@@ -283,39 +283,13 @@ const MyCourseDetail = () => {
 
     const selectedChapter = chapters.find(ch => ch.id === selectedChapterId);
 
-    // Breadcrumbs
-    const renderBreadcrumbs = () => {
-      const segments: { label: string; onClick?: () => void }[] = [
-        { label: "Dashboard", onClick: () => navigate("/dashboard") },
-        { label: "My Courses", onClick: () => navigate("/my-courses") },
-      ];
-      if (course) {
-        segments.push({
-          label: course.title,
-          onClick: selectedChapterId ? () => setSelectedChapterId(null) : undefined,
-        });
-      }
-      if (selectedChapter) {
-        segments.push({ label: selectedChapter.title });
-      }
-
-      return (
-        <nav className="flex items-center gap-1.5 text-sm px-4 py-3 flex-wrap">
-          {segments.map((seg, i) => (
-            <span key={i} className="flex items-center gap-1.5">
-              {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
-              {seg.onClick ? (
-                <button onClick={seg.onClick} className="text-muted-foreground hover:text-primary transition-colors">
-                  {seg.label}
-                </button>
-              ) : (
-                <span className="font-semibold text-foreground">{seg.label}</span>
-              )}
-            </span>
-          ))}
-        </nav>
-      );
-    };
+    // Breadcrumb segments for main course view
+    const mainBreadcrumbSegments = [
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "My Courses", href: "/my-courses" },
+      ...(course ? [{ label: course.title, href: selectedChapterId ? `/my-courses/${courseId}` : undefined }] : []),
+      ...(selectedChapter ? [{ label: selectedChapter.title }] : []),
+    ];
 
     const renderLessonCard = (lesson: Lesson, typeConfig: any, TypeIcon: any, isLocked: boolean) => (
       <div
@@ -399,19 +373,19 @@ const MyCourseDetail = () => {
    }
  
    if (isPlayerOpen && selectedLesson) {
+     const playerBreadcrumbs = [
+       { label: "My Courses", href: "/my-courses" },
+       { label: course.title, href: `/my-courses/${courseId}` },
+       { label: selectedLesson.title },
+     ];
      return (
        <div className="fixed inset-0 z-50 bg-background flex flex-col">
-         <header className="flex items-center justify-between px-4 py-3 border-b bg-background">
-           <div className="flex items-center gap-3">
-             <Button variant="ghost" size="icon" onClick={handleClosePlayer}>
-               <ArrowLeft className="h-5 w-5" />
-             </Button>
-             <div>
-               <h1 className="font-semibold text-foreground line-clamp-1">
-                 {selectedLesson.title}
-               </h1>
-               <p className="text-xs text-muted-foreground">{course.title}</p>
-             </div>
+         <header className="flex items-center gap-2 border-b bg-background shrink-0">
+           <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={handleClosePlayer}>
+             <ArrowLeft className="h-5 w-5" />
+           </Button>
+           <div className="flex-1 min-w-0 overflow-hidden">
+             <Breadcrumbs segments={playerBreadcrumbs} className="border-b-0 py-3 px-1 bg-transparent backdrop-blur-none" />
            </div>
          </header>
  
