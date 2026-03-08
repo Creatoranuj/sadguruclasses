@@ -1,4 +1,4 @@
-import { X, Home, BookOpen, Users, Calendar, FileText, MessageCircle, Settings, LogOut, User, Bell, Library, ShieldCheck, Bot } from "lucide-react";
+import { X, Home, BookOpen, Users, Calendar, FileText, MessageCircle, Settings, LogOut, User, Bell, Library, ShieldCheck, Bot, Download } from "lucide-react";
 import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ const menuItems: MenuItem[] = [
   { icon: GraduationCap, label: "My Courses", path: "/my-courses" },
   { icon: BookOpen, label: "Courses", path: "/courses" },
   { icon: Library, label: "Books", path: "/books" },
+  { icon: Download, label: "Downloads", path: "/downloads" },
   { icon: Bell, label: "Notices", path: "/notices" },
   { icon: Users, label: "Students", path: "/students", adminOrTeacher: true },
   { icon: Calendar, label: "Attendance", path: "/attendance", adminOrTeacher: true },

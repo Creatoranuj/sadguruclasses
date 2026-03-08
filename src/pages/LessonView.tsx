@@ -23,6 +23,7 @@ import { ArchiveBookList, type ArchiveBook } from "@/components/archive";
 import { Textarea } from "@/components/ui/textarea";
 import LessonActionBar from "@/components/video/LessonActionBar";
 import { useLessonLikes } from "@/hooks/useLessonLikes";
+import { useDownloads } from "@/hooks/useDownloads";
 
 // Type definitions
 interface Lesson {
@@ -76,10 +77,14 @@ const LessonView = () => {
   const [lessonOverviewMap, setLessonOverviewMap] = useState<Record<string, string>>({});
   
   // Comments hook
+  // Comments hook
   const { comments, loading: commentsLoading, createComment, fetchComments } = useComments(currentLesson?.id || undefined);
   
   // Likes hook
   const { likeCount, hasLiked, toggleLike, loading: likesLoading } = useLessonLikes(currentLesson?.id || undefined);
+
+  // Downloads hook
+  const { addDownload } = useDownloads();
   
   // Progress tracking state
   const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
@@ -634,6 +639,9 @@ const LessonView = () => {
                             <DriveEmbedViewer
                               url={currentLesson.class_pdf_url}
                               title={currentLesson.title}
+                              onDownloaded={({ title, url, filename }) =>
+                                addDownload(title, url, filename, "PDF")
+                              }
                             />
                           </TabsContent>
                         )}

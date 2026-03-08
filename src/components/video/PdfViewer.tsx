@@ -8,9 +8,10 @@ import sadguruLogo from "@/assets/branding/logo_primary_web.png";
 interface PdfViewerProps {
   url: string;
   title?: string;
+  onDownloaded?: (info: { title: string; url: string; filename: string }) => void;
 }
 
-const PdfViewer = memo(({ url, title }: PdfViewerProps) => {
+const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -39,8 +40,10 @@ const PdfViewer = memo(({ url, title }: PdfViewerProps) => {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadFile(url, title ? `${title}.pdf` : undefined);
+      const filename = title ? `${title}.pdf` : undefined;
+      await downloadFile(url, filename);
       toast.success("Download started");
+      onDownloaded?.({ title: title || "Document", url, filename: filename || "document.pdf" });
     } catch {
       toast.error("Download failed");
     } finally {

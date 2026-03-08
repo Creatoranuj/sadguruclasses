@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { MessageCircle, User } from "lucide-react";
+import { MessageCircle, User, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import homeIcon from "@/assets/icons/home-3d.png";
 import scienceIcon from "@/assets/icons/science-3d.png";
@@ -45,15 +45,15 @@ const BottomNav = () => {
         ))}
 
         <button
-          onClick={() => navigate("/messages")}
+          onClick={() => navigate("/downloads")}
           className="flex flex-col items-center gap-0.5 flex-1 min-h-[44px] justify-center"
         >
-          <MessageCircle
+          <Download
             size={22}
-            className={isActive("/messages") ? "text-accent" : "text-muted-foreground opacity-40"}
+            className={isActive("/downloads") ? "text-accent" : "text-muted-foreground opacity-40"}
           />
-          <span className={`text-[9px] font-medium ${isActive("/messages") ? "text-accent" : "text-muted-foreground"}`}>
-            Messages
+          <span className={`text-[9px] font-medium ${isActive("/downloads") ? "text-accent" : "text-muted-foreground"}`}>
+            Downloads
           </span>
         </button>
 

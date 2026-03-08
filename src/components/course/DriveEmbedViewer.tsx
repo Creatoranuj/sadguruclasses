@@ -8,9 +8,10 @@ import sadguruLogo from "@/assets/branding/logo_primary_web.png";
 interface DriveEmbedViewerProps {
   url: string;
   title?: string;
+  onDownloaded?: (info: { title: string; url: string; filename: string }) => void;
 }
 
-const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
+const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerProps) => {
   const [downloading, setDownloading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // For Archive.org: resolved direct PDF URL (async via metadata API)
@@ -82,9 +83,13 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
       if (isArchive && archiveId) {
         toast.info("Finding PDF file…");
         const directUrl = archiveDirectUrl || await getArchiveDownloadUrl(archiveId);
-        await downloadFile(directUrl, title ? `${title}.pdf` : `${archiveId}.pdf`);
+        const filename = title ? `${title}.pdf` : `${archiveId}.pdf`;
+        await downloadFile(directUrl, filename);
+        onDownloaded?.({ title: title || archiveId, url: directUrl, filename });
       } else {
-        await downloadFile(url, title ? `${title}.pdf` : undefined);
+        const filename = title ? `${title}.pdf` : undefined;
+        await downloadFile(url, filename);
+        onDownloaded?.({ title: title || "Document", url, filename: filename || "document.pdf" });
       }
       toast.success("Download started");
     } catch {

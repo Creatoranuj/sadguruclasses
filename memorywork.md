@@ -2,6 +2,41 @@
 
 ---
 
+## Date: 2026-03-08 (Session 10 – Downloads Section + PDF Tracking)
+
+### Changes Applied
+
+#### 1. IndexedDB Downloads Store (`src/lib/indexedDB.ts`)
+Created client-side IndexedDB wrapper with DB name `sadguru_app` v1:
+- **Store:** `downloads` (auto-increment key `id`)
+- **Fields:** `title`, `filename`, `url`, `downloadedAt` (ISO 8601), `fileType` ("PDF" | "NOTES" | "DPP")
+- **Exports:** `addDownload(item)`, `getDownloads()` (sorted newest-first), `deleteDownload(id)`
+
+#### 2. useDownloads Hook (`src/hooks/useDownloads.ts`)
+React hook wrapping IndexedDB:
+- State: `downloads[]`, `loading`
+- Methods: `addDownload(title, url, filename, fileType)`, `deleteDownload(id)`, `refresh()`
+
+#### 3. Downloads Page (`src/pages/Downloads.tsx`)
+New page at `/downloads`:
+- Search bar, empty state with CTA, card list with file type badge (color-coded), Open button (opens in PdfViewer), Delete with confirmation dialog
+- Inline PDF viewing via PdfViewer component
+
+#### 4. Download Tracking Wired
+- `PdfViewer.tsx` and `DriveEmbedViewer.tsx`: Added optional `onDownloaded` callback prop — called on successful download with `{ title, url, filename }`
+- `LessonView.tsx`: Wired `useDownloads().addDownload` to `DriveEmbedViewer`'s `onDownloaded` — every PDF download in lessons is logged to IndexedDB
+
+#### 5. Navigation Updates
+- `Sidebar.tsx`: Added "Downloads" link (Download icon) between Books and Notices
+- `BottomNav.tsx`: Added "Downloads" tab (replaces Messages tab; Messages still accessible via sidebar)
+- `App.tsx`: Added lazy-loaded `/downloads` route
+
+### No DB migrations needed — IndexedDB is client-side only.
+
+---
+
+
+
 ## Date: 2026-03-08 (Session 9 – Final Masterpiece Audit & Polishing)
 
 ### Audit Summary
