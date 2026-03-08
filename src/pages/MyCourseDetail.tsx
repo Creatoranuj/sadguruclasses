@@ -767,6 +767,17 @@ const MyCourseDetail = () => {
                   ? `${selectedChapter.code} : ${selectedChapter.title}`
                   : course.title}
               </h1>
+              {/* Desktop sidebar collapse toggle */}
+              <button
+                onClick={() => setSidebarCollapsed(prev => !prev)}
+                className="hidden md:flex p-2 rounded-lg border bg-card text-muted-foreground hover:bg-muted transition-colors"
+                title={sidebarCollapsed ? "Show chapters" : "Hide chapters"}
+              >
+                {sidebarCollapsed
+                  ? <PanelLeftOpen className="h-4 w-4" />
+                  : <PanelLeftClose className="h-4 w-4" />
+                }
+              </button>
               {/* Mobile sidebar toggle */}
               <button
                 onClick={() => setCourseSidebarOpen(true)}
