@@ -390,21 +390,14 @@ const MyCourseDetail = () => {
     if (completedLessonIds.has(lesson.id)) return; // already done
 
     const lessonId = lesson.id;
-    const lessonChapterId = lesson.chapterId;
 
-    // Optimistic UI update
-    setCompletedLessonIds(prev => new Set([...prev, lessonId]));
-    setChapters(prev => prev.map(ch => {
-      if (ch.id === "__all__") {
-        if (ch.completedLessons >= ch.lessonCount) return ch;
-        return { ...ch, completedLessons: ch.completedLessons + 1 };
-      }
-      if (ch.id === lessonChapterId) {
-        if (ch.completedLessons >= ch.lessonCount) return ch;
-        return { ...ch, completedLessons: ch.completedLessons + 1 };
-      }
-      return ch;
-    }));
+    // Optimistic UI: add to set, recompute counts from source of truth
+    setCompletedLessonIds(prev => {
+      if (prev.has(lessonId)) return prev;
+      const next = new Set([...prev, lessonId]);
+      setChapters(chs => recomputeChapterCounts(next, lessons, chs));
+      return next;
+    });
 
     try {
       const { error } = await supabase.from("user_progress").upsert({
@@ -419,17 +412,16 @@ const MyCourseDetail = () => {
       progressMarkedRef.current.add(lessonId);
       toast.success("Marked as complete! 🎉");
     } catch (err) {
-      // Rollback optimistic update
-      setCompletedLessonIds(prev => { const s = new Set(prev); s.delete(lessonId); return s; });
-      setChapters(prev => prev.map(ch => {
-        if (ch.id === "__all__" || ch.id === lessonChapterId) {
-          return { ...ch, completedLessons: Math.max(0, ch.completedLessons - 1) };
-        }
-        return ch;
-      }));
+      // Rollback: remove from set, recompute
+      setCompletedLessonIds(prev => {
+        const next = new Set(prev);
+        next.delete(lessonId);
+        setChapters(chs => recomputeChapterCounts(next, lessons, chs));
+        return next;
+      });
       toast.error("Failed to mark complete");
     }
-  }, [user, courseId, completedLessonIds]);
+  }, [user, courseId, completedLessonIds, lessons]);
 
   // ── Single upsert + real-time chapter progress recalculation ──────────────
   const handleVideoProgress = useCallback(async (state: { played: number; playedSeconds: number }) => {
@@ -451,35 +443,13 @@ const MyCourseDetail = () => {
       if (error) throw error;
 
       const lessonId = selectedLesson.id;
-      const lessonChapterId = selectedLesson.chapterId;
 
-      // 1. Add to local completed set
+      // Atomic: add to completed set and recompute chapter counts from source of truth
       setCompletedLessonIds(prev => {
-        if (prev.has(lessonId)) return prev; // already counted — skip
-        return new Set([...prev, lessonId]);
-      });
-
-      // 2. Recalculate counts from the authoritative lessons + new completedSet
-      //    instead of doing +1 blindly (prevents double-counting on hot-reload/re-entry)
-      setChapters(prev => {
-        // Build the new completed set including the just-finished lesson
-        const newCompleted = new Set([...prev.reduce<string[]>((acc, _) => acc, []), lessonId]);
-        return prev.map(ch => {
-          if (ch.id === "__all__") {
-            // For "All" chapter, use total completed from real lesson list
-            // We compute based on known state: previous completedLessons + 1 if not already counted
-            const wasAlreadyDone = ch.completedLessons >= ch.lessonCount;
-            if (wasAlreadyDone) return ch;
-            return { ...ch, completedLessons: ch.completedLessons + 1 };
-          }
-          if (ch.id === lessonChapterId) {
-            const wasAlreadyDone = ch.completedLessons >= ch.lessonCount;
-            if (wasAlreadyDone) return ch;
-            return { ...ch, completedLessons: ch.completedLessons + 1 };
-          }
-          return ch;
-        });
-        void newCompleted; // suppress unused warning
+        if (prev.has(lessonId)) return prev;
+        const next = new Set([...prev, lessonId]);
+        setChapters(chs => recomputeChapterCounts(next, lessons, chs));
+        return next;
       });
 
       setLastWatchedLessonId(lessonId);
@@ -488,7 +458,7 @@ const MyCourseDetail = () => {
       console.error("Error marking lesson complete:", err);
       progressMarkedRef.current.delete(selectedLesson.id);
     }
-  }, [user, selectedLesson, courseId]);
+  }, [user, selectedLesson, courseId, lessons]);
 
   // ── LOADING STATE ──────────────────────────────────────────
   if (loading) {

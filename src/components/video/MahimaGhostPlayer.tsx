@@ -688,6 +688,11 @@ const MahimaGhostPlayer = memo(({
             className="absolute inset-0 z-40"
             onClick={handleOverlayTap}
             onTouchStart={(e) => {
+              // If touch landed on a child button (play/skip), skip gesture logic entirely
+              const target = e.target as HTMLElement;
+              const closestBtn = target.closest('button');
+              if (closestBtn) { handleOverlayTouchStart(e); return; }
+
               const touch = e.touches[0];
               const container = containerRef.current;
               if (!container) { handleOverlayTouchStart(e); return; }
@@ -972,12 +977,13 @@ const MahimaGhostPlayer = memo(({
             {/* Visible thin track — expands on hover for easier clicking */}
             <div className="absolute left-0 right-0 h-1 md:h-1.5 group-hover/progress:h-2 md:group-hover/progress:h-2.5 rounded-full bg-white/30 top-1/2 -translate-y-1/2 transition-all duration-150">
               <div className="absolute inset-y-0 left-0 bg-white/35 rounded-full" style={{ width: `${bufferedPercentage}%` }} />
-              <div className="absolute inset-y-0 left-0 bg-blue-500 rounded-full transition-all" style={{ width: `${progressPercentage}%` }} />
+              {/* transition-none: live data must update instantly, no lag */}
+              <div className="absolute inset-y-0 left-0 bg-blue-500 rounded-full" style={{ width: `${progressPercentage}%`, willChange: 'width' }} />
             </div>
-            {/* Always-visible thumb */}
+            {/* Always-visible thumb — clamped so it never overflows the track edges */}
             <div
               className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 bg-blue-500 rounded-full shadow-lg transition-transform active:scale-125 progress-thumb"
-              style={{ left: `calc(${progressPercentage}% - 7px)`, willChange: 'transform' }}
+              style={{ left: `clamp(0px, calc(${progressPercentage}% - 7px), calc(100% - 14px))`, willChange: 'left' }}
             />
             {hoverTime !== null && (
               <div className="absolute -top-8 bg-black/90 text-white text-xs px-2 py-1 rounded transform -translate-x-1/2" style={{ left: hoverPosition }}>
