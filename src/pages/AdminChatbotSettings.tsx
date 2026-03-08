@@ -166,7 +166,7 @@ const ChatbotSettings = () => {
             <Bot className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Sadguru Sarthi Settings</h1>
+            <h1 className="text-2xl font-bold text-foreground">Sadguru Sarthi 2.0 Settings</h1>
             <p className="text-sm text-muted-foreground">सीखने का सच्चा साथी – Configure your AI learning companion</p>
           </div>
           <Button variant="outline" size="sm" className="ml-auto" onClick={fetchData}>
