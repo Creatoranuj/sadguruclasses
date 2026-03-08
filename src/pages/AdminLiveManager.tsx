@@ -17,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Radio, Plus, Play, Square, Eye, Trash2, Calendar, Clock,
-  MessageSquare, ExternalLink, Loader2,
+  MessageSquare, ExternalLink, Loader2, GraduationCap,
 } from "lucide-react";
 
 interface LiveSession {
@@ -30,6 +30,7 @@ interface LiveSession {
   started_at: string | null;
   ended_at: string | null;
   created_at: string;
+  recording_url?: string | null;
 }
 
 const AdminLiveManager = () => {
@@ -47,6 +48,7 @@ const AdminLiveManager = () => {
     youtube_live_id: "",
     scheduled_at: "",
     course_id: "",
+    recording_url: "",
   });
 
   const [previewSession, setPreviewSession] = useState<LiveSession | null>(null);
@@ -99,7 +101,7 @@ const AdminLiveManager = () => {
       toast.error("Failed to create session: " + error.message);
     } else {
       toast.success("Live session created!");
-      setForm({ title: "", description: "", youtube_live_id: "", scheduled_at: "", course_id: "" });
+      setForm({ title: "", description: "", youtube_live_id: "", scheduled_at: "", course_id: "", recording_url: "" });
       fetchSessions();
     }
     setCreating(false);
@@ -247,6 +249,9 @@ const AdminLiveManager = () => {
                           <Square className="h-3 w-3" /> End Live
                         </Button>
                       )}
+                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Teacher View" onClick={() => window.open(`/teacher/live/${session.id}`, "_blank")}>
+                        <GraduationCap className="h-4 w-4 text-primary" />
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8" title="Preview session" onClick={() => { setPreviewSession(session); setShowPreview(true); }}>
                         <Eye className="h-4 w-4" />
                       </Button>
