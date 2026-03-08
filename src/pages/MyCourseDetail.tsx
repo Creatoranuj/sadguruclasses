@@ -845,6 +845,11 @@ const MyCourseDetail = () => {
                         isLocked={!!lesson.isLocked && !hasPurchased && !isAdminOrTeacher}
                         isCompleted={completedLessonIds.has(lesson.id)}
                         onClick={() => handleContentClick(lesson)}
+                        onMarkComplete={
+                          lesson.lectureType !== "VIDEO" && !completedLessonIds.has(lesson.id)
+                            ? (e) => { e.stopPropagation(); handleManualComplete(lesson); }
+                            : undefined
+                        }
                       />
                     ))}
                   </div>
