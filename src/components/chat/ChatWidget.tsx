@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -102,14 +103,22 @@ const ChatWidget = () => {
     }]);
   };
 
-  const renderContent = (text: string) => {
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, i) =>
-      part.startsWith("**") && part.endsWith("**")
-        ? <strong key={i}>{part.slice(2, -2)}</strong>
-        : part
-    );
-  };
+  const MarkdownMessage = ({ content }: { content: string }) => (
+    <ReactMarkdown
+      components={{
+        h2: ({ children }) => <h2 className="text-sm font-bold mt-2 mb-1">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-sm font-semibold mt-1.5 mb-0.5">{children}</h3>,
+        p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="list-disc pl-4 mb-1 space-y-0.5">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal pl-4 mb-1 space-y-0.5">{children}</ol>,
+        li: ({ children }) => <li className="text-sm">{children}</li>,
+        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+        a: ({ href, children }) => <a href={href} className="underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
 
   return (
     <>
@@ -171,7 +180,7 @@ const ChatWidget = () => {
                       ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-muted text-foreground rounded-bl-sm"
                   )}>
-                    {renderContent(msg.content)}
+                    {msg.role === "assistant" ? <MarkdownMessage content={msg.content} /> : msg.content}
                   </div>
                 </div>
               ))}

@@ -74,9 +74,23 @@ Deno.serve(async (req) => {
       ? `\n\nAVAILABLE COURSES:\n${courses.map(c => `- ${c.title} (Class ${c.grade || 'All'}) - ₹${c.price === 0 ? 'FREE' : c.price}`).join('\n')}`
       : '';
 
-    const systemPrompt = (settings?.system_prompt || 
-      'You are Sadguru Chatbot, a friendly assistant for Sadguru Coaching Classes. Only help with course and platform questions.') 
-      + faqContext + courseContext;
+    const basePrompt = settings?.system_prompt || 
+      'You are Sadguru Chatbot, a friendly and helpful assistant for Sadguru Coaching Classes.';
+
+    const formattingInstructions = `
+
+RESPONSE FORMATTING RULES (ALWAYS follow these):
+- Always use proper Markdown formatting in your responses
+- Use ## for main headings, ### for sub-headings
+- Use numbered lists (1. 2. 3.) for steps or ranked items
+- Use bullet points (- ) for unordered lists
+- Use **bold** for important terms, course names, and key points
+- Keep responses clear, concise, and well-structured
+- If answering in Hindi, still use Markdown formatting
+- Never return a wall of unformatted text
+- For multi-part answers, always use headings to separate sections`;
+
+    const systemPrompt = basePrompt + formattingInstructions + faqContext + courseContext;
 
     // Check for FAQ match first (keyword matching)
     const msgLower = message.toLowerCase();
