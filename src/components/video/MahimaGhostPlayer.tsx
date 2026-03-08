@@ -385,14 +385,21 @@ const MahimaGhostPlayer = memo(({
     return () => window.removeEventListener('message', handleMessage);
   }, [onEnded, onDurationReady, isSeeking, duration]);
 
-  // Poll YouTube for time updates
+  // Poll YouTube for real-time progress updates
   useEffect(() => {
     if (!playerReady) return;
-    progressIntervalRef.current = setInterval(() => {
+    // Subscribe to infoDelivery events (fires every ~250ms while playing)
+    const subscribe = () => {
       if (playerRef.current?.contentWindow) {
-        try { playerRef.current.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*"); } catch {}
+        try {
+          playerRef.current.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*");
+          // Also request current time explicitly so the bar updates even when paused
+          playerRef.current.contentWindow.postMessage(JSON.stringify({ event: "command", func: "getCurrentTime", args: "" }), "*");
+        } catch {}
       }
-    }, 500);
+    };
+    subscribe(); // immediate call on ready
+    progressIntervalRef.current = setInterval(subscribe, 250);
     return () => { if (progressIntervalRef.current) clearInterval(progressIntervalRef.current); };
   }, [playerReady]);
 
