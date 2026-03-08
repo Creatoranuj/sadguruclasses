@@ -1,108 +1,83 @@
 
-## Terminology Rename: "Chapter" → "Subject" and "All Content chapter row" → "Chapter"
+## Root Cause: Missing `lovable.toml`
 
-### User's request (translated):
-- In the breadcrumb and UI, the current structure is: `All Classes > Course > Chapters > 01 (Subject)` 
-- Target structure: `All Classes > Course > Subjects > Chapter`
-- Also: the same breadcrumb logic used in the `All Classes` flow should be applied to the **My Courses** section too (same format)
-- **PURELY DISPLAY CHANGE** — keep all DB table names (`chapters`) as-is, just rename UI labels
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
 ---
 
-### All files to change and exact locations:
+## Plan
 
-#### 1. `src/pages/ChapterView.tsx`
-The tab that currently says **"Chapters"** should say **"Subjects"**:
-- Line 191: `Chapters` → `Subjects`
-- Line 237: `"No chapters available yet."` → `"No subjects available yet."`
-- Line 151 (loading text): `"Loading chapters..."` → `"Loading subjects..."`
-- Breadcrumb segments (line 162–165): currently only `All Classes > course.title`. No changes needed to breadcrumb segments here, it already shows just course name. BUT — the tab label "Chapters" at line 191 becomes "Subjects".
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-#### 2. `src/pages/LectureListing.tsx`
-The breadcrumb at lines 234–244 currently shows:
-- `All Classes > Course Title > [parent chapter if exists] > [chapter code: title]`
-
-After rename, the chapter segments should NOT change in the breadcrumb (the chapter title is dynamic from DB, not hardcoded). However, the breadcrumb linking back to the chapters list at line 237:
-- href `/classes/${courseId}/chapters` is fine
-
-The word "chapters" in comments/logic is internal, no UI text found here except `"Sub-folders"` (line 287) and `"Direct Lectures"` (line 307) which stay as-is.
-
-No display label changes needed in LectureListing. The chapter title in breadcrumb comes from DB data, not hardcoded.
-
-#### 3. `src/pages/MyCourseDetail.tsx`
-
-**Line 691**: `"Back to Chapters"` → `"Back to Subjects"`
-**Lines 707–708**:
-```
-<h2 className="font-semibold text-foreground">Chapters</h2>
-<span className="text-xs text-muted-foreground">{chapters.length} chapters</span>
-```
-→ 
-```
-<h2 className="font-semibold text-foreground">Subjects</h2>
-<span className="text-xs text-muted-foreground">{chapters.length} subjects</span>
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-Also, the breadcrumb in `MyCourseDetail` currently shows:
-`Dashboard > My Courses > Course Title > [Chapter Title]`
-After rename: `Dashboard > My Courses > Course Title > [Subject Title]` — the `selectedChapter?.title` is dynamic from DB so no change needed in the segments themselves, BUT the back-button label "Back to Chapters" at line 691 becomes "Back to Subjects".
-
-#### 4. `src/pages/AdminCMS.tsx`
-
-UI display labels to rename:
-- Line 269–271: Tab trigger text `"Chapters"` → `"Subjects"` (the tab in the CMS tab bar)
-- Line 380: `"Add Chapter"` CardTitle → `"Add Subject"`  
-- Line 403: `"Chapter Code (e.g., CH-01)"` → `"Subject Code (e.g., SB-01)"`
-- Line 411: `"Chapter Title"` → `"Subject Title"`
-- Line 418–419: `Add Chapter` button → `Add Subject`
-- Line 427: `"Existing Chapters"` → `"Existing Subjects"`
-- Line 462: `"No chapters yet"` → `"No subjects yet"`
-- Line 153: `toast.success("Chapter created!")` → `toast.success("Subject created!")`
-
-Note: Line 267 already says `"Subjects"` for the Subjects tab — that stays.
-
-#### 5. `src/components/admin/ContentDrillDown.tsx`
-
-UI display label changes:
-- Line 476: `"{selectedCourse?.title} — Chapters"` → `"{selectedCourse?.title} — Subjects"`
-- Line 483: `"Create Chapter"` button → `"Create Subject"`
-- Line 501: `"New Chapter"` (form header) → `"New Subject"`
-- Line 504: `placeholder="Chapter title (e.g. Kinematics)"` → `"Subject title (e.g. Kinematics)"`
-- Line 515: `"Creating..."` / `"Create"` buttons → stay (generic)
-- Line 543: `"Loading chapters..."` → `"Loading subjects..."`
-- Line 544 (empty state): `"No chapters yet. Create one above."` → `"No subjects yet. Create one above."`
-- Line 600: `chapters.find(...)?.title || "Chapter"` → `"Subject"` fallback
-- Line 746: `placeholder="Chapter"` in the edit lesson dropdown → `"Subject"`
-- Line 410: `chapters.find(...)?.title || "Chapter"` in breadcrumb → `"Subject"`
-
-Keep internal variable names (`chapters`, `setChapters`, `chapter`, etc.) unchanged — only visible UI strings change.
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
 ---
 
-### Summary of what changes vs what stays the same:
+### 2. Visual Polish — CSS & Theme Improvements
 
-```text
-CHANGES (display labels only):
-  ChapterView.tsx       "Chapters" tab         → "Subjects"
-  ChapterView.tsx       "No chapters" text     → "No subjects"
-  MyCourseDetail.tsx    "Back to Chapters"     → "Back to Subjects"
-  MyCourseDetail.tsx    "Chapters" heading     → "Subjects"
-  MyCourseDetail.tsx    "{n} chapters"         → "{n} subjects"
-  AdminCMS.tsx          Chapters tab           → Subjects tab
-  AdminCMS.tsx          Add/Existing Chapter   → Add/Existing Subject
-  ContentDrillDown.tsx  "— Chapters"           → "— Subjects"
-  ContentDrillDown.tsx  "Create Chapter"       → "Create Subject"
-  ContentDrillDown.tsx  "New Chapter" form     → "New Subject"
-  ContentDrillDown.tsx  "Loading chapters..."  → "Loading subjects..."
-  ContentDrillDown.tsx  "No chapters yet..."   → "No subjects yet..."
-  ContentDrillDown.tsx  "Chapter" fallback     → "Subject"
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-STAYS THE SAME:
-  All DB queries (.from("chapters"), .eq("chapter_id", ...))
-  Variable names (chapters, setChapters, chapter, etc.)
-  Route paths (/classes/:id/chapters, /chapter/:id)
-  The actual "chapter.title" values shown in breadcrumbs (dynamic from DB)
-  LectureListing.tsx (no hardcoded "Chapter" display text found)
-```
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-No DB migrations needed. 5 files total.
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

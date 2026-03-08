@@ -150,7 +150,7 @@ const AdminCMS = () => {
       });
 
       if (error) throw error;
-      toast.success("Chapter created!");
+      toast.success("Subject created!");
       setNewChapter({ courseId: newChapter.courseId, code: "", title: "" });
       fetchAllData();
     } catch (err: any) {
@@ -268,7 +268,7 @@ const AdminCMS = () => {
             </TabsTrigger>
             <TabsTrigger value="chapters" className="gap-2">
               <Layers className="h-4 w-4" />
-              Chapters
+              Subjects
             </TabsTrigger>
             <TabsTrigger value="lectures" className="gap-2">
               <Video className="h-4 w-4" />
@@ -376,8 +376,8 @@ const AdminCMS = () => {
               {/* Add Form */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Plus className="h-4 w-4" /> Add Chapter
+                   <CardTitle className="flex items-center gap-2 text-base">
+                    <Plus className="h-4 w-4" /> Add Subject
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -400,7 +400,7 @@ const AdminCMS = () => {
                     </Select>
                   </div>
                   <div>
-                    <Label>Chapter Code (e.g., CH-01)</Label>
+                    <Label>Subject Code (e.g., SB-01)</Label>
                     <Input
                       placeholder="CH-01"
                       value={newChapter.code}
@@ -408,7 +408,7 @@ const AdminCMS = () => {
                     />
                   </div>
                   <div>
-                    <Label>Chapter Title</Label>
+                    <Label>Subject Title</Label>
                     <Input
                       placeholder="e.g., Introduction to Mind"
                       value={newChapter.title}
@@ -416,7 +416,7 @@ const AdminCMS = () => {
                     />
                   </div>
                   <Button onClick={handleAddChapter} className="w-full">
-                    Add Chapter
+                     Add Subject
                   </Button>
                 </CardContent>
               </Card>
@@ -424,7 +424,7 @@ const AdminCMS = () => {
               {/* List */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Existing Chapters</CardTitle>
+                  <CardTitle className="text-base">Existing Subjects</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[400px]">
@@ -459,7 +459,7 @@ const AdminCMS = () => {
                         );
                       })}
                       {chapters.length === 0 && (
-                        <p className="text-muted-foreground text-center py-8">No chapters yet</p>
+                        <p className="text-muted-foreground text-center py-8">No subjects yet</p>
                       )}
                     </div>
                   </ScrollArea>

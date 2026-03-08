@@ -407,7 +407,7 @@ const ContentDrillDown = ({ coursesList, onNavigateToUpload, onRefresh }: Conten
               !selectedSubChapterId ? "font-semibold text-foreground" : "text-muted-foreground"
             )}
           >
-            {chapters.find(c => c.id === selectedChapterId)?.title || "Chapter"}
+            {chapters.find(c => c.id === selectedChapterId)?.title || "Subject"}
           </button>
         </>
       )}
@@ -473,14 +473,14 @@ const ContentDrillDown = ({ coursesList, onNavigateToUpload, onRefresh }: Conten
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle>{selectedCourse?.title} — Chapters</CardTitle>
+            <CardTitle>{selectedCourse?.title} — Subjects</CardTitle>
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 onClick={() => setShowCreateChapter(!showCreateChapter)}
                 className="gap-1"
               >
-                <Plus className="h-4 w-4" /> Create Chapter
+                <Plus className="h-4 w-4" /> Create Subject
               </Button>
               <Button
                 size="sm"
@@ -498,10 +498,10 @@ const ContentDrillDown = ({ coursesList, onNavigateToUpload, onRefresh }: Conten
           {/* Inline Create Chapter Form */}
           {showCreateChapter && (
             <div className="p-4 mb-4 border-2 border-primary/30 rounded-xl bg-primary/5 space-y-3">
-              <p className="text-sm font-semibold text-primary">New Chapter</p>
+              <p className="text-sm font-semibold text-primary">New Subject</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input
-                  placeholder="Chapter title (e.g. Kinematics)"
+                  placeholder="Subject title (e.g. Kinematics)"
                   value={newChapterTitle}
                   onChange={e => setNewChapterTitle(e.target.value)}
                 />
@@ -540,9 +540,9 @@ const ContentDrillDown = ({ coursesList, onNavigateToUpload, onRefresh }: Conten
           </button>
 
           {loading ? (
-            <p className="text-center text-muted-foreground py-8">Loading chapters...</p>
+            <p className="text-center text-muted-foreground py-8">Loading subjects...</p>
           ) : chapters.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No chapters yet. Create one above.</p>
+            <p className="text-center text-muted-foreground py-8">No subjects yet. Create one above.</p>
           ) : (
             <div className="space-y-2">
               {chapters.map((ch, index) => (
@@ -597,7 +597,7 @@ const ContentDrillDown = ({ coursesList, onNavigateToUpload, onRefresh }: Conten
     ? subChapters.find(c => c.id === selectedSubChapterId)?.title
     : selectedChapterId === "__all__"
       ? `${selectedCourse?.title} — All Lessons`
-      : chapters.find(c => c.id === selectedChapterId)?.title || "Chapter";
+      : chapters.find(c => c.id === selectedChapterId)?.title || "Subject";
 
   return (
     <Card>
@@ -743,7 +743,7 @@ const ContentDrillDown = ({ coursesList, onNavigateToUpload, onRefresh }: Conten
               <Input type="number" value={editLessonData.position} onChange={e => setEditLessonData({ ...editLessonData, position: e.target.value })} placeholder="Position" />
               {editChaptersList.length > 0 && (
                 <Select value={editLessonData.chapter_id} onValueChange={v => setEditLessonData({ ...editLessonData, chapter_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Chapter" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Subject" /></SelectTrigger>
                   <SelectContent>
                     {editChaptersList.map(ch => <SelectItem key={ch.id} value={ch.id}>{ch.title}</SelectItem>)}
                   </SelectContent>

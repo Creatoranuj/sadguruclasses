@@ -688,7 +688,7 @@ const MyCourseDetail = () => {
              >
                <ArrowLeft className="h-4 w-4" />
                <span className="text-sm font-medium">
-                 {selectedChapterId ? "Back to Chapters" : "Back to Courses"}
+                 {selectedChapterId ? "Back to Subjects" : "Back to Courses"}
                </span>
              </button>
  
@@ -704,8 +704,8 @@ const MyCourseDetail = () => {
            {!selectedChapterId && chapters.length > 0 ? (
              <div className="p-4 space-y-4">
                <div className="flex items-center justify-between mb-2">
-                 <h2 className="font-semibold text-foreground">Chapters</h2>
-                 <span className="text-xs text-muted-foreground">{chapters.length} chapters</span>
+                  <h2 className="font-semibold text-foreground">Subjects</h2>
+                  <span className="text-xs text-muted-foreground">{chapters.length} subjects</span>
                </div>
                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                  {chapters.map((chapter, idx) => (

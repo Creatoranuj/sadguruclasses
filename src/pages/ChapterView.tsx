@@ -148,7 +148,7 @@ const ChapterView = () => {
   }, [courseId, user?.id]);
 
   if (loading) {
-    return <LoadingSpinner fullPage size="lg" text="Loading chapters..." />;
+    return <LoadingSpinner fullPage size="lg" text="Loading subjects..." />;
   }
 
   if (!course) {
@@ -188,7 +188,7 @@ const ChapterView = () => {
             activeTab === "chapters" ? "text-primary" : "text-muted-foreground"
           )}
         >
-          Chapters
+          Subjects
           {activeTab === "chapters" && (
             <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-full" />
           )}
@@ -234,7 +234,7 @@ const ChapterView = () => {
 
         {activeTab === "chapters" && chapters.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
-            <p>No chapters available yet.</p>
+            <p>No subjects available yet.</p>
           </div>
         )}
       </div>
