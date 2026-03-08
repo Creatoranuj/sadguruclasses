@@ -638,22 +638,8 @@ const MahimaGhostPlayer = memo(({
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
-            {/* Center controls: [↺ CCW] [⏪10s] [▶ PLAY] [⏩10s] [↻ CW] */}
-            <div className="absolute inset-0 flex flex-row items-center justify-center gap-5 md:gap-8">
-              {/* Rotate CCW */}
-              <button
-                className={cn(
-                  "flex items-center justify-center text-white bg-black/40 rounded-full p-2 md:p-3",
-                  "transition-all duration-200 pointer-events-auto active:scale-90",
-                  showControls ? "opacity-100 scale-100" : "opacity-0 scale-90"
-                )}
-                onClick={(e) => { e.stopPropagation(); rotateCCW(); }}
-                title="Rotate counter-clockwise"
-                aria-label="Rotate counter-clockwise"
-              >
-                <RotateCcw className="w-6 h-6 md:w-7 md:h-7" style={{ filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.9))' }} />
-              </button>
-
+            {/* Center controls: [⏪10s] [▶ PLAY] [⏩10s] [⟳ rotate] */}
+            <div className="absolute inset-0 flex flex-row items-center justify-center gap-6 md:gap-10">
               {/* Skip back 10s */}
               <button
                 className={cn(
@@ -700,18 +686,18 @@ const MahimaGhostPlayer = memo(({
                 <img src={skipForward10Icon} alt="Forward 10s" className="w-12 h-12 md:w-14 md:h-14" style={{ filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.9))' }} />
               </button>
 
-              {/* Rotate CW */}
+              {/* Rotate (single custom icon, cycles CW: 0→90→180→270→0) */}
               <button
                 className={cn(
-                  "flex items-center justify-center text-white bg-black/40 rounded-full p-2 md:p-3",
-                  "transition-all duration-200 pointer-events-auto active:scale-90",
+                  "flex items-center justify-center bg-transparent border-none",
+                  "transition-transform duration-200 pointer-events-auto active:scale-90",
                   showControls ? "opacity-100 scale-100" : "opacity-0 scale-90"
                 )}
                 onClick={(e) => { e.stopPropagation(); rotateCW(); }}
-                title="Rotate clockwise"
-                aria-label="Rotate clockwise"
+                title="Rotate screen"
+                aria-label="Rotate screen"
               >
-                <RotateCw className="w-6 h-6 md:w-7 md:h-7" style={{ filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.9))' }} />
+                <img src={rotationIcon} alt="Rotate" className="w-12 h-12 md:w-14 md:h-14" style={{ filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.9))' }} />
               </button>
             </div>
           </div>
