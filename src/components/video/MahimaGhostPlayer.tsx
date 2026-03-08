@@ -586,6 +586,7 @@ const MahimaGhostPlayer = memo(({
           <div
             className="absolute inset-0 z-40"
             onClick={handleOverlayTap}
+            onTouchStart={handleOverlayTouchStart}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
