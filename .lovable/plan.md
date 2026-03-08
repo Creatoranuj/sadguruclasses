@@ -1,77 +1,83 @@
 
-## What to build
+## Root Cause: Missing `lovable.toml`
 
-The screenshot shows the `LessonView.tsx` style lesson view. The user wants `MyCourseDetail.tsx`'s inline lesson section (STATE 3, lines 728–974) to match that format exactly:
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-1. **`LessonActionBar`** — Like + Doubts pill buttons + Class PDF button row below lesson meta
-2. **`CourseContent` component** — Progress bar + lesson playlist at bottom of Overview tab
-3. Fix the "You will learn" box — should show admin-entered overview, not hardcoded text (already fixed but box still renders unconditionally)
+---
 
-### What's missing in MyCourseDetail inline view vs screenshot
+## Plan
 
-| Feature | Screenshot | MyCourseDetail now |
-|---|---|---|
-| Like + Doubts pill buttons | ✅ (LessonActionBar) | ❌ missing |
-| Class PDF button row | ✅ | ❌ missing |
-| Course Content playlist in Overview | ✅ (CourseContent component) | ❌ has "More in chapter" list but not the card with progress bar |
-| "You will learn" box | ✅ with actual text | Shows "Content coming soon" fallback only |
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-### Changes to `MyCourseDetail.tsx`
-
-**1. Add imports** (line 1–22):
-- `useLessonLikes` from `@/hooks/useLessonLikes`
-- `LessonActionBar` from `@/components/video/LessonActionBar`
-- `CourseContent` from `@/components/lecture/CourseContent`
-- `ThumbsUp, HelpCircle` not needed — LessonActionBar handles them
-- `Download` icon
-
-**2. Add `useLessonLikes` hook** inside component (alongside existing state), keyed to `selectedLesson?.id`:
-```ts
-const { likeCount, hasLiked, toggleLike, loading: likesLoading } = useLessonLikes(selectedLesson?.id);
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-**3. After the lesson meta block** (after line 754, before the Tabs), insert `LessonActionBar`:
-```tsx
-<LessonActionBar
-  likeCount={likeCount}
-  hasLiked={hasLiked}
-  onLike={toggleLike}
-  onDoubts={() => { /* click Discussion tab */ }}
-  onDownloadPdf={selectedLesson.classPdfUrl ? () => window.open(selectedLesson.classPdfUrl!, '_blank') : undefined}
-  hasPdf={!!selectedLesson.classPdfUrl}
-  likesLoading={likesLoading}
-  lessonTitle={selectedLesson.title}
-/>
-```
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-**4. In the Overview tab** (lines 766–841), replace the "More in this chapter" list section with `<CourseContent>`:
-```tsx
-{/* Course Content playlist */}
-<CourseContent
-  lessons={filteredLessons.filter(l => l.lectureType === "VIDEO").map(l => ({
-    id: l.id,
-    title: l.title,
-    duration: l.duration ?? 0,
-    isCompleted: completedLessonIds.has(l.id),
-    isCurrent: l.id === selectedLesson.id,
-  }))}
-  completedCount={filteredLessons.filter(l => l.lectureType === "VIDEO" && completedLessonIds.has(l.id)).length}
-  onLessonClick={(lessonId) => {
-    const lesson = lessons.find(l => l.id === lessonId);
-    if (lesson) { setSelectedLesson(lesson); setSearchParams({ lesson: lessonId }); }
-  }}
-/>
-```
+---
 
-**5. Track `completedLessonIds` as state** (currently only tracked in `chapters` state for progress bars). Add a `Set<string>` state that mirrors DB completions:
-```ts
-const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
-```
-- Populate it from `progressData` during the `fetchData` useEffect (already fetched, just needs to be stored in a Set state)
-- Update it in `handleVideoProgress` when lesson is marked complete
+### 2. Visual Polish — CSS & Theme Improvements
 
-### File to change
-- `src/pages/MyCourseDetail.tsx` — add imports, add hook call, add LessonActionBar, swap "More in chapter" list for CourseContent, add completedLessonIds state
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-### No other files need changes
-`LessonActionBar`, `CourseContent`, `useLessonLikes` all already exist and are reusable.
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

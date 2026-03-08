@@ -20,6 +20,9 @@ import { Breadcrumbs } from "@/components/course/Breadcrumbs";
 import { ChapterCard } from "@/components/course/ChapterCard";
 import { LectureCard } from "@/components/course";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LessonActionBar from "@/components/video/LessonActionBar";
+import CourseContent from "@/components/lecture/CourseContent";
+import { useLessonLikes } from "@/hooks/useLessonLikes";
 
 interface Lesson {
   id: string;
@@ -100,6 +103,11 @@ const MyCourseDetail = () => {
   const [comments, setComments] = useState<any[]>([]);
   const [selectedNoteUrl, setSelectedNoteUrl] = useState<{ url: string; title: string } | null>(null);
   const [inlineViewer, setInlineViewer] = useState<{ url: string; title: string } | null>(null);
+  const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
+  const [activeDiscussionTab, setActiveDiscussionTab] = useState("overview");
+
+  // Lesson likes — keyed to the selected lesson
+  const { likeCount, hasLiked, toggleLike, loading: likesLoading } = useLessonLikes(selectedLesson?.id);
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -202,6 +210,7 @@ const MyCourseDetail = () => {
             .eq("course_id", Number(courseId))
             .eq("completed", true);
           completedSet = new Set((progressData || []).map((p: any) => p.lesson_id));
+          setCompletedLessonIds(completedSet);
         }
 
         const lessonCountMap: Record<string, number> = {};
@@ -341,6 +350,8 @@ const MyCourseDetail = () => {
         } as any);
       }
 
+      const lessonId = selectedLesson.id;
+      setCompletedLessonIds(prev => new Set([...prev, lessonId]));
       setChapters(prev => prev.map(ch => {
         if (ch.id === selectedLesson.chapterId) {
           if (ch.completedLessons >= ch.lessonCount) return ch;
@@ -753,8 +764,20 @@ const MyCourseDetail = () => {
                 </div>
               </div>
 
+              {/* Like / Doubts / PDF action bar */}
+              <LessonActionBar
+                likeCount={likeCount}
+                hasLiked={hasLiked}
+                onLike={toggleLike}
+                onDoubts={() => setActiveDiscussionTab("discussion")}
+                onDownloadPdf={selectedLesson.classPdfUrl ? () => window.open(selectedLesson.classPdfUrl!, "_blank") : undefined}
+                hasPdf={!!selectedLesson.classPdfUrl}
+                likesLoading={likesLoading}
+                lessonTitle={selectedLesson.title}
+              />
+
               {/* Tabs: Overview / Resources / Notes / Discussion */}
-              <Tabs defaultValue="overview" className="w-full">
+              <Tabs value={activeDiscussionTab} onValueChange={setActiveDiscussionTab} className="w-full">
                 <TabsList className="w-full grid grid-cols-4 bg-muted/50 rounded-none border-b h-auto py-0">
                   <TabsTrigger value="overview" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Overview</TabsTrigger>
                   <TabsTrigger value="resources" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-sm data-[state=active]:border-b-2 data-[state=active]:border-primary">Resources</TabsTrigger>
@@ -780,63 +803,23 @@ const MyCourseDetail = () => {
                       </div>
                     )}
 
-                    {/* Other lessons in chapter */}
-                    <div className="mt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-semibold text-foreground">More in this chapter</h3>
-                        <span className="text-xs text-muted-foreground">{filteredLessons.length} Lessons</span>
-                      </div>
-                      <div className="space-y-2">
-                        {filteredLessons.filter(l => l.lectureType === "VIDEO").slice(0, 5).map((lesson) => {
-                          const resources = filteredLessons.filter(
-                            r => r.chapterId === lesson.chapterId && r.lectureType !== "VIDEO" && r.videoUrl
-                          );
-                          return (
-                            <div key={lesson.id}>
-                              <button
-                                onClick={() => { setSelectedLesson(lesson); setSearchParams({ lesson: lesson.id }); }}
-                                className={cn(
-                                  "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
-                                  lesson.id === selectedLesson.id ? "bg-primary/10" : "hover:bg-muted"
-                                )}
-                              >
-                                <div className={cn(
-                                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                                  lesson.id === selectedLesson.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                                )}>
-                                  <Play className="h-4 w-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-foreground truncate">{lesson.title}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {lesson.duration ? `${Math.floor(lesson.duration / 60)}m` : "—"}
-                                  </p>
-                                </div>
-                              </button>
-                              {resources.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 pl-11 pb-1">
-                                  {resources.map(res => (
-                                    <button
-                                      key={res.id}
-                                      onClick={() => setInlineViewer({ url: res.videoUrl, title: res.title })}
-                                      className={cn(
-                                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors",
-                                        res.lectureType === "PDF" && "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100",
-                                        res.lectureType === "DPP" && "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
-                                        res.lectureType === "NOTES" && "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100",
-                                      )}
-                                    >
-                                      <FileText className="h-2.5 w-2.5" />
-                                      {res.lectureType}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    {/* Course Content playlist with progress */}
+                    <CourseContent
+                      lessons={filteredLessons
+                        .filter(l => l.lectureType === "VIDEO")
+                        .map(l => ({
+                          id: l.id,
+                          title: l.title,
+                          duration: l.duration ?? 0,
+                          isCompleted: completedLessonIds.has(l.id),
+                          isCurrent: l.id === selectedLesson.id,
+                        }))}
+                      completedCount={filteredLessons.filter(l => l.lectureType === "VIDEO" && completedLessonIds.has(l.id)).length}
+                      onLessonClick={(lessonId) => {
+                        const lesson = lessons.find(l => l.id === lessonId);
+                        if (lesson) { setSelectedLesson(lesson); setSearchParams({ lesson: lessonId }); }
+                      }}
+                    />
                   </div>
                 </TabsContent>
 
