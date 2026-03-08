@@ -11,7 +11,7 @@ interface PdfViewerProps {
   onDownloaded?: (info: { title: string; url: string; filename: string }) => void;
 }
 
-const PdfViewer = memo(({ url, title }: PdfViewerProps) => {
+const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
