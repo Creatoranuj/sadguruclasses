@@ -1,83 +1,109 @@
 
-## Root Cause: Missing `lovable.toml`
+## Understanding the Request
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+The user says: **"course mein sidebar do"** — add a sidebar to the course view showing the course content structure (chapters → lessons), similar to how PhysicsWallah/Unacademy shows a collapsible lesson list on the side. "Do not change lesson view" = keep the lesson player screen untouched.
+
+The main page this applies to is **`MyCourseDetail`** (`/my-courses/:courseId`) — this is the primary course content page students use. Currently it shows either a chapter folder grid OR a lesson grid. The user wants a **left sidebar** (on desktop) / **bottom drawer** (on mobile) showing all chapters and lessons for quick navigation.
 
 ---
 
-## Plan
+## Scope
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+**Only change**: `src/pages/MyCourseDetail.tsx` — add a collapsible course content sidebar to the main course view (the grid/chapter view), NOT the lesson player (which is the `isPlayerOpen && selectedLesson` block — leave that untouched).
 
-```toml
-[run]
-dev = "npm run dev"
+The sidebar will:
+- List all chapters on the left (desktop: fixed sidebar, mobile: slide-in panel)
+- Show lesson count per chapter
+- Allow clicking a chapter to expand/collapse and see its lessons
+- Highlight the currently selected chapter
+- Have a toggle button to open/close on mobile
+
+---
+
+## Layout Change
+
+```text
+BEFORE (MyCourseDetail main view):
+┌─────────────────────────────┐
+│ Header                       │
+│ Breadcrumbs                  │
+│ Back + Course Title          │
+│ ─────────────────────────── │
+│ Chapter grid / Lesson grid   │
+└─────────────────────────────┘
+
+AFTER (MyCourseDetail main view):
+┌─────────────────────────────────────┐
+│ Header                               │
+│ Breadcrumbs                          │
+│ Back + Course Title                  │
+│ ───────────────────────────────────  │
+│ [Sidebar]  │  [Main Content]         │
+│  Chapter 1 │  Tab filters            │
+│  Chapter 2 │  Lesson grid            │
+│  Chapter 3 │                         │
+└─────────────────────────────────────┘
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+**Desktop**: `flex` layout — left sidebar (w-64) + right main content (flex-1)
+**Mobile**: Sidebar hidden by default, toggle button in header → slides in as overlay
 
 ---
 
-### 2. Visual Polish — CSS & Theme Improvements
+## Implementation Plan
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+### What to add to `MyCourseDetail.tsx`:
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+1. **State**: `sidebarCollapsed` (boolean, default `false` on desktop, hidden on mobile)
 
----
+2. **Sidebar component** (inline JSX, no new file needed):
+   - Shows all chapters as a list
+   - Each chapter is clickable → sets `selectedChapterId`
+   - Active chapter gets highlighted (bg-primary/10, left border accent)
+   - Chapter item shows: folder icon, chapter title, lesson count badge
+   - A "All Content" entry at the top (sets selectedChapterId to null)
+   - On mobile: absolute overlay with backdrop + X close button
 
-### 3. Landing Page & Navigation Visual Fixes
+3. **Sidebar toggle button**: 
+   - Added to the Back button row (top of main area)
+   - Shows `PanelLeftOpen`/`PanelLeftClose` icon (Lucide)
+   - Only visible on mobile (hidden md:hidden), sidebar always visible on `md:flex`
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+4. **Layout wrapper**: Change the main content `<div>` to a `flex` layout:
+   ```tsx
+   <div className="flex-1 flex overflow-hidden">
+     {/* Sidebar */}
+     <aside className="hidden md:flex w-64 ...">...</aside>
+     {/* Main content - unchanged */}
+     <main className="flex-1 ...">...</main>
+   </div>
+   ```
 
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
-
+### Files to change:
 | File | Change |
 |------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+| `src/pages/MyCourseDetail.tsx` | Add sidebar state, sidebar JSX, wrap layout in flex |
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+### Lines to touch in MyCourseDetail.tsx:
+- Line 80–81: Add `sidebarOpen` state for mobile toggle
+- Line 650–750 (return JSX, main layout): Wrap in flex, add sidebar aside
+- The `isPlayerOpen` block (lines 379–648) — **NOT touched**
 
----
+### Sidebar content:
+```tsx
+// "All Content" item
+<button onClick={() => setSelectedChapterId(null)} className={...active styles...}>
+  <Grid3X3 /> All Content
+  <span>{lessons.length}</span>
+</button>
 
-## Note on Visual Editor
+// Chapter items
+{chapters.map(ch => (
+  <button key={ch.id} onClick={() => setSelectedChapterId(ch.id)} className={...}>
+    <FolderOpen /> {ch.title}
+    <span>{chapterLessonCounts[ch.id]}</span>
+  </button>
+))}
+```
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+The lesson view (player) is completely untouched — it renders at lines 379–648 as a `fixed inset-0` overlay before the main return, so it's entirely separate.
