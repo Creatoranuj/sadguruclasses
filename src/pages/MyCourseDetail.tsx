@@ -80,6 +80,7 @@ const MyCourseDetail = () => {
     const isAdminOrTeacher = isAdmin || isTeacher;
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [courseSidebarOpen, setCourseSidebarOpen] = useState(false);
     const [course, setCourse] = useState<Course | null>(null);
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [chapters, setChapters] = useState<Chapter[]>([]);
