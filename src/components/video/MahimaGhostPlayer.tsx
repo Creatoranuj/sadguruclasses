@@ -589,7 +589,7 @@ const MahimaGhostPlayer = memo(({
       <div
         ref={containerRef}
         className={cn(
-          "relative rounded-xl overflow-hidden bg-black select-none group",
+          "mahima-ghost-player relative rounded-xl overflow-hidden bg-black select-none group",
           isFullscreen && "mahima-fullscreen"
         )}
         onContextMenu={(e) => e.preventDefault()}

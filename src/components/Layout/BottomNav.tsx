@@ -18,7 +18,10 @@ const BottomNav = () => {
 
   if (isTeacher || isAdmin) return null;
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    if (path === "/dashboard") return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(path + "/");
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-30 md:hidden">
