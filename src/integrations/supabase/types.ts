@@ -1621,6 +1621,50 @@ export type Database = {
         }
         Relationships: []
       }
+      questions_for_students: {
+        Row: {
+          id: string | null
+          image_url: string | null
+          marks: number | null
+          negative_marks: number | null
+          options: Json | null
+          order_index: number | null
+          question_text: string | null
+          question_type: string | null
+          quiz_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          image_url?: string | null
+          marks?: number | null
+          negative_marks?: number | null
+          options?: Json | null
+          order_index?: number | null
+          question_text?: string | null
+          question_type?: string | null
+          quiz_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          image_url?: string | null
+          marks?: number | null
+          negative_marks?: number | null
+          options?: Json | null
+          order_index?: number | null
+          question_text?: string | null
+          question_type?: string | null
+          quiz_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_user_profiles_admin: {
