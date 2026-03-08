@@ -1,4 +1,4 @@
-import { Play, FileText, BookOpen, Lock, Download, Copy, ClipboardCheck } from "lucide-react";
+import { Play, Lock, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import checkmarkIcon from "@/assets/icons/checkmark-3d.png";
@@ -143,23 +143,6 @@ export const LectureCard = ({
               {isVideo ? "Watch Lecture" : isTest ? "Take Test" : isNotes ? "View Note" : "View DPP"}
             </button>
 
-            {/* Action icons for video only */}
-            {isVideo && (
-              <div className="flex items-center gap-1 ml-auto">
-                <button
-                  onClick={(e) => e.stopPropagation()}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={(e) => e.stopPropagation()}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
