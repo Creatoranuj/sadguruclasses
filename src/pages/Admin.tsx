@@ -399,24 +399,14 @@ const Admin = () => {
 
       if (updateError) throw updateError;
 
-      // Step B: Check if already enrolled (to avoid duplicates)
-      const { data: existingEnroll } = await supabase
+      // Step B: Upsert enrollment — safe against duplicates at DB level
+      const { error: enrollError } = await supabase
         .from('enrollments')
-        .select('*')
-        .eq('user_id', paymentRequest.user_id)
-        .eq('course_id', paymentRequest.course_id)
-        .maybeSingle();
-
-      // Step C: Enroll Student if not already enrolled
-      if (!existingEnroll) {
-        const { error: enrollError } = await supabase
-          .from('enrollments')
-          .insert({
-            user_id: paymentRequest.user_id,
-            course_id: paymentRequest.course_id
-          });
-        if (enrollError) throw enrollError;
-      }
+        .upsert(
+          { user_id: paymentRequest.user_id, course_id: paymentRequest.course_id, status: 'active' },
+          { onConflict: 'user_id,course_id', ignoreDuplicates: true }
+        );
+      if (enrollError) throw enrollError;
 
       toast.success("Payment Approved & Course Unlocked!");
       fetchDashboardData();
