@@ -88,15 +88,24 @@ const Dashboard = () => {
         ]);
 
         if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {
-          const enrolled = enrollmentsRes.data.map((e: any) => ({
-            id: e.courses?.id,
-            title: e.courses?.title,
-            description: e.courses?.description,
-            grade: e.courses?.grade,
-            imageUrl: e.courses?.image_url,
-            thumbnailUrl: e.courses?.thumbnail_url,
-            progressPercent: e.progress_percentage || 0,
-          }));
+          // Deduplicate by course id — keep first occurrence only
+          const seenIds = new Set<number>();
+          const enrolled = enrollmentsRes.data
+            .filter((e: any) => {
+              const cid = e.courses?.id;
+              if (!cid || seenIds.has(cid)) return false;
+              seenIds.add(cid);
+              return true;
+            })
+            .map((e: any) => ({
+              id: e.courses?.id,
+              title: e.courses?.title,
+              description: e.courses?.description,
+              grade: e.courses?.grade,
+              imageUrl: e.courses?.image_url,
+              thumbnailUrl: e.courses?.thumbnail_url,
+              progressPercent: e.progress_percentage || 0,
+            }));
           setMyCourses(enrolled);
           setProgressPercent(enrolled[0]?.progressPercent || 0);
         }

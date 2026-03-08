@@ -65,7 +65,8 @@ export function ArchiveBookReader({
   } | null>(null);
 
   // Embed URL for Archive.org BookReader
-  const embedUrl = `https://archive.org/embed/${identifier}`;
+  // Add ui=embed to hide Archive.org's sidebar/navigation chrome
+  const embedUrl = `https://archive.org/embed/${identifier}?ui=embed&remove_related_count=1`;
   const detailsUrl = `https://archive.org/details/${identifier}`;
 
   // Fetch metadata from Archive.org API
