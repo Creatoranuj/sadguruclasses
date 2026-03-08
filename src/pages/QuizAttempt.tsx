@@ -29,6 +29,7 @@ interface Question {
   negative_marks: number;
   order_index: number;
   explanation?: string | null;
+  image_url?: string | null;
 }
 
 interface Quiz {
@@ -259,6 +260,13 @@ const QuizAttempt = () => {
 
           {/* Question text */}
           <div className="bg-card border rounded-xl p-5 mb-6 shadow-sm">
+            {currentQ.image_url && (
+              <img
+                src={currentQ.image_url}
+                alt="Question"
+                className="rounded-lg max-h-64 w-full object-contain mb-4 border"
+              />
+            )}
             <p className="text-foreground text-base font-medium leading-relaxed whitespace-pre-wrap">
               {currentQ.question_text}
             </p>

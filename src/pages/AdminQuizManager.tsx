@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronLeft, Eye, EyeOff, Save, Loader2,
   ClipboardList, FlaskConical, Edit2, ArrowLeft, Check, X, Link2,
-  ChevronDown, ChevronUp, GripVertical, Users,
+  ChevronDown, ChevronUp, GripVertical, Users, ImagePlus, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -58,6 +58,8 @@ interface QuestionForm {
   explanation: string;
   marks: number;
   negative_marks: number;
+  image_url?: string;
+  _imageFile?: File | null;
 }
 
 const defaultQuestion = (): QuestionForm => ({
@@ -68,6 +70,8 @@ const defaultQuestion = (): QuestionForm => ({
   explanation: "",
   marks: 4,
   negative_marks: 1,
+  image_url: "",
+  _imageFile: null,
 });
 
 // ─── Sortable Question Card ─────────────────────────────────────────────────
@@ -264,8 +268,21 @@ const AdminQuizManager = () => {
 
     setSavingQuestions(true);
     try {
+      // Upload any pending image files first
+      const formsWithUrls = await Promise.all(questionForms.map(async (q) => {
+        if (q._imageFile) {
+          const fileExt = q._imageFile.name.split('.').pop();
+          const fileName = `questions/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const { error: uploadErr } = await supabase.storage.from('content').upload(fileName, q._imageFile);
+          if (uploadErr) throw uploadErr;
+          const { data: { publicUrl } } = supabase.storage.from('content').getPublicUrl(fileName);
+          return { ...q, image_url: publicUrl, _imageFile: null };
+        }
+        return q;
+      }));
+
       await supabase.from("questions").delete().eq("quiz_id", editingQuizId);
-      const rows = questionForms.map((q, idx) => ({
+      const rows = formsWithUrls.map((q, idx) => ({
         quiz_id: editingQuizId,
         question_text: q.question_text.trim(),
         question_type: q.question_type,
@@ -274,11 +291,12 @@ const AdminQuizManager = () => {
         explanation: q.explanation || null,
         marks: q.marks,
         negative_marks: q.negative_marks,
+        image_url: q.image_url || null,
         order_index: idx,
       }));
       const { error } = await supabase.from("questions").insert(rows);
       if (error) throw error;
-      const totalMarks = questionForms.reduce((s, q) => s + q.marks, 0);
+      const totalMarks = formsWithUrls.reduce((s, q) => s + q.marks, 0);
       await supabase.from("quizzes").update({ total_marks: totalMarks }).eq("id", editingQuizId);
       toast.success("Questions saved!");
       await fetchQuizzes();
@@ -302,6 +320,8 @@ const AdminQuizManager = () => {
         explanation: q.explanation || "",
         marks: q.marks,
         negative_marks: q.negative_marks,
+        image_url: q.image_url || "",
+        _imageFile: null,
       })));
       // Collapse all by default when loading existing
       setExpandedQuestions({});
@@ -876,6 +896,53 @@ const AdminQuizManager = () => {
                     placeholder="Why is this the correct answer?"
                     className="mt-1 h-11"
                   />
+                </div>
+
+                {/* Image upload for question */}
+                <div>
+                  <Label className="text-xs">Question Image (optional)</Label>
+                  <div className="mt-1 space-y-2">
+                    {(q.image_url || q._imageFile) ? (
+                      <div className="relative rounded-lg overflow-hidden border bg-muted/30">
+                        <img
+                          src={q._imageFile ? URL.createObjectURL(q._imageFile) : q.image_url}
+                          alt="Question"
+                          className="max-h-40 w-full object-contain"
+                        />
+                        <button
+                          onClick={() => {
+                            updateQuestionForm(qIdx, "image_url", "");
+                            updateQuestionForm(qIdx, "_imageFile", null);
+                          }}
+                          className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-2 cursor-pointer border-2 border-dashed border-border rounded-lg p-3 hover:border-primary/50 transition-colors">
+                        <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Upload image for this question</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) updateQuestionForm(qIdx, "_imageFile", file);
+                          }}
+                        />
+                      </label>
+                    )}
+                    {!q._imageFile && !q.image_url && (
+                      <Input
+                        value={q.image_url || ""}
+                        onChange={e => updateQuestionForm(qIdx, "image_url", e.target.value)}
+                        placeholder="Or paste image URL..."
+                        className="h-9 text-xs"
+                      />
+                    )}
+                  </div>
                 </div>
               </SortableQuestion>
             ))}

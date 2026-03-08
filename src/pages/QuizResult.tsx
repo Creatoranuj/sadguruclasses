@@ -24,6 +24,7 @@ interface Question {
   marks: number;
   negative_marks: number;
   order_index: number;
+  image_url?: string | null;
 }
 
 interface Attempt {
@@ -572,6 +573,9 @@ const QuizResult = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-muted-foreground mb-1">Q{idx + 1}</p>
+                      {(q as any).image_url && (
+                        <img src={(q as any).image_url} alt="Question" className="rounded max-h-20 object-contain mb-1 border" />
+                      )}
                       <p className="text-sm font-medium text-foreground line-clamp-2">{q.question_text}</p>
                     </div>
                     <div className="shrink-0 flex items-center gap-2">

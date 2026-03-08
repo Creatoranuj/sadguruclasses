@@ -113,6 +113,7 @@ const Admin = () => {
   const [editMaterialData, setEditMaterialData] = useState({ title: "", description: "", file_url: "" });
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editNoteData, setEditNoteData] = useState({ title: "", pdf_url: "" });
+  const [noteFile, setNoteFile] = useState<File | null>(null);
 
   // Admin access protection with email verification
   useEffect(() => {
@@ -1765,7 +1766,41 @@ const Admin = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
                     <Input value={newNote.title} onChange={(e) => setNewNote({...newNote, title: e.target.value})} placeholder="Note title" />
-                    <Input value={newNote.pdf_url} onChange={(e) => setNewNote({...newNote, pdf_url: e.target.value})} placeholder="PDF URL" />
+                    
+                    {/* Upload Mode Toggle for Notes */}
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant={!noteFile ? "default" : "outline"} onClick={() => setNoteFile(null)}>
+                        <ExternalLink className="h-3 w-3 mr-1" /> Paste Link
+                      </Button>
+                      <Button size="sm" variant={noteFile ? "default" : "outline"} onClick={() => {
+                        document.getElementById('note-file-upload')?.click();
+                      }}>
+                        <Upload className="h-3 w-3 mr-1" /> Upload PDF
+                      </Button>
+                    </div>
+
+                    {!noteFile && (
+                      <Input value={newNote.pdf_url} onChange={(e) => setNewNote({...newNote, pdf_url: e.target.value})} placeholder="PDF URL" />
+                    )}
+
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      id="note-file-upload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setNoteFile(file);
+                      }}
+                    />
+                    {noteFile && (
+                      <div className="flex items-center gap-2 p-2 bg-green-50 rounded border border-green-200 text-sm text-green-700">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium truncate">{noteFile.name}</span>
+                        <Button size="sm" variant="ghost" className="ml-auto h-6 text-red-500" onClick={() => setNoteFile(null)}>✕</Button>
+                      </div>
+                    )}
+
                     <Select value={newNote.lesson_id || "__none__"} onValueChange={(v) => setNewNote({...newNote, lesson_id: v === "__none__" ? "" : v})}>
                       <SelectTrigger><SelectValue placeholder="Link to Lesson (optional)" /></SelectTrigger>
                       <SelectContent>
@@ -1773,7 +1808,29 @@ const Admin = () => {
                         {lessons.slice(0, 50).map(l => <SelectItem key={l.id} value={l.id}>{l.title}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button size="sm" onClick={handleCreateNote}><Plus className="h-3 w-3 mr-1" /> Add Note</Button>
+                    <Button size="sm" className="w-full" onClick={async () => {
+                      if (noteFile) {
+                        if (!newNote.title) { toast.error("Note title is required"); return; }
+                        const fileExt = noteFile.name.split('.').pop();
+                        const fileName = `notes/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                        const { error: uploadError } = await supabase.storage.from('content').upload(fileName, noteFile);
+                        if (uploadError) { toast.error(uploadError.message); return; }
+                        const { data: { publicUrl } } = supabase.storage.from('content').getPublicUrl(fileName);
+                        await supabase.from('notes').insert({
+                          title: newNote.title,
+                          pdf_url: publicUrl,
+                          lesson_id: newNote.lesson_id || null,
+                        });
+                        toast.success("Note uploaded!");
+                        setNoteFile(null);
+                        setNewNote({ title: "", pdf_url: "", lesson_id: "" });
+                        fetchLibraryData();
+                      } else {
+                        handleCreateNote();
+                      }
+                    }}>
+                      <Plus className="h-3 w-3 mr-1" /> {noteFile ? "Upload & Add Note" : "Add Note"}
+                    </Button>
                   </div>
 
                   <ScrollArea className="h-[350px]">

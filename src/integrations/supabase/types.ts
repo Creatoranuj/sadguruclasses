@@ -1053,6 +1053,7 @@ export type Database = {
           created_at: string | null
           explanation: string | null
           id: string
+          image_url: string | null
           marks: number | null
           negative_marks: number | null
           options: Json | null
@@ -1066,6 +1067,7 @@ export type Database = {
           created_at?: string | null
           explanation?: string | null
           id?: string
+          image_url?: string | null
           marks?: number | null
           negative_marks?: number | null
           options?: Json | null
@@ -1079,6 +1081,7 @@ export type Database = {
           created_at?: string | null
           explanation?: string | null
           id?: string
+          image_url?: string | null
           marks?: number | null
           negative_marks?: number | null
           options?: Json | null
