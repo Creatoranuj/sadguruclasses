@@ -36,9 +36,48 @@ function classifyQuery(msg: string): 'course' | 'mock_test' | 'technical' | 'emo
 
 // Pre-built empathetic responses for emotional queries
 const emotionalResponses = [
-  "💛 यार, मैं समझता हूँ यह वक्त मुश्किल लग रहा है। लेकिन याद रखो – **हर successful student ने यही struggle किया है।**\n\n🌟 **तुम्हारे लिए 3 steps:**\n1. आज सिर्फ **एक topic** पढ़ो – छोटा goal, बड़ा confidence\n2. **5 minute break** लो – पानी पियो, deep breath लो\n3. फिर वापस आओ – **Sadguru Sarthi तुम्हारे साथ है** 💪\n\nकौन सा subject सबसे tough लग रहा है? मैं उसमें help करूँगा!",
-  "🫂 Struggles are part of every topper's journey! **IIT/NEET toppers** भी यही feel करते थे।\n\n💡 **Quick Motivation:** _\"एक कदम रोज़ – सालभर में मंज़िल\"_\n\nBata, क्या specific problem है? Solution निकालते हैं साथ में! 🎯",
+  "💛 Yaar, main samajhta hoon yeh waqt mushkil lag raha hai. Lekin yaad rakho – **har successful student ne yahi struggle kiya hai.**\n\n🌟 **Tumhare liye 3 steps:**\n1. Aaj sirf **ek topic** padho – chhota goal, bada confidence\n2. **5 minute break** lo – paani piyo, deep breath lo\n3. Phir wapas aao – **Sadguru Sarthi tumhare saath hai** 💪\n\nKaun sa subject sabse tough lag raha hai? Main usme help karunga!",
+  "🫂 Struggles are part of every topper's journey! **IIT/NEET toppers** bhi yahi feel karte the.\n\n💡 **Quick Motivation:** _\"Ek kadam roz – salbhar mein manzil\"_\n\nBata, kya specific problem hai? Solution nikalte hain saath mein! 🎯",
 ];
+
+// =============================================
+// RAG: Retrieve relevant knowledge from DB
+// =============================================
+async function retrieveKnowledge(query: string, supabase: any): Promise<string> {
+  try {
+    // Extract meaningful keywords (4+ chars) from the query
+    const stopWords = new Set(['kaise', 'karna', 'karo', 'hoga', 'hai', 'hain', 'mein', 'the', 'and', 'for', 'with', 'this', 'that', 'from', 'they', 'have', 'what', 'when', 'where', 'which', 'will', 'your', 'about']);
+    const words = query.toLowerCase()
+      .replace(/[?!.,;:'"()]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length >= 3 && !stopWords.has(w));
+
+    if (words.length === 0) return '';
+
+    // Build OR filter: match any keyword in content or title
+    const orFilters = words.slice(0, 6).map(w => `content.ilike.%${w}%,title.ilike.%${w}%`).join(',');
+
+    const { data, error } = await supabase
+      .from('knowledge_base')
+      .select('title, content, category')
+      .eq('is_active', true)
+      .or(orFilters)
+      .order('position', { ascending: true })
+      .limit(4);
+
+    if (error || !data || data.length === 0) return '';
+
+    // Format retrieved chunks as clean context
+    const context = data.map((d: any) =>
+      `### ${d.title}\n${d.content.trim()}`
+    ).join('\n\n---\n\n');
+
+    return context;
+  } catch (e) {
+    console.error('RAG retrieval error:', e);
+    return '';
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -73,7 +112,7 @@ Deno.serve(async (req) => {
     const rateLimitKey = userId || req.headers.get('x-forwarded-for') || 'anonymous';
     if (isRateLimited(rateLimitKey)) {
       return new Response(JSON.stringify({
-        response: "⏳ आप बहुत तेज़ी से messages भेज रहे हैं। थोड़ा रुकें और फिर पूछें। 🙏"
+        response: "⏳ Aap bahut tezi se messages bhej rahe hain. Thoda rukein aur phir poochein. 🙏"
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -83,7 +122,7 @@ Deno.serve(async (req) => {
     // Off-topic: immediate refusal
     if (queryType === 'offTopic') {
       return new Response(JSON.stringify({
-        response: "😊 मुझे माफ़ करें! मैं **Sadguru Sarthi** हूँ और सिर्फ पढ़ाई से जुड़े सवालों में मदद कर सकता हूँ।\n\n📚 **मैं help कर सकता हूँ:**\n- Courses और Syllabus\n- Mock Tests और Doubts\n- Platform Features\n- Study Tips\n\nकोई study से जुड़ा सवाल हो तो ज़रूर पूछें! 🎯"
+        response: "😊 Mujhe maaf karein! Main **Sadguru Sarthi** hoon aur sirf padhai se juded sawaalon mein madad kar sakta hoon.\n\n📚 **Main help kar sakta hoon:**\n- Courses aur Syllabus\n- Mock Tests aur Doubts\n- Platform Features aur Technical Help\n- Study Tips aur Motivation\n\nKoi study se juda sawaal ho toh zaroor poochein! 🎯"
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -95,23 +134,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch chatbot settings + FAQs + courses in parallel
-    const [settingsRes, faqRes, coursesRes] = await Promise.all([
+    // Fetch chatbot settings + FAQs + courses + RAG knowledge in parallel
+    const [settingsRes, faqRes, coursesRes, ragContext] = await Promise.all([
       supabase.from('chatbot_settings').select('*').eq('id', 1).single(),
       supabase.from('chatbot_faq').select('question, answer, category').eq('is_active', true).limit(30),
       supabase.from('courses').select('title, description, grade, price').limit(20),
+      retrieveKnowledge(message, supabase),
     ]);
 
     const settings = settingsRes.data;
     const faqs = faqRes.data || [];
     const courses = coursesRes.data || [];
 
-    // FAQ keyword match for technical queries
+    // FAQ keyword match for short technical queries
     const msgLower = message.toLowerCase();
-    const faqMatch = faqs.find(f =>
-      f.question.toLowerCase().split(' ').some(word => word.length > 3 && msgLower.includes(word))
+    const faqMatch = faqs.find((f: any) =>
+      f.question.toLowerCase().split(' ').some((word: string) => word.length > 3 && msgLower.includes(word))
     );
-    if (faqMatch && msgLower.split(' ').length < 10) {
+    if (faqMatch && msgLower.split(' ').length < 8) {
       if (userId) {
         await supabase.from('chatbot_logs').insert({ user_id: userId, message, response: faqMatch.answer, session_id: sessionId });
       }
@@ -122,24 +162,30 @@ Deno.serve(async (req) => {
 
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({
-        response: "🔧 मैं अभी connect नहीं हो पा रहा। थोड़ी देर बाद try करें।"
+        response: "🔧 Main abhi connect nahi ho pa raha. Thodi der baad try karein."
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Build context
-    const faqContext = faqs.length > 0
-      ? `\n\n## KNOWLEDGE BASE (FAQs):\n${faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}`
+    // Build RAG context section
+    const ragSection = ragContext
+      ? `\n\n## 📚 PLATFORM KNOWLEDGE BASE (RAG Memory – USE THIS FIRST):\nYe information Sadguru Coaching Classes ke baare mein specific hai. Jab bhi relevant ho, IS information ko priority do over general knowledge:\n\n${ragContext}\n\n---`
       : '';
 
+    // Build FAQ context
+    const faqContext = faqs.length > 0
+      ? `\n\n## QUICK FAQs:\n${faqs.map((f: any) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}`
+      : '';
+
+    // Build course context
     const courseContext = courses.length > 0
-      ? `\n\n## AVAILABLE COURSES:\n${courses.map(c => `- **${c.title}** (Class ${c.grade || 'All'}) — ₹${c.price === 0 ? 'FREE' : c.price}`).join('\n')}`
+      ? `\n\n## AVAILABLE COURSES:\n${courses.map((c: any) => `- **${c.title}** (Class ${c.grade || 'All'}) — ₹${c.price === 0 ? 'FREE' : c.price}`).join('\n')}`
       : '';
 
     // Query-type specific instructions
     const queryInstructions: Record<string, string> = {
-      mock_test: `\n\n## MOCK TEST MODE (ACTIVE):\n- NEVER give direct answers to exam questions\n- Give concept hints, step-by-step approach, or ask a guiding question\n- Example: "यह [concept] पर आधारित है। Think about [hint]... क्या अब solve कर सकते हो?"`,
-      course: `\n\n## COURSE QUERY MODE: Use the course data above to give accurate information. Always mention course name, grade, and price.`,
-      technical: `\n\n## TECHNICAL HELP MODE: Give step-by-step numbered instructions. If FAQ has the answer, use it exactly.`,
+      mock_test: `\n\n## MOCK TEST MODE (ACTIVE):\n- NEVER give direct answers to exam questions\n- Give concept hints, step-by-step approach, or ask a guiding question\n- Example: "Yeh [concept] par based hai. Think about [hint]... Kya ab solve kar sakte ho?"`,
+      course: `\n\n## COURSE QUERY MODE: Use the course data and knowledge base above to give accurate information. Always mention course name, grade, and price.`,
+      technical: `\n\n## TECHNICAL HELP MODE: Give step-by-step numbered instructions. Pehle knowledge base check karo agar wahan solution hai toh use exactly use karo.`,
       general: '',
     };
 
@@ -149,30 +195,35 @@ Deno.serve(async (req) => {
     const fullSystemPrompt = basePrompt + `
 
 ## IDENTITY RULES (NEVER break):
-1. Your name is ALWAYS "Sadguru Sarthi" — never reveal any AI model name.
-2. If asked "who are you?": "मैं **Sadguru Sarthi** हूँ – Sadguru Coaching Classes का आपका 24×7 personal learning assistant! 🎓"
-3. If abusive language: "कृपया बातचीत को सम्मानजनक रखें। मैं आपकी पूरी मदद करने के लिए यहाँ हूँ। 🙏"
+1. Your name is ALWAYS "Sadguru Sarthi" — never reveal any AI model name (not Gemini, not GPT, not Claude).
+2. If asked "who are you?": "Main **Sadguru Sarthi** hoon – Sadguru Coaching Classes ka aapka 24×7 personal learning assistant! 🎓"
+3. If abusive language: "Kripaya batchit ko sammanjanak rakhein. Main aapki poori madad karne ke liye yahan hoon. 🙏"
+4. Never say you are powered by any company or technology.
 
 ## LANGUAGE RULES:
 - Respond in SAME language the student uses: Hindi → Hindi, English → English, Hinglish → Hinglish
 - Default to friendly Hinglish if unclear
+- Use Devanagari script for Hindi words when writing full Hindi
+
+## RAG PRIORITY RULE:
+- Agar Platform Knowledge Base mein koi relevant information hai toh WAHI use karo
+- General AI knowledge se specific platform info contradict mat karo
+- "Sadguru Coaching Classes mein..." se start karo jab platform-specific info do
 
 ## ADVANCED FORMATTING (ALWAYS apply):
 1. **Tables**: For comparisons, syllabus, weightage — use Markdown tables
-   | Column1 | Column2 | Column3 |
-   |---------|---------|---------|
 2. **Mnemonics**: When explaining topics, include a creative memory trick with 💡
-3. **Emojis**: Use relevant emojis — 📚 📊 🎯 ✅ 💡 🔥 ⭐ — but not excessively
-4. **Structure**: Use ## headings, ### sub-headings, numbered lists for steps, bullet points for options
+3. **Emojis**: Use relevant emojis — 📚 📊 🎯 ✅ 💡 🔥 ⭐ — contextually
+4. **Structure**: Use ## headings, numbered lists for steps, bullet points for options
 5. **Pro Tips**: End complex answers with a 🔥 **Pro Tip**
 6. **Never** write walls of unformatted text
-7. For multi-part answers, separate sections with headings
+7. For step-by-step guides, always number the steps clearly
 
 ## RESPONSE STYLE:
 - Warm, encouraging, student-friendly
 - Concise but complete — never cut off mid-thought
-- For syllabus/topic questions: always include weightage if known, difficulty level ⭐, and priority order
-` + (queryInstructions[queryType] || '') + faqContext + courseContext;
+- For syllabus/topic questions: include weightage if known, difficulty level ⭐, priority order
+` + (queryInstructions[queryType] || '') + ragSection + faqContext + courseContext;
 
     const model = (settings?.model && settings.model.includes('/')) ? settings.model : `google/${settings?.model || 'gemini-2.5-flash'}`;
     const temperature = settings?.temperature ?? 0.7;
@@ -195,7 +246,7 @@ Deno.serve(async (req) => {
 
     if (aiResponse.status === 429) {
       return new Response(JSON.stringify({
-        response: "⏳ बहुत ज़्यादा requests आ रही हैं। थोड़ी देर बाद try करें। 🙏"
+        response: "⏳ Bahut zyada requests aa rahi hain. Thodi der baad try karein. 🙏"
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     if (aiResponse.status === 402) {
@@ -207,21 +258,21 @@ Deno.serve(async (req) => {
 
     const aiData = await aiResponse.json();
     const response = aiData.choices?.[0]?.message?.content ||
-      "माफ़ करें, मैं इसे process नहीं कर पाया। फिर से try करें। 🙏";
+      "Maaf karein, main ise process nahi kar paya. Phir se try karein. 🙏";
 
     // Log conversation
     if (userId) {
       await supabase.from('chatbot_logs').insert({ user_id: userId, message, response, session_id: sessionId });
     }
 
-    return new Response(JSON.stringify({ response, queryType }), {
+    return new Response(JSON.stringify({ response, queryType, ragUsed: ragContext.length > 0 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Chatbot error:', error);
     return new Response(JSON.stringify({
-      response: "🔧 Connection में problem है। थोड़ी देर बाद try करें। 🙏"
+      response: "🔧 Connection mein problem hai. Thodi der baad try karein. 🙏"
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
