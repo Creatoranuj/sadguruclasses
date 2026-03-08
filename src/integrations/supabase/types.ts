@@ -155,6 +155,96 @@ export type Database = {
           },
         ]
       }
+      chatbot_faq: {
+        Row: {
+          answer: string
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          question: string
+          updated_at: string | null
+        }
+        Insert: {
+          answer: string
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          question: string
+          updated_at?: string | null
+        }
+        Update: {
+          answer?: string
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          question?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      chatbot_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          response: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          response: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          response?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chatbot_settings: {
+        Row: {
+          enable_mock_help: boolean | null
+          id: number
+          max_tokens: number | null
+          model: string | null
+          provider: string | null
+          system_prompt: string | null
+          temperature: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          enable_mock_help?: boolean | null
+          id?: number
+          max_tokens?: number | null
+          model?: string | null
+          provider?: string | null
+          system_prompt?: string | null
+          temperature?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          enable_mock_help?: boolean | null
+          id?: number
+          max_tokens?: number | null
+          model?: string | null
+          provider?: string | null
+          system_prompt?: string | null
+          temperature?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           created_at: string | null

@@ -56,6 +56,8 @@ const AdminQuizManager = lazy(() => import("./pages/AdminQuizManager"));
 const LiveClass = lazy(() => import("./pages/LiveClass"));
 const AdminLiveManager = lazy(() => import("./pages/AdminLiveManager"));
 const TeacherLiveView = lazy(() => import("./pages/TeacherLiveView"));
+const AdminChatbotSettings = lazy(() => import("./pages/AdminChatbotSettings"));
+import ChatWidget from "./components/chat/ChatWidget";
 
 // Optimized QueryClient with better caching
 const queryClient = new QueryClient({
