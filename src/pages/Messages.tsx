@@ -295,7 +295,7 @@ const Messages = () => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <Header onMenuClick={() => setSidebarOpen(true)} />
 
-      <div className="flex-1 flex overflow-hidden" style={{ height: "calc(100dvh - 64px)" }}>
+      <div className="flex-1 flex overflow-hidden" style={{ height: "calc(100dvh - 64px - 56px)" }} /* 56px = BottomNav h-14 on mobile */>
         {/* Contact List */}
         <div className={cn(
           "w-full sm:w-80 border-r border-border flex flex-col bg-card",
