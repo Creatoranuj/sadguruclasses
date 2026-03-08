@@ -27,6 +27,7 @@ interface Quiz {
   course_id: number | null;
   lesson_id: string | null;
   created_at: string;
+  lessons?: { title: string } | null;
 }
 
 interface QuestionForm {
