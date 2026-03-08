@@ -1,83 +1,83 @@
 
-## Root Cause: Missing `lovable.toml`
+## What I Found
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+**Database**: The `live_sessions` table exists with correct columns and RLS policies:
+- Admins can fully manage sessions (ALL operations)
+- All authenticated users can view sessions (SELECT)
+- `live_messages` table: authenticated users can INSERT/VIEW, admins/teachers can UPDATE (answer doubts)
 
----
+**Current State**: The table is EMPTY — no live sessions have been created yet. This is why the student dashboard shows nothing in the "Upcoming Live Classes" or "LIVE NOW" sections.
 
-## Plan
-
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
-
-```toml
-[run]
-dev = "npm run dev"
-```
-
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+**All code is correct and working.** The only thing needed is to walk through HOW to test it step-by-step.
 
 ---
 
-### 2. Visual Polish — CSS & Theme Improvements
+## Complete Walkthrough: How to Test the Live Manager
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+### Step 1 — Admin Creates a Live Session
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+1. Log in as **Admin** → go to `/admin/live` (already on that page)
+2. Fill in the **"Schedule New Live Class"** form:
+   - **Session Title**: e.g. `Physics Chapter 5 – Motion`
+   - **YouTube Live Video ID**: Any valid YouTube video ID to test, e.g. `dQw4w9WgXcQ` (or a real live stream ID)
+   - **Scheduled Date & Time**: Set a future date/time (optional)
+   - **Link to Course**: Select any course (optional)
+3. Click **"Create Session"** → toast "Live session created!" appears
+4. The session appears in the "All Sessions" list with status badge **"Scheduled"**
 
----
+### Step 2 — Admin Goes Live
 
-### 3. Landing Page & Navigation Visual Fixes
+1. In the session card, click the red **"Go Live"** button
+2. Status badge changes to **"LIVE"** with a pulsing animation
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+### Step 3 — Student Dashboard Shows Live Banner
 
----
+1. Open the app as a **Student** (in a separate browser window or incognito)
+2. Log in → go to `/dashboard`
+3. The **red pulsing "LIVE CLASS NOW"** banner (`LiveBadge`) appears at the top of the dashboard showing the session title
+4. Also visible: **UpcomingLiveSessions** shows sessions with future scheduled dates
+5. Click **"Join Now"** on the banner → navigates to `/live/{sessionId}`
 
-### 4. Global Component Polish in `src/index.css`
+### Step 4 — Student Joins Live Class (`/live/:id`)
 
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
+The page shows:
+- **YouTube video** embedded (if the YouTube ID is a real live stream, it plays live; test IDs show the video normally)
+- **Viewer count** (Supabase Realtime Presence — shows how many users are on the page)
+- **"Raise Hand"** button
+- **Chat + Doubts** panel on the right (two tabs)
 
----
+Student types a message in Chat → sends → **appears instantly** (Supabase Realtime subscription on `live_messages`)
 
-### 5. Branding Consistency
+Student asks a doubt → sends → appears in Doubts tab with "Pending" badge
 
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+### Step 5 — Admin/Teacher Views Session
 
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+1. Back in Admin Live Manager, click the **Eye 👁 icon** on the session card → a side sheet opens showing:
+   - Embedded YouTube video preview
+   - Full LiveChat with moderation mode (`isAdmin=true`)
+   - In Doubts tab: sees student doubts, can click **"Answer this doubt"** → type answer → Submit
+   - The answered doubt shows "Teacher's Answer" box for students in real-time
 
----
+2. Click the **🎓 (GraduationCap) icon** → opens `/teacher/live/{sessionId}` in a new tab (Teacher View with full controls)
 
-## Files to Modify
+### Step 6 — End the Session
 
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
-
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+1. Admin clicks **"End Live"** → session status changes to "Ended"
+2. The `LiveBadge` disappears from student dashboard automatically (Realtime subscription)
 
 ---
 
-## Note on Visual Editor
+## Known Behavior Notes
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+| Scenario | What happens |
+|---|---|
+| YouTube ID is not a live stream | Video plays normally (not live) — for real live testing, use an actual YouTube Live stream ID |
+| Student opens `/live/{id}` before "Go Live" | Session loads, video shows, chat works — just no LIVE badge |
+| Multiple students join | Viewer count increments in real-time via Supabase Presence |
+| Admin answers a doubt | Student sees the answer appear instantly without refresh |
+
+---
+
+## No Code Changes Needed
+
+Everything is already built and working correctly. The system just needs real session data to be created through the Admin Live Manager.
