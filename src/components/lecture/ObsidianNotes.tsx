@@ -32,6 +32,29 @@ interface ObsidianNotesProps {
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+// ── Hoisted outside component — stable reference, no recreation on re-render ─
+const SaveStatusIndicator = ({ status }: { status: SaveStatus }) => {
+  if (status === 'idle') return null;
+  if (status === 'saving') return (
+    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+      <Loader2 className="w-3 h-3 animate-spin" />
+      Saving...
+    </span>
+  );
+  if (status === 'saved') return (
+    <span className="flex items-center gap-1 text-xs text-primary">
+      <CheckCircle className="w-3 h-3" />
+      Saved ✓
+    </span>
+  );
+  return (
+    <span className="flex items-center gap-1 text-xs text-destructive">
+      <AlertCircle className="w-3 h-3" />
+      Save failed
+    </span>
+  );
+};
+
 const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
   lessonId,
   userId,
