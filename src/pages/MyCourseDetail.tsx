@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Play, FileText, BookOpen, Grid3X3,
   Lock, Clock, CheckCircle, MessageCircle, Send,
-  PanelLeftOpen, PanelLeftClose, X, ChevronLeft, Search
+  PanelLeftOpen, PanelLeftClose, X, ChevronLeft, Search,
+  LayoutList, LayoutGrid, CheckCircle2, Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
