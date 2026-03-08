@@ -1,29 +1,83 @@
 
-## Plan: Replace Lucide Rotation Buttons with Custom Rotation Image Icon
+## Root Cause: Missing `lovable.toml`
 
-### What the user wants
-Remove the two separate `RotateCcw` / `RotateCw` Lucide icons (currently placed at the far left and far right of the center controls row) and replace them with a **single custom rotation image** (the uploaded `Rotation_icon.png`) — similar to how `skipBack10Icon` and `skipForward10Icon` use image files instead of Lucide icons.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-The single rotation icon will cycle through 0° → 90° → 180° → 270° → 0° on each tap (CW direction), keeping the back-button intercept logic intact.
+---
 
-### Files to change
+## Plan
 
-**1. Copy image asset**
-- Copy `user-uploads://Rotation_icon.png` → `src/assets/icons/rotation-icon-custom.png`
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-**2. `src/components/video/MahimaGhostPlayer.tsx`**
-
-- **Remove** `RotateCcw, RotateCw` from the Lucide import (line 4)
-- **Add** import for the new image: `import rotationCustomIcon from "@/assets/icons/rotation-icon-custom.png"`
-- **Remove** the separate CCW button (lines 643–655) and CW button (lines 703–715) from the center controls row
-- **Add** a single rotation button using the custom image, placed **after** the skip-forward button (i.e., at the far right of the center row), same styling as the skip icons — transparent background, no rounded-full bubble, just the image with drop-shadow
-- Keep `rotateCW` / `rotateCCW` functions — just wire the single button to call `rotateCW()` (cycles CW through 0/90/180/270)
-- Keep the back-button intercept `useEffect` fully intact
-
-### Result layout (center controls)
-
-```
-[⏪10s]   [▶ PLAY]   [⏩10s]   [⟳ rotate]
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-The rotate icon is the uploaded phone-rotation graphic — same visual weight as the skip icons, transparent background, no pill/bubble shape.
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+
+---
+
+### 2. Visual Polish — CSS & Theme Improvements
+
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
