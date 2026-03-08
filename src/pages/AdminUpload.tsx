@@ -107,6 +107,7 @@ const AdminUpload = () => {
   const [pdfInputMode, setPdfInputMode] = useState<"file" | "url">("file");
   const [pdfUrl, setPdfUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [overviewText, setOverviewText] = useState("");
   const [classPdfFile, setClassPdfFile] = useState<File | null>(null);
   const [classPdfUrl, setClassPdfUrl] = useState("");
 
