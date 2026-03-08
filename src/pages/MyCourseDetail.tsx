@@ -79,6 +79,21 @@ const tabs: { id: ContentType; label: string }[] = [
   { id: "notes", label: "Notes" },
 ];
 
+// ── Derives exact chapter completion counts from the source-of-truth sets ──────
+// Prevents double-counting on re-entry, hot-reload, or concurrent updates.
+const recomputeChapterCounts = (
+  completedSet: Set<string>,
+  allLessons: { id: string; chapterId: string | null }[],
+  prevChapters: Chapter[]
+): Chapter[] =>
+  prevChapters.map(ch => {
+    if (ch.id === "__all__") {
+      return { ...ch, completedLessons: allLessons.filter(l => completedSet.has(l.id)).length };
+    }
+    const chLessons = allLessons.filter(l => l.chapterId === ch.id);
+    return { ...ch, completedLessons: chLessons.filter(l => completedSet.has(l.id)).length };
+  });
+
 const MyCourseDetail = () => {
   const navigate = useNavigate();
   const { courseId } = useParams();
