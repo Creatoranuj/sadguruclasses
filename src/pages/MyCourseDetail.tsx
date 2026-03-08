@@ -459,29 +459,61 @@ const MyCourseDetail = () => {
                         <div className="h-full bg-primary rounded-full" style={{ width: `${100 / lessons.length}%` }} />
                       </div>
                       <div className="space-y-2">
-                        {lessons.filter(l => l.lectureType === "VIDEO").slice(0, 5).map((lesson) => (
-                          <button
-                            key={lesson.id}
-                            onClick={() => { setSelectedLesson(lesson); setSearchParams({ lesson: lesson.id }); }}
-                            className={cn(
-                              "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
-                              lesson.id === selectedLesson.id ? "bg-primary/10" : "hover:bg-muted"
-                            )}
-                          >
-                            <div className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
-                              lesson.id === selectedLesson.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                            )}>
-                              <Play className="h-4 w-4" />
+                        {lessons.filter(l => l.lectureType === "VIDEO").slice(0, 5).map((lesson) => {
+                          // Resource chips: PDF/DPP/NOTES in same chapter
+                          const resources = lessons.filter(
+                            r => r.chapterId === lesson.chapterId && r.lectureType !== "VIDEO" && r.videoUrl
+                          );
+                          return (
+                            <div key={lesson.id}>
+                              <button
+                                onClick={() => { setSelectedLesson(lesson); setSearchParams({ lesson: lesson.id }); }}
+                                className={cn(
+                                  "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
+                                  lesson.id === selectedLesson.id ? "bg-primary/10" : "hover:bg-muted"
+                                )}
+                              >
+                                <div className={cn(
+                                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                                  lesson.id === selectedLesson.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                )}>
+                                  <Play className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-foreground truncate">{lesson.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {lesson.duration ? `${Math.floor(lesson.duration / 60)}m` : "—"}
+                                  </p>
+                                </div>
+                              </button>
+                              {resources.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 pl-11 pb-1">
+                                  {resources.map(res => (
+                                    <button
+                                      key={res.id}
+                                      onClick={() => {
+                                        if (res.lectureType === "NOTES") {
+                                          setSelectedNoteUrl({ url: res.videoUrl, title: res.title });
+                                        } else {
+                                          window.open(res.videoUrl, "_blank");
+                                        }
+                                      }}
+                                      className={cn(
+                                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors",
+                                        res.lectureType === "PDF" && "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100",
+                                        res.lectureType === "DPP" && "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
+                                        res.lectureType === "NOTES" && "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100",
+                                      )}
+                                    >
+                                      <FileText className="h-2.5 w-2.5" />
+                                      {res.lectureType}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-foreground truncate">{lesson.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {lesson.duration ? `${Math.floor(lesson.duration / 60)}m` : "—"}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -595,11 +627,11 @@ const MyCourseDetail = () => {
        <Header onMenuClick={() => setSidebarOpen(true)} userName={profile?.fullName || "User"} />
  
        <main className="flex-1 overflow-y-auto">
-         <div className="max-w-7xl mx-auto w-full">
- 
-            {renderBreadcrumbs()}
- 
-           <div className="px-4 py-4 border-b">
+        <div className="max-w-7xl mx-auto w-full">
+
+          <Breadcrumbs segments={mainBreadcrumbSegments} />
+
+          <div className="px-4 py-4 border-b">
              <button 
                onClick={() => selectedChapterId ? setSelectedChapterId(null) : navigate("/my-courses")} 
                className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
