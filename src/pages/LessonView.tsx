@@ -31,6 +31,7 @@ interface Lesson {
   video_url: string;
   is_locked: boolean | null;
   description: string | null;
+  overview: string | null;
   course_id: number | null;
   created_at: string | null;
   class_pdf_url: string | null;
