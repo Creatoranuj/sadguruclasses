@@ -53,6 +53,8 @@ const Install = lazy(() => import("./pages/Install"));
 const QuizAttempt = lazy(() => import("./pages/QuizAttempt"));
 const QuizResult = lazy(() => import("./pages/QuizResult"));
 const AdminQuizManager = lazy(() => import("./pages/AdminQuizManager"));
+const LiveClass = lazy(() => import("./pages/LiveClass"));
+const AdminLiveManager = lazy(() => import("./pages/AdminLiveManager"));
 
 // Optimized QueryClient with better caching
 const queryClient = new QueryClient({
@@ -128,7 +130,8 @@ const App = () => (
                   <Route path="/admin/upload" element={<AdminUpload />} />
                   <Route path="/admin/cms" element={<AdminCMS />} />
                   <Route path="/admin/schedule" element={<AdminSchedule />} />
-                  <Route path="/admin/quiz" element={<AdminQuizManager />} />
+                   <Route path="/admin/quiz" element={<AdminQuizManager />} />
+                   <Route path="/admin/live" element={<AdminLiveManager />} />
                   
                   {/* Protected Routes */}
                   <Route path="/dashboard" element={<Dashboard />} />
@@ -152,7 +155,8 @@ const App = () => (
                   <Route path="/quiz/:quizId/result/:attemptId" element={<QuizResult />} />
 
                   {/* Feature Pages */}
-                  <Route path="/all-tests" element={<AllTests />} />
+                   <Route path="/all-tests" element={<AllTests />} />
+                   <Route path="/live/:sessionId" element={<LiveClass />} />
                   <Route path="/attendance" element={<Attendance />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/students" element={<Students />} />
