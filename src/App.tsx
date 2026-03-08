@@ -158,6 +158,7 @@ const App = () => (
                   {/* Feature Pages */}
                    <Route path="/all-tests" element={<AllTests />} />
                    <Route path="/live/:sessionId" element={<LiveClass />} />
+                   <Route path="/teacher/live/:sessionId" element={<TeacherLiveView />} />
                   <Route path="/attendance" element={<Attendance />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/students" element={<Students />} />
