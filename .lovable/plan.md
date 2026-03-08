@@ -1,60 +1,83 @@
 
-## Problem: Two separate issues causing duplicate thumbnails
+## Root Cause: Missing `lovable.toml`
 
-### Issue 1 — Visual: BatchSelector shows 2 images in trigger
-**Root cause**: Radix `<SelectValue>` mirrors the full content of the selected `<SelectItem>` (including its `<img>`) into the trigger. The trigger ALSO has an explicit `<img src={selectedBatch.image_url}>` rendered before `<SelectValue>`. So two images appear: one hardcoded, one reflected from the SelectItem.
-
-**Fix**: Remove the explicit `<img>` from inside `<SelectTrigger>` and instead pass a `placeholder` to `<SelectValue>`, or use the `displayValue` pattern. The cleanest fix: keep the explicit img but hide SelectValue's mirrored image by using `SelectValue` with a fixed text-only display via the `children` prop override.
-
-Simplest approach: Replace the SelectItem's image+text layout with text-only for what gets mirrored into SelectValue, and show the image only in the dropdown list. Use `SelectValue`'s `children` prop to render a plain text label, so Radix doesn't mirror the img.
-
-```tsx
-// In SelectTrigger: keep the explicit img + show a plain text span
-<SelectValue>
-  {selectedBatch?.title} {selectedBatch?.grade && `(Class ${selectedBatch.grade})`}
-</SelectValue>
-```
-This overrides Radix's mirror behavior so only one image shows.
-
-### Issue 2 — Data: Duplicate enrollment rows in DB
-The `enrollments` table has no `UNIQUE(user_id, course_id)` constraint. The prompt's SQL is correct:
-1. Clean existing duplicates (keep earliest per user+course)
-2. Add `UNIQUE(user_id, course_id)` constraint
-
-The Dashboard query already deduplicates in JS (lines 92–99), and BatchContext already deduplicates (lines 49–63), so the frontend is safe. But the DB constraint prevents future duplicates at the source.
-
-The `upsert` in `useEnrollments.ts` already uses `onConflict: 'user_id,course_id'` — this will work correctly once the constraint exists.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
 ---
 
-## Files to change
+## Plan
 
-### 1. `src/components/dashboard/BatchSelector.tsx`
-- Remove the explicit `<img>` from inside `<SelectTrigger>` OR keep it but override `<SelectValue>` with a custom render that shows only text — preventing Radix from mirroring the SelectItem img into the trigger
-- Specifically: wrap `SelectValue` so it renders `{selectedBatch?.title}` as text, not the full SelectItem JSX
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-### 2. DB Migration (SQL)
-```sql
--- Step 1: Remove duplicate enrollments, keep earliest per user+course
-DELETE FROM enrollments
-WHERE id NOT IN (
-  SELECT DISTINCT ON (user_id, course_id) id
-  FROM enrollments
-  ORDER BY user_id, course_id, purchased_at ASC NULLS LAST
-);
-
--- Step 2: Add unique constraint
-ALTER TABLE enrollments 
-ADD CONSTRAINT unique_user_course UNIQUE (user_id, course_id);
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-No changes needed to `Dashboard.tsx` or `BatchContext.tsx` — they already deduplicate in JS correctly.
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
 ---
 
-## Summary
+### 2. Visual Polish — CSS & Theme Improvements
 
-| Change | File | Impact |
-|---|---|---|
-| Fix double-image in BatchSelector trigger | `BatchSelector.tsx` | Visual fix for duplicate thumbnails |
-| Remove duplicate DB rows + add UNIQUE constraint | Migration | Prevents future duplicates at DB level |
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
