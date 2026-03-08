@@ -149,15 +149,6 @@ const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerPro
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-muted-foreground hover:text-foreground"
-            onClick={() => window.open(openUrl, "_blank", "noopener,noreferrer")}
-            title="Open in new tab"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </Button>
         </div>
       </div>
 
