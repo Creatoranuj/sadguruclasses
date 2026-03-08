@@ -1,4 +1,4 @@
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
@@ -19,7 +19,7 @@ export const LoadingSpinner = ({ size = "md", className, text, fullPage = false 
     <div className={cn("flex flex-col items-center justify-center gap-3", className)}>
       <div className="relative">
         <img
-          src={refreshLogo}
+          src={sadguruLogo}
           alt="Loading..."
           className={cn(sizeMap[size], "mahima-loader-logo")}
           draggable={false}

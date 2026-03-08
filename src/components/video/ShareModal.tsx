@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Copy, Check, MessageCircle } from "lucide-react";
-import mahimaLogo from "@/assets/mahima-academy-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 interface ShareModalProps {
   open: boolean;
@@ -52,7 +52,7 @@ const ShareModal = ({ open, onOpenChange, title = "Share this lesson" }: ShareMo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <img src={mahimaLogo} alt="Sadguru Coaching Classes" className="h-8 w-8 rounded" />
+            <img src={sadguruLogo} alt="Sadguru Coaching Classes" className="h-8 w-8 rounded" />
             {title}
           </DialogTitle>
         </DialogHeader>

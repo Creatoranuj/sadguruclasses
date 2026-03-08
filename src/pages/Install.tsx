@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Smartphone, Monitor, Apple, Download, Share2, MoreVertical, Plus, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 type Platform = "android" | "ios" | "desktop";
 
@@ -30,7 +30,7 @@ const Install = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <img src={refreshLogo} alt="Sadguru Coaching Classes" className="h-8 w-8 rounded-lg" />
+          <img src={sadguruLogo} alt="Sadguru Coaching Classes" className="h-8 w-8 rounded-lg" />
           <h1 className="text-lg font-bold text-foreground">Install App</h1>
         </div>
       </div>

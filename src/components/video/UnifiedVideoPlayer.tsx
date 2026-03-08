@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MahimaGhostPlayer } from "@/components/video";
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 const DriveEmbedViewer = lazy(() => import("@/components/course/DriveEmbedViewer"));
 
@@ -136,14 +136,14 @@ const BrandingOverlay = () => (
     style={{ background: "transparent" }}
   >
     <div className="flex items-center gap-2" style={{ pointerEvents: 'auto', cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
-      <img src={refreshLogo} alt="" className="h-8 w-8 rounded" draggable={false} />
+      <img src={sadguruLogo} alt="" className="h-8 w-8 rounded" draggable={false} />
     </div>
     <div
       className="flex items-center gap-1.5 px-3 py-1 rounded-md"
       style={{ background: 'rgba(128,128,128,0.65)', backdropFilter: 'blur(4px)', pointerEvents: 'auto', cursor: 'default' }}
       onClick={(e) => e.stopPropagation()}
     >
-      <img src={refreshLogo} alt="" className="h-5 w-5 rounded-sm" draggable={false} />
+      <img src={sadguruLogo} alt="" className="h-5 w-5 rounded-sm" draggable={false} />
       <span className="text-white text-xs font-semibold tracking-wide">Sadguru Coaching Classes</span>
     </div>
   </div>

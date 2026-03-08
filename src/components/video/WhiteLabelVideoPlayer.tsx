@@ -3,7 +3,7 @@ import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ShareModal from "./ShareModal";
 import EndScreenOverlay from "./EndScreenOverlay";
-import mahimaLogo from "@/assets/mahima-academy-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 interface WhiteLabelVideoPlayerProps {
   videoUrl?: string;
@@ -241,7 +241,7 @@ const WhiteLabelVideoPlayer = ({
            }}
          >
            <img 
-             src={mahimaLogo} 
+             src={sadguruLogo} 
              alt="" 
              className="h-8 w-8 rounded"
              draggable={false}

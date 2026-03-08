@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
 } from "@/components/ui/sheet";
-import logo from "@/assets/mahima-logo.png"; // TODO: Replace with new Sadguru logo when available
+import logo from "@/assets/branding/logo_icon_web.png";
 
 const defaultHeroData: HeroData = {
   title: "Welcome to Sadguru Coaching Classes",
