@@ -116,6 +116,9 @@ const MyCourseDetail = () => {
   const [activeTab, setActiveTab] = useState<ContentType>("all");
   const [hasPurchased, setHasPurchased] = useState(false);
   const [chapterTab, setChapterTab] = useState<"chapters" | "material">("chapters");
+  const [viewMode, setViewMode] = useState<"card" | "list">(() => {
+    try { return (localStorage.getItem("sadguru_lesson_view") as "card" | "list") || "card"; } catch { return "card"; }
+  });
 
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [newComment, setNewComment] = useState("");
@@ -125,6 +128,11 @@ const MyCourseDetail = () => {
   const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
   const [activeDiscussionTab, setActiveDiscussionTab] = useState("overview");
   const [lastWatchedLessonId, setLastWatchedLessonId] = useState<string | null>(null);
+
+  const handleViewModeChange = useCallback((mode: "card" | "list") => {
+    setViewMode(mode);
+    try { localStorage.setItem("sadguru_lesson_view", mode); } catch {}
+  }, []);
 
   // Lesson likes — keyed to the selected lesson
   const { likeCount, hasLiked, toggleLike, loading: likesLoading } = useLessonLikes(selectedLesson?.id);
