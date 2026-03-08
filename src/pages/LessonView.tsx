@@ -669,23 +669,13 @@ const LessonView = () => {
                             </div>
                         </TabsContent>
                         
-                        {/* Notes Tab - Simple Textarea */}
-                        <TabsContent value="notes" className="bg-card p-6 rounded-xl border shadow-sm">
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5 text-primary" />
-                                    <h3 className="font-semibold text-lg text-foreground">Your Notes</h3>
-                                </div>
-                                <Textarea
-                                    placeholder="Start typing your notes here... They are auto-saved!"
-                                    value={noteContent}
-                                    onChange={(e) => setNoteContent(e.target.value)}
-                                    className="min-h-[300px] font-mono text-sm resize-none"
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    ✓ Notes are auto-saved locally and will persist when you reload the page.
-                                </p>
-                            </div>
+                        {/* Notes Tab - ObsidianNotes */}
+                        <TabsContent value="notes" className="bg-card rounded-xl border shadow-sm">
+                            <ObsidianNotes
+                                lessonId={currentLesson.id}
+                                userId={user?.id}
+                                lessonTitle={currentLesson.title}
+                            />
                         </TabsContent>
 
                         {/* Discussion Tab - Functional */}
