@@ -926,8 +926,8 @@ const AdminUpload = () => {
                             {lessons.map(lesson => (
                               <SortableItem key={lesson.id} id={lesson.id}>
                                 {(handle) => (
-                                  <div className="p-3 hover:bg-muted/20 transition-colors">
-                                    <div className="flex items-center gap-2">
+                                  <div className="transition-colors">
+                                    <div className={cn("p-3 hover:bg-muted/20 flex items-center gap-2", editingLesson?.id === lesson.id && "bg-primary/5")}>
                                       {handle}
                                       <div className="flex items-center gap-2.5 flex-1 min-w-0">
                                         <div className={cn("p-1.5 rounded-md shrink-0", typeColor(lesson.lecture_type))}>
@@ -945,9 +945,21 @@ const AdminUpload = () => {
                                                 PDF
                                               </Badge>
                                             )}
+                                            {lesson.overview && (
+                                              <Badge variant="outline" className="text-[10px] gap-0.5 border-primary/30 text-primary">
+                                                Overview ✓
+                                              </Badge>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
+                                      <Button
+                                        variant="ghost" size="icon"
+                                        onClick={() => editingLesson?.id === lesson.id ? setEditingLesson(null) : handleOpenEdit(lesson)}
+                                        className={cn("h-9 w-9 shrink-0", editingLesson?.id === lesson.id ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-primary/10")}
+                                      >
+                                        {editingLesson?.id === lesson.id ? <X className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                                      </Button>
                                       <Button
                                         variant="ghost" size="icon"
                                         onClick={() => handleDeleteLesson(lesson.id)}
@@ -956,6 +968,53 @@ const AdminUpload = () => {
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </Button>
                                     </div>
+
+                                    {/* Inline Edit Panel */}
+                                    {editingLesson?.id === lesson.id && (
+                                      <div className="mx-3 mb-3 p-4 rounded-lg border border-primary/30 bg-card space-y-3">
+                                        <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-1.5">
+                                          <Pencil className="h-3 w-3" /> Edit Lesson
+                                        </p>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs">Title *</Label>
+                                          <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="h-10 text-sm" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs">Video URL / File URL</Label>
+                                          <Input value={editVideoUrl} onChange={e => setEditVideoUrl(e.target.value)} className="h-10 text-sm" placeholder="https://..." />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs">Description</Label>
+                                          <textarea
+                                            value={editDescription}
+                                            onChange={e => setEditDescription(e.target.value)}
+                                            rows={2}
+                                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs flex items-center gap-1"><BookOpen className="h-3 w-3 text-primary" /> Overview (Overview tab)</Label>
+                                          <textarea
+                                            value={editOverview}
+                                            onChange={e => setEditOverview(e.target.value)}
+                                            rows={3}
+                                            placeholder="What will students learn in this lesson?"
+                                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3 text-orange-500" /> Class PDF URL (Resources tab)</Label>
+                                          <Input value={editClassPdfUrl} onChange={e => setEditClassPdfUrl(e.target.value)} className="h-10 text-sm" placeholder="https://... or leave blank" />
+                                        </div>
+                                        <div className="flex gap-2 pt-1">
+                                          <Button size="sm" onClick={handleSaveEdit} disabled={isSavingEdit} className="gap-1.5 h-9">
+                                            {isSavingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                            Save
+                                          </Button>
+                                          <Button size="sm" variant="ghost" onClick={() => setEditingLesson(null)} className="h-9">Cancel</Button>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </SortableItem>
