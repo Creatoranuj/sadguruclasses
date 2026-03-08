@@ -25,6 +25,7 @@ import scienceIcon from "@/assets/icons/science-3d.png";
 import bellIcon from "@/assets/icons/bell-3d.png";
 import homeIcon from "@/assets/icons/home-3d.png";
 import studentIcon from "@/assets/icons/student-3d.png";
+import UpcomingLiveSessions from "@/components/live/UpcomingLiveSessions";
 
 const studentQuickActions = [
   { iconSrc: cubeIcon, label: "All Classes", path: "/all-classes", bg: "bg-blue-50 dark:bg-blue-950/30" },
