@@ -120,19 +120,24 @@ const LiveClass = () => {
             <LivePlayer youtubeId={session.youtube_live_id} title={session.title} />
 
             <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                {session.is_active ? (
-                  <Badge className="bg-destructive text-destructive-foreground gap-1.5 animate-pulse">
-                    <span className="h-2 w-2 rounded-full bg-white" />
-                    LIVE
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Ended</Badge>
-                )}
-                <div className="flex items-center gap-1 text-muted-foreground text-xs">
-                  <Eye className="h-3.5 w-3.5" />
-                  <span>{viewerCount} watching</span>
+              <div className="flex items-center gap-2 flex-wrap justify-between">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {session.is_active ? (
+                    <Badge className="bg-destructive text-destructive-foreground gap-1.5 animate-pulse">
+                      <span className="h-2 w-2 rounded-full bg-white" />
+                      LIVE
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Ended</Badge>
+                  )}
+                  <div className="flex items-center gap-1 text-muted-foreground text-xs">
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>{viewerCount} watching</span>
+                  </div>
                 </div>
+                {session.is_active && (
+                  <RaiseHandButton sessionId={session.id} />
+                )}
               </div>
               <h1 className="text-lg font-bold text-foreground">{session.title}</h1>
               {session.description && (
