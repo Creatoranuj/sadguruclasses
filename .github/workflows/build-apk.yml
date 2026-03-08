@@ -93,6 +93,11 @@ jobs:
       - name: 🔧 Make Gradlew executable
         run: chmod +x android/gradlew
 
+      # ── 11. Install Android SDK 35 ────────────────────────────────────
+      - name: 📲 Install Android SDK 35
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" || true
+
       # ── 11. Build debug APK ───────────────────────────────────────────
       - name: 🤖 Build Debug APK
         run: cd android && ./gradlew assembleDebug --no-daemon
