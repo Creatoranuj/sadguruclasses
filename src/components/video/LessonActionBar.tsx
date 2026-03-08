@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { ThumbsUp, HelpCircle, Download, FileText } from "lucide-react";
+import { ThumbsUp, HelpCircle, FileText, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ interface LessonActionBarProps {
   hasLiked: boolean;
   onLike: () => void;
   onDoubts: () => void;
+  onComments?: () => void;
   onDownloadPdf?: () => void;
   hasPdf: boolean;
   likesLoading?: boolean;
@@ -21,6 +22,7 @@ const LessonActionBar = memo(({
   hasLiked,
   onLike,
   onDoubts,
+  onComments,
   onDownloadPdf,
   hasPdf,
   likesLoading,
@@ -43,56 +45,51 @@ const LessonActionBar = memo(({
       )}
 
       {/* Action buttons row */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-2 px-4 py-3">
         {/* Like Button */}
         <Button
           variant="outline"
           className={cn(
-            "flex-1 gap-2 h-11 text-sm font-semibold rounded-xl transition-all",
+            "flex-1 gap-1.5 h-10 text-xs font-semibold rounded-xl transition-all",
             hasLiked && "bg-primary/10 border-primary text-primary"
           )}
           onClick={onLike}
           disabled={likesLoading}
         >
-          <ThumbsUp className={cn("h-5 w-5", hasLiked && "fill-primary")} />
+          <ThumbsUp className={cn("h-4 w-4", hasLiked && "fill-primary")} />
           {likeCount > 0 ? `${likeCount} Likes` : "Like"}
         </Button>
+
+        {/* Comments Button */}
+        {onComments && (
+          <Button
+            variant="outline"
+            className="flex-1 gap-1.5 h-10 text-xs font-semibold rounded-xl"
+            onClick={onComments}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Comments
+          </Button>
+        )}
 
         {/* Doubts Button */}
         <Button
           variant="outline"
-          className="flex-1 gap-2 h-11 text-sm font-semibold rounded-xl"
+          className="flex-1 gap-1.5 h-10 text-xs font-semibold rounded-xl"
           onClick={onDoubts}
         >
-          <HelpCircle className="h-5 w-5" />
+          <HelpCircle className="h-4 w-4" />
           Doubts
         </Button>
 
-        {/* Download Button */}
+        {/* Class PDF Button — only one, opens PDF tab */}
         {hasPdf && onDownloadPdf && (
           <Button
             variant="outline"
-            className="flex-1 gap-2 h-11 text-sm font-semibold rounded-xl"
+            className="flex-1 gap-1.5 h-10 text-xs font-semibold rounded-xl"
             onClick={onDownloadPdf}
           >
-            <Download className="h-5 w-5" />
-            Download
-          </Button>
-        )}
-
-        {/* Class PDF Button */}
-        {hasPdf && onDownloadPdf && (
-          <Button
-            variant="outline"
-            className="flex-1 gap-2 h-11 text-sm font-semibold rounded-xl"
-            onClick={() => {
-              if (onDownloadPdf) {
-                // Open in new tab instead of download
-                onDownloadPdf();
-              }
-            }}
-          >
-            <FileText className="h-5 w-5" />
+            <FileText className="h-4 w-4" />
             Class PDF
           </Button>
         )}

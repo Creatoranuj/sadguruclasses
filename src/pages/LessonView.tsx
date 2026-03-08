@@ -10,7 +10,8 @@ import { formatDuration } from "@/components/video/MahimaVideoPlayer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, Play, Lock, Clock,
-  Loader2, FileText, MessageCircle, Star, CheckCircle, Send, Library, ImageIcon, X
+  Loader2, FileText, MessageCircle, CheckCircle, Send, Library, ImageIcon, X,
+  BookOpen, HelpCircle, ChevronRight, ChevronDown, ChevronUp, Edit2, Save
 } from "lucide-react";
 import DriveEmbedViewer from "@/components/course/DriveEmbedViewer";
 import { extractArchiveId } from "@/utils/fileUtils";
@@ -30,6 +31,7 @@ interface Lesson {
   video_url: string;
   is_locked: boolean | null;
   description: string | null;
+  overview: string | null;
   course_id: number | null;
   created_at: string | null;
   class_pdf_url: string | null;
@@ -246,7 +248,7 @@ const LessonView = () => {
         // Fetch Lessons — strip video_url/class_pdf_url from DB query (fetched via Edge Function)
         const { data: lessonData, error: lessonError } = await supabase
           .from('lessons')
-          .select('id, title, is_locked, description, course_id, created_at, like_count')
+          .select('id, title, is_locked, description, overview, course_id, created_at, like_count')
           .eq('course_id', Number(courseId))
           .order('created_at', { ascending: true });
         if (lessonError) throw lessonError;
@@ -256,6 +258,7 @@ const LessonView = () => {
           ...l,
           video_url: '',
           class_pdf_url: null,
+          overview: l.overview || null,
         }));
         
         setLessons(mappedLessons);
@@ -491,12 +494,15 @@ const LessonView = () => {
                     likeCount={likeCount}
                     hasLiked={hasLiked}
                     onLike={toggleLike}
+                    onComments={() => {
+                      const t = document.querySelector('[value="doubts"]') as HTMLElement;
+                      if (t) { t.click(); setTimeout(() => t.scrollIntoView({ behavior: 'smooth' }), 100); }
+                    }}
                     onDoubts={() => {
-                      const tabsTrigger = document.querySelector('[value="doubts"]') as HTMLElement;
-                      if (tabsTrigger) tabsTrigger.click();
+                      const t = document.querySelector('[value="doubts"]') as HTMLElement;
+                      if (t) { t.click(); setTimeout(() => t.scrollIntoView({ behavior: 'smooth' }), 100); }
                     }}
                     onDownloadPdf={currentLesson.class_pdf_url ? () => {
-                      // Switch to the inline PDF tab instead of opening a new tab
                       const pdfTab = document.querySelector('[value="pdf"]') as HTMLElement;
                       if (pdfTab) { pdfTab.click(); window.scrollTo({ top: 500, behavior: 'smooth' }); }
                       else window.open(currentLesson.class_pdf_url!, '_blank');
@@ -508,23 +514,74 @@ const LessonView = () => {
                   />
                 )}
 
-                {/* INFO & TABS (PW Style) */}
+                {/* INFO & TABS */}
                 <div className="px-4 lg:px-0 pb-10">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
-                                {currentLesson?.title || "Course Introduction"}
-                            </h1>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {videoDuration > 0 ? formatDuration(videoDuration) : '—'}</span>
-                                <span className="flex items-center gap-1"><Star className="h-4 w-4 text-primary fill-primary" /> 4.8 Rating</span>
-                            </div>
+                    {/* Lesson Title + Meta */}
+                    <div className="py-4 border-b border-border">
+                        <h1 className="text-lg md:text-xl font-bold text-foreground mb-1">
+                            {currentLesson?.title || "Course Introduction"}
+                        </h1>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                            {course?.grade && (
+                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                                Class {course.grade}
+                              </span>
+                            )}
+                            {videoDuration > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(videoDuration)}
+                              </span>
+                            )}
+                            {currentLesson?.created_at && (
+                              <span>{new Date(currentLesson.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                            )}
                         </div>
-                        {/* Share button removed to prevent video link leaking */}
+                        {/* Description with Read More */}
+                        {currentLesson?.description && (
+                          <LessonDescription description={currentLesson.description} />
+                        )}
+                    </div>
+
+                    {/* Smart Notes + Ask Doubt Quick Cards */}
+                    <div className="grid grid-cols-2 gap-3 py-4 border-b border-border">
+                      <button
+                        onClick={() => {
+                          const t = document.querySelector('[value="notes"]') as HTMLElement;
+                          if (t) { t.click(); setTimeout(() => t.scrollIntoView({ behavior: 'smooth' }), 100); }
+                        }}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-accent/10 transition-all text-left group"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <BookOpen className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground">Smart Notes</p>
+                          <p className="text-[10px] text-muted-foreground">Your personal notes</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const t = document.querySelector('[value="doubts"]') as HTMLElement;
+                          if (t) { t.click(); setTimeout(() => t.scrollIntoView({ behavior: 'smooth' }), 100); }
+                        }}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-accent/10 transition-all text-left group"
+                      >
+                        <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                          <HelpCircle className="h-4 w-4 text-amber-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground">Ask Doubt</p>
+                          <p className="text-[10px] text-muted-foreground">Get instant answers</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-amber-500 transition-colors flex-shrink-0" />
+                      </button>
                     </div>
 
                     {/* TABS COMPONENT */}
-                    <Tabs defaultValue={currentLesson?.class_pdf_url ? "pdf" : "overview"} className="w-full">
+                    <Tabs defaultValue={currentLesson?.class_pdf_url ? "pdf" : "overview"} className="w-full mt-4">
                         <TabsList className={`grid w-full mb-6 ${currentLesson?.class_pdf_url ? "grid-cols-5" : "grid-cols-4"} lg:w-auto lg:inline-flex`}>
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             {currentLesson?.class_pdf_url && (
@@ -541,15 +598,25 @@ const LessonView = () => {
                             <TabsTrigger value="doubts">Discussion</TabsTrigger>
                         </TabsList>
                         
-                        <TabsContent value="overview" className="bg-white p-6 rounded-xl border shadow-sm">
-                            <h3 className="font-semibold text-lg mb-3">About this lesson</h3>
-                            <p className="text-gray-600 leading-relaxed">
-                                {currentLesson?.description || "In this lesson, we will cover the fundamental concepts needed to master this topic. Make sure to watch the full video and take notes."}
-                            </p>
-                            <div className="mt-6 flex items-center gap-3 p-4 bg-blue-50 text-blue-800 rounded-lg border border-blue-100">
-                                <CheckCircle className="h-5 w-5" />
-                                <div className="text-sm font-medium">You will learn: Basic definitions, Real-world examples, and Problem solving.</div>
+                        <TabsContent value="overview" className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-6">
+                            {/* About section */}
+                            <div>
+                              <h3 className="font-semibold text-base text-foreground mb-2">About this lesson</h3>
+                              <p className="text-muted-foreground leading-relaxed text-sm">
+                                  {currentLesson?.description || "In this lesson, we will cover the fundamental concepts needed to master this topic. Make sure to watch the full video and take notes."}
+                              </p>
+                              <div className="mt-4 flex items-center gap-3 p-4 bg-primary/5 text-primary rounded-lg border border-primary/20">
+                                  <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                                  <div className="text-sm font-medium">You will learn: Basic definitions, Real-world examples, and Problem solving.</div>
+                              </div>
                             </div>
+
+                            {/* Topics Covered timeline */}
+                            <TopicsCovered
+                              lessonId={currentLesson?.id || ''}
+                              overview={(currentLesson as any)?.overview || null}
+                              isAdmin={isAdminOrTeacher}
+                            />
                         </TabsContent>
 
                         {/* PDF Tab — inline Archive.org / Drive / direct PDF embed */}
@@ -784,6 +851,128 @@ const LessonView = () => {
         </aside>
 
       </div>
+    </div>
+  );
+};
+
+// ─── Helper: Read More description ───────────────────────────────────────────
+const LessonDescription = ({ description }: { description: string }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = description.length > 120;
+  return (
+    <div className="mt-2">
+      <p className={cn("text-sm text-muted-foreground leading-relaxed", !expanded && isLong && "line-clamp-2")}>
+        {description}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="text-xs font-semibold text-primary mt-1 hover:underline"
+        >
+          {expanded ? "Show Less" : "Read More"}
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ─── Helper: Topics Covered timeline ─────────────────────────────────────────
+interface TopicsCoveredProps {
+  lessonId: string;
+  overview: string | null;
+  isAdmin: boolean;
+}
+
+const TopicsCovered = ({ lessonId, overview, isAdmin }: TopicsCoveredProps) => {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(overview || "");
+  const [saving, setSaving] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Parse "timestamp|topic" lines from overview
+  const topics = (overview || "")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line.includes("|"))
+    .map(line => {
+      const [ts, ...rest] = line.split("|");
+      return { ts: ts.trim(), topic: rest.join("|").trim() };
+    });
+
+  const handleSave = async () => {
+    if (!lessonId) return;
+    setSaving(true);
+    try {
+      await supabase.from("lessons").update({ overview: editText }).eq("id", lessonId);
+      toast.success("Topics saved!");
+      setEditing(false);
+      // Optimistically update
+      window.location.reload();
+    } catch {
+      toast.error("Failed to save topics");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      {/* Header */}
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors"
+      >
+        <span className="font-semibold text-sm text-foreground">Topics Covered</span>
+        <div className="flex items-center gap-2">
+          {isAdmin && !editing && (
+            <span
+              onClick={(e) => { e.stopPropagation(); setEditing(true); setCollapsed(false); }}
+              className="p-1 rounded-md hover:bg-border transition-colors"
+            >
+              <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+            </span>
+          )}
+          {collapsed ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronUp className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </button>
+
+      {!collapsed && (
+        <div className="px-4 py-3">
+          {editing ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Enter one topic per line as: <code className="bg-muted px-1 rounded">timestamp|topic</code></p>
+              <textarea
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                className="w-full h-40 text-xs font-mono border border-border rounded-lg p-2 bg-background text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder={"0:00:18|Beginning the chapter\n0:02:06|Introduction\n0:07:48|System of Classification"}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+                <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : topics.length > 0 ? (
+            <div className="space-y-0">
+              {topics.map((t, i) => (
+                <div key={i} className="flex items-start gap-3 py-2 border-b border-border/50 last:border-0">
+                  <span className="text-[11px] font-mono font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5">
+                    {t.ts}
+                  </span>
+                  <span className="text-sm text-foreground leading-snug">{t.topic}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-2">
+              {isAdmin ? 'Click ✏️ to add topics covered with timestamps.' : 'Topics will be added soon.'}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
