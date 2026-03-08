@@ -31,8 +31,8 @@ interface LiveChatProps {
 }
 
 const LiveChat = ({ sessionId, isAdmin = false, canModerate = false, activeTab }: LiveChatProps) => {
-  const showModerate = isAdmin || canModerate;
   const { user, profile } = useAuth();
+  const showModerate = isAdmin || canModerate;
   const [messages, setMessages] = useState<LiveMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [doubtInput, setDoubtInput] = useState("");
@@ -116,6 +116,119 @@ const LiveChat = ({ sessionId, isAdmin = false, canModerate = false, activeTab }
   const formatTime = (iso: string) =>
     new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
+  const renderChatContent = () => (
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 px-3 py-2">
+        <div className="space-y-2">
+          {chatMessages.length === 0 && (
+            <p className="text-center text-muted-foreground text-xs py-6">No messages yet. Say hello! 👋</p>
+          )}
+          {chatMessages.map((msg) => {
+            const isOwn = msg.user_id === user?.id;
+            return (
+              <div key={msg.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
+                {!isOwn && <span className="text-[10px] text-muted-foreground mb-0.5 ml-1">{msg.user_name}</span>}
+                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"}`}>
+                  {msg.message}
+                </div>
+                <span className="text-[10px] text-muted-foreground mt-0.5 mx-1">{formatTime(msg.created_at)}</span>
+              </div>
+            );
+          })}
+          <div ref={chatBottomRef} />
+        </div>
+      </ScrollArea>
+      <div className="flex gap-2 p-3 border-t border-border shrink-0">
+        <Input
+          placeholder="Type a message..."
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage("chat")}
+          className="text-sm h-9"
+        />
+        <Button size="icon" className="h-9 w-9 shrink-0" onClick={() => sendMessage("chat")} disabled={sending || !chatInput.trim()}>
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderDoubtsContent = () => (
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 px-3 py-2">
+        <div className="space-y-3">
+          {doubtMessages.length === 0 && (
+            <p className="text-center text-muted-foreground text-xs py-6">No doubts asked yet. Ask your first doubt! 🤔</p>
+          )}
+          {doubtMessages.map((doubt) => (
+            <div key={doubt.id} className="bg-muted rounded-xl p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-xs font-semibold text-foreground">{doubt.user_name}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatTime(doubt.created_at)}</span>
+                    {doubt.is_answered ? (
+                      <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] gap-0.5 h-4 px-1.5">
+                        <CheckCircle2 className="h-3 w-3" /> Answered
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">Pending</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-foreground">{doubt.message}</p>
+                </div>
+              </div>
+
+              {doubt.is_answered && doubt.answer && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
+                  <p className="text-[10px] font-semibold text-primary mb-0.5">Teacher's Answer:</p>
+                  <p className="text-xs text-foreground">{doubt.answer}</p>
+                </div>
+              )}
+
+              {showModerate && !doubt.is_answered && (
+                answeringId === doubt.id ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      placeholder="Type your answer..."
+                      value={answerText}
+                      onChange={(e) => setAnswerText(e.target.value)}
+                      className="text-xs min-h-[60px]"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" className="text-xs h-7 flex-1" onClick={() => handleAnswerDoubt(doubt.id)}>Submit Answer</Button>
+                      <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setAnsweringId(null); setAnswerText(""); }}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setAnsweringId(doubt.id)}>
+                    Answer this doubt
+                  </Button>
+                )
+              )}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+      <div className="flex gap-2 p-3 border-t border-border shrink-0">
+        <Input
+          placeholder="Ask your doubt..."
+          value={doubtInput}
+          onChange={(e) => setDoubtInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage("doubt")}
+          className="text-sm h-9"
+        />
+        <Button size="icon" className="h-9 w-9 shrink-0" onClick={() => sendMessage("doubt")} disabled={sending || !doubtInput.trim()}>
+          <HelpCircle className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  // When activeTab is specified, render only that content (no tab switcher)
+  if (activeTab === "chat") return renderChatContent();
+  if (activeTab === "doubts") return renderDoubtsContent();
+
   return (
     <Tabs defaultValue="chat" className="flex flex-col h-full">
       <TabsList className="grid grid-cols-2 mx-3 mt-3 shrink-0">
@@ -129,114 +242,11 @@ const LiveChat = ({ sessionId, isAdmin = false, canModerate = false, activeTab }
           )}
         </TabsTrigger>
       </TabsList>
-
-      {/* CHAT TAB */}
       <TabsContent value="chat" className="flex flex-col flex-1 mt-0 overflow-hidden">
-        <ScrollArea className="flex-1 px-3 py-2">
-          <div className="space-y-2">
-            {chatMessages.length === 0 && (
-              <p className="text-center text-muted-foreground text-xs py-6">No messages yet. Say hello! 👋</p>
-            )}
-            {chatMessages.map((msg) => {
-              const isOwn = msg.user_id === user?.id;
-              return (
-                <div key={msg.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
-                  {!isOwn && (
-                    <span className="text-[10px] text-muted-foreground mb-0.5 ml-1">{msg.user_name}</span>
-                  )}
-                  <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"}`}>
-                    {msg.message}
-                  </div>
-                  <span className="text-[10px] text-muted-foreground mt-0.5 mx-1">{formatTime(msg.created_at)}</span>
-                </div>
-              );
-            })}
-            <div ref={chatBottomRef} />
-          </div>
-        </ScrollArea>
-        <div className="flex gap-2 p-3 border-t border-border shrink-0">
-          <Input
-            placeholder="Type a message..."
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage("chat")}
-            className="text-sm h-9"
-          />
-          <Button size="icon" className="h-9 w-9 shrink-0" onClick={() => sendMessage("chat")} disabled={sending || !chatInput.trim()}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+        {renderChatContent()}
       </TabsContent>
-
-      {/* DOUBTS TAB */}
       <TabsContent value="doubts" className="flex flex-col flex-1 mt-0 overflow-hidden">
-        <ScrollArea className="flex-1 px-3 py-2">
-          <div className="space-y-3">
-            {doubtMessages.length === 0 && (
-              <p className="text-center text-muted-foreground text-xs py-6">No doubts asked yet. Ask your first doubt! 🤔</p>
-            )}
-            {doubtMessages.map((doubt) => (
-              <div key={doubt.id} className="bg-muted rounded-xl p-3 space-y-2">
-                <div className="flex items-start gap-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-xs font-semibold text-foreground">{doubt.user_name}</span>
-                      <span className="text-[10px] text-muted-foreground">{formatTime(doubt.created_at)}</span>
-                      {doubt.is_answered ? (
-                        <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] gap-0.5 h-4 px-1.5">
-                          <CheckCircle2 className="h-3 w-3" /> Answered
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px] h-4 px-1.5">Pending</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-foreground">{doubt.message}</p>
-                  </div>
-                </div>
-
-                {doubt.is_answered && doubt.answer && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
-                    <p className="text-[10px] font-semibold text-primary mb-0.5">Teacher's Answer:</p>
-                    <p className="text-xs text-foreground">{doubt.answer}</p>
-                  </div>
-                )}
-
-                {isAdmin && !doubt.is_answered && (
-                  answeringId === doubt.id ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        placeholder="Type your answer..."
-                        value={answerText}
-                        onChange={(e) => setAnswerText(e.target.value)}
-                        className="text-xs min-h-[60px]"
-                      />
-                      <div className="flex gap-2">
-                        <Button size="sm" className="text-xs h-7 flex-1" onClick={() => handleAnswerDoubt(doubt.id)}>Submit Answer</Button>
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setAnsweringId(null); setAnswerText(""); }}>Cancel</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setAnsweringId(doubt.id)}>
-                      Answer this doubt
-                    </Button>
-                  )
-                )}
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-        <div className="flex gap-2 p-3 border-t border-border shrink-0">
-          <Input
-            placeholder="Ask your doubt..."
-            value={doubtInput}
-            onChange={(e) => setDoubtInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage("doubt")}
-            className="text-sm h-9"
-          />
-          <Button size="icon" className="h-9 w-9 shrink-0" onClick={() => sendMessage("doubt")} disabled={sending || !doubtInput.trim()}>
-            <HelpCircle className="h-4 w-4" />
-          </Button>
-        </div>
+        {renderDoubtsContent()}
       </TabsContent>
     </Tabs>
   );
