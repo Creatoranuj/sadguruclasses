@@ -179,7 +179,7 @@ const ChatWidget = () => {
         )}
         aria-label="Open Sadguru Sarthi"
       >
-        <Sparkles className="w-6 h-6" />
+        <img src={logoIcon} className="w-8 h-8 object-contain" alt="Sadguru Sarthi" />
       </button>
 
       {/* Full-page chat overlay */}
