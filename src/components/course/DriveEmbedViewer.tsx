@@ -141,7 +141,7 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
             className="absolute top-0 left-0 right-0 h-9 z-10 flex items-center px-3 gap-2 select-none pointer-events-none"
             style={{ background: "hsl(var(--card))" }}
           >
-            <img src={refreshLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
+            <img src={sadguruLogo} alt="" className="h-5 w-5 rounded" draggable={false} />
             <span className="text-xs font-semibold text-foreground tracking-wide">
               Sadguru Coaching Classes
             </span>
