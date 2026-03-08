@@ -639,6 +639,9 @@ const LessonView = () => {
                             <DriveEmbedViewer
                               url={currentLesson.class_pdf_url}
                               title={currentLesson.title}
+                              onDownloaded={({ title, url, filename }) =>
+                                addDownload(title, url, filename, "PDF")
+                              }
                             />
                           </TabsContent>
                         )}
