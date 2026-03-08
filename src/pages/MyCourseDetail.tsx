@@ -88,6 +88,7 @@ const MyCourseDetail = () => {
   const [courseSidebarOpen, setCourseSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarSearch, setSidebarSearch] = useState("");
+  const [lessonSearch, setLessonSearch] = useState("");
   const progressMarkedRef = useRef<Set<string>>(new Set());
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
