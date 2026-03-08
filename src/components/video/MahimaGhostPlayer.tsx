@@ -82,6 +82,11 @@ const MahimaGhostPlayer = memo(({
   const swipeTouchRef = useRef<{ startY: number; startX: number; startVal: number; side: 'left' | 'right'; locked: boolean } | null>(null);
   const swipeIndicatorTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  // Double-tap state
+  const [doubleTapRipple, setDoubleTapRipple] = useState<{ side: 'left' | 'right'; key: number } | null>(null);
+  const doubleTapTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const lastTapRef = useRef<{ time: number; side: 'left' | 'right' } | null>(null);
+
   // Rotation state — supports 0, 90, 180, 270 degrees
   const [rotation, setRotation] = useState(0);
 
@@ -652,12 +657,30 @@ const MahimaGhostPlayer = memo(({
             className="absolute inset-0 z-40"
             onClick={handleOverlayTap}
             onTouchStart={(e) => {
-              // Swipe gesture detection (MX Player-style)
               const touch = e.touches[0];
               const container = containerRef.current;
               if (!container) { handleOverlayTouchStart(e); return; }
               const rect = container.getBoundingClientRect();
               const side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+
+              // ── Double-tap detection ──────────────────────────────────────
+              const now = Date.now();
+              const last = lastTapRef.current;
+              if (last && now - last.time < 300 && last.side === side) {
+                // Double-tap confirmed — skip 10s
+                clearTimeout(doubleTapTimerRef.current);
+                lastTapRef.current = null;
+                if (side === 'left') skipBackward();
+                else skipForward();
+                setDoubleTapRipple({ side, key: now });
+                setTimeout(() => setDoubleTapRipple(null), 700);
+                return; // don't start swipe / show controls
+              }
+              lastTapRef.current = { time: now, side };
+              doubleTapTimerRef.current = setTimeout(() => { lastTapRef.current = null; }, 300);
+              // ─────────────────────────────────────────────────────────────
+
+              // Swipe gesture detection (MX Player-style)
               swipeTouchRef.current = {
                 startY: touch.clientY,
                 startX: touch.clientX,
@@ -673,36 +696,72 @@ const MahimaGhostPlayer = memo(({
               const touch = e.touches[0];
               const deltaY = touch.clientY - ref.startY;
               const deltaX = touch.clientX - ref.startX;
-              // Ignore if horizontal swipe dominates (seek gesture)
               if (!ref.locked && Math.abs(deltaX) > Math.abs(deltaY)) return;
               if (Math.abs(deltaY) < 8) return;
-              // Lock to vertical swipe
               ref.locked = true;
               e.stopPropagation();
-              const sensitivity = 0.4; // % change per px
+              const sensitivity = 0.4;
               const newVal = Math.max(
                 ref.side === 'left' ? 20 : 0,
                 Math.min(ref.side === 'left' ? 150 : 100, ref.startVal - deltaY * sensitivity)
               );
-              if (ref.side === 'left') {
-                setBrightness(newVal);
-              } else {
-                setPlayerVolume(newVal);
-              }
+              if (ref.side === 'left') setBrightness(newVal);
+              else setPlayerVolume(newVal);
               if (swipeIndicatorTimer.current) clearTimeout(swipeIndicatorTimer.current);
               setSwipeIndicator({ type: ref.side === 'left' ? 'brightness' : 'volume', value: newVal, visible: true });
             }}
             onTouchEnd={() => {
               swipeTouchRef.current = null;
               if (swipeIndicatorTimer.current) clearTimeout(swipeIndicatorTimer.current);
-              swipeIndicatorTimer.current = setTimeout(() => {
-                setSwipeIndicator(null);
-              }, 1500);
+              swipeIndicatorTimer.current = setTimeout(() => setSwipeIndicator(null), 1500);
             }}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
+            {/* ── Double-tap ripple (YouTube-style) ── */}
+            {doubleTapRipple && (
+              <div
+                key={doubleTapRipple.key}
+                className="absolute inset-y-0 pointer-events-none z-50 flex items-center overflow-hidden"
+                style={{
+                  left: doubleTapRipple.side === 'left' ? 0 : '50%',
+                  right: doubleTapRipple.side === 'right' ? 0 : '50%',
+                }}
+              >
+                {/* Expanding arc ripple */}
+                <div
+                  className="absolute"
+                  style={{
+                    width: '130px', height: '130px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.18)',
+                    top: '50%', marginTop: '-65px',
+                    ...(doubleTapRipple.side === 'left' ? { left: '-50px' } : { right: '-50px' }),
+                    animation: 'dt-ripple 0.65s ease-out forwards',
+                  }}
+                />
+                {/* Label "+10s" / "-10s" */}
+                <div
+                  className="absolute flex flex-col items-center gap-1"
+                  style={{
+                    top: '50%', transform: 'translateY(-50%)',
+                    ...(doubleTapRipple.side === 'left' ? { left: '18px' } : { right: '18px' }),
+                    animation: 'dt-label 0.65s ease-out forwards',
+                  }}
+                >
+                  <img
+                    src={doubleTapRipple.side === 'left' ? skipBack10Icon : skipForward10Icon}
+                    alt={doubleTapRipple.side === 'left' ? '-10s' : '+10s'}
+                    style={{ width: '36px', height: '36px', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.7))' }}
+                  />
+                  <span style={{ color: 'white', fontSize: '13px', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+                    {doubleTapRipple.side === 'left' ? '- 10 seconds' : '+ 10 seconds'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Swipe Indicator Pill (brightness / volume) */}
             {swipeIndicator?.visible && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
