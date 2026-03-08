@@ -73,7 +73,7 @@ const Install = () => {
                 </p>
                 <Button asChild className="w-full gap-2">
                   <a
-                    href="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest"
+                    href="https://github.com/sadguru-coaching/sadguru-app/releases/latest"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -83,6 +83,7 @@ const Install = () => {
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   Note: You may need to enable "Install from unknown sources" in your phone settings.
+                  Once you create your GitHub repo, update this URL to your actual releases page.
                 </p>
               </CardContent>
             </Card>
