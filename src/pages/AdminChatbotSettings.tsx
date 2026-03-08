@@ -166,8 +166,8 @@ const ChatbotSettings = () => {
             <Bot className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Sadguru Chatbot Settings</h1>
-            <p className="text-sm text-muted-foreground">Configure your AI assistant</p>
+            <h1 className="text-2xl font-bold text-foreground">Sadguru Sarthi Settings</h1>
+            <p className="text-sm text-muted-foreground">सीखने का सच्चा साथी – Configure your AI learning companion</p>
           </div>
           <Button variant="outline" size="sm" className="ml-auto" onClick={fetchData}>
             <RefreshCw className="h-4 w-4 mr-2" /> Refresh
@@ -242,7 +242,7 @@ const ChatbotSettings = () => {
                       onChange={e => setSettings({ ...settings, system_prompt: e.target.value })}
                       rows={8}
                       className="font-mono text-xs"
-                      placeholder="Describe how the chatbot should behave..."
+                    placeholder="e.g. You are Sadguru Sarthi, a friendly learning companion for Sadguru Coaching Classes. Help students with courses, mock tests, and platform features..."
                     />
                     <p className="text-xs text-muted-foreground">This is the core identity and rules for the chatbot. FAQs and course data are appended automatically.</p>
                   </div>
