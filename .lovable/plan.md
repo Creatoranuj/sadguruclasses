@@ -1,78 +1,83 @@
 
-## Problem Analysis
+## Root Cause: Missing `lovable.toml`
 
-When video is rotated 90° clockwise, two things break:
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-### Bug 1 — Side Detection is INVERTED (lines 669–671)
-Current code:
-```js
-if (rotation === 90) {
-  side = touch.clientY - rect.top > rect.height / 2 ? 'left' : 'right';
-}
+---
+
+## Plan
+
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
+
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-This is backwards. When rotated 90° CW:
-- Visual LEFT = DOM TOP = **low clientY** → should be `'left'`
-- Visual RIGHT = DOM BOTTOM = **high clientY** → should be `'right'`
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-The condition `> rect.height / 2` assigns `'left'` to high clientY (visual right). It needs to be flipped:
-```js
-side = touch.clientY - rect.top < rect.height / 2 ? 'left' : 'right';
-```
+---
 
-This single `<` vs `>` fix corrects both double-tap (forward/backward swap) AND swipe zone (brightness/volume swap).
+### 2. Visual Polish — CSS & Theme Improvements
 
-### Bug 2 — Swipe direction uses wrong axis when rotated (lines 709–710)
-Current code always uses `deltaY = touch.clientY - ref.startY`.
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-When rotated 90°, physically swiping "up" (to increase volume/brightness) moves your finger along the **X-axis** in DOM space, not the Y-axis. So `deltaY` will be near zero and the swipe won't register properly.
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-Fix: compute effective delta based on rotation:
-- `rotation === 0` or `180`: use `deltaY` (normal)
-- `rotation === 90`: physical "up" = DOM right → use `-deltaX` 
-- `rotation === 270`: physical "up" = DOM left → use `deltaX`
+---
 
-## Files to Change
-Only `src/components/video/MahimaGhostPlayer.tsx`
+### 3. Landing Page & Navigation Visual Fixes
 
-### Change 1 — Fix side detection (line 671)
-Change `>` to `<` for rotation 90°:
-```js
-// rotation === 90: visual left = top of DOM = low clientY
-side = touch.clientY - rect.top < rect.height / 2 ? 'left' : 'right';
-```
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
 
-### Change 2 — Fix swipe delta axis (lines 709–710 area)
-Pass `rotation` into the swipe calculation:
-```js
-// In onTouchMove:
-const deltaY = touch.clientY - ref.startY;
-const deltaX = touch.clientX - ref.startX;
+---
 
-// Rotation-aware effective delta (physical "up" gesture)
-let effectiveDelta: number;
-if (rotation === 90) {
-  effectiveDelta = -deltaX;  // physical up = swipe right in DOM
-} else if (rotation === 270) {
-  effectiveDelta = deltaX;   // physical up = swipe left in DOM
-} else {
-  effectiveDelta = -deltaY;  // normal: swipe up = negative deltaY
-}
-```
+### 4. Global Component Polish in `src/index.css`
 
-Then replace `ref.startVal - deltaY * sensitivity` with `ref.startVal + effectiveDelta * sensitivity`.
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
 
-Also fix the horizontal-swipe guard — when rotated, check `|deltaY| > |deltaX|` (axes swap):
-```js
-if (rotation === 90 || rotation === 270) {
-  if (!ref.locked && Math.abs(deltaY) > Math.abs(deltaX)) return; // horizontal in physical space = Y in DOM
-} else {
-  if (!ref.locked && Math.abs(deltaX) > Math.abs(deltaY)) return;
-}
-```
+---
 
-## Summary of Changes
-| Line | Fix |
-|------|-----|
-| 671 | `>` → `<` to correct side detection for 90° rotation |
-| 709–720 | Add rotation-aware `effectiveDelta` for swipe axis, fix axis guard |
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

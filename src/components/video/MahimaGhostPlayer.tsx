@@ -667,10 +667,11 @@ const MahimaGhostPlayer = memo(({
               // When rotated 270°: DOM "left" is visual "bottom" → finger on visual left = low clientY
               let side: 'left' | 'right';
               if (rotation === 90) {
-                // Visual left half = high clientY in DOM space
-                side = touch.clientY - rect.top > rect.height / 2 ? 'left' : 'right';
-              } else if (rotation === 270) {
+                // Visual left = DOM top = low clientY
                 side = touch.clientY - rect.top < rect.height / 2 ? 'left' : 'right';
+              } else if (rotation === 270) {
+                // Visual left = DOM bottom = high clientY
+                side = touch.clientY - rect.top > rect.height / 2 ? 'left' : 'right';
               } else {
                 side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
               }
@@ -708,14 +709,31 @@ const MahimaGhostPlayer = memo(({
               const touch = e.touches[0];
               const deltaY = touch.clientY - ref.startY;
               const deltaX = touch.clientX - ref.startX;
-              if (!ref.locked && Math.abs(deltaX) > Math.abs(deltaY)) return;
-              if (Math.abs(deltaY) < 8) return;
+
+              // Rotation-aware axis guard: when rotated, physical swipe "up/down" maps to X-axis in DOM
+              if (rotation === 90 || rotation === 270) {
+                if (!ref.locked && Math.abs(deltaY) > Math.abs(deltaX)) return;
+              } else {
+                if (!ref.locked && Math.abs(deltaX) > Math.abs(deltaY)) return;
+              }
+
+              // Rotation-aware effective delta (physical "up" = increase value)
+              let effectiveDelta: number;
+              if (rotation === 90) {
+                effectiveDelta = -deltaX; // physical up = swipe right → DOM +X → negate for increase
+              } else if (rotation === 270) {
+                effectiveDelta = deltaX;  // physical up = swipe left → DOM -X → keep for increase
+              } else {
+                effectiveDelta = -deltaY; // normal: swipe up = negative deltaY → negate for increase
+              }
+
+              if (Math.abs(effectiveDelta) < 8) return;
               ref.locked = true;
               e.stopPropagation();
               const sensitivity = 0.4;
               const newVal = Math.max(
                 ref.side === 'left' ? 20 : 0,
-                Math.min(ref.side === 'left' ? 150 : 100, ref.startVal - deltaY * sensitivity)
+                Math.min(ref.side === 'left' ? 150 : 100, ref.startVal + effectiveDelta * sensitivity)
               );
               if (ref.side === 'left') setBrightness(newVal);
               else setPlayerVolume(newVal);
