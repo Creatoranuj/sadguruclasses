@@ -72,6 +72,9 @@ const LessonView = () => {
   // Archive.org books state (stored per lesson in localStorage for now)
   const [archiveBooks, setArchiveBooks] = useState<ArchiveBook[]>([]);
   
+  // Lesson overview override map (avoids page reload after admin saves topics)
+  const [lessonOverviewMap, setLessonOverviewMap] = useState<Record<string, string>>({});
+  
   // Comments hook
   const { comments, loading: commentsLoading, createComment, fetchComments } = useComments(currentLesson?.id || undefined);
   
