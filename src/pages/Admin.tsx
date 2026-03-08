@@ -25,6 +25,7 @@ import {
 
 import ContentDrillDown from "@/components/admin/ContentDrillDown";
 import SocialLinksManager from "@/components/admin/SocialLinksManager";
+import HeroBannerManager from "@/components/admin/HeroBannerManager";
 
 // Types for users list
 interface UserWithRole {
