@@ -3,7 +3,7 @@ import { ExternalLink, Download, Maximize, Minimize, FileText } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { downloadFile, extractArchiveId, extractDocsId, getArchiveDownloadUrl } from "@/utils/fileUtils";
 import { toast } from "sonner";
-import refreshLogo from "@/assets/refresh-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 interface DriveEmbedViewerProps {
   url: string;
