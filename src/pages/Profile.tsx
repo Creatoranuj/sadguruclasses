@@ -184,6 +184,7 @@ const Profile = () => {
           <LogOut className="h-5 w-5" /> Sign Out
         </Button>
       </main>
+      <BottomNav />
     </div>
   );
 };
