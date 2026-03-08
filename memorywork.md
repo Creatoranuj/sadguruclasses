@@ -1,6 +1,55 @@
 # Memorywork – Changes Log
 
-## Date: 2026-03-08 (Archive.org PDF Embed + Smart Download)
+## Date: 2026-03-08 (Quiz Engine + Knowledge Hub Duplicate Fix)
+
+### Knowledge Hub Duplicate Fix
+- **Root cause**: `BatchSelector` component (showing selected batch name + thumbnail) visually appeared identical to a course card when a batch was selected → looked like 2 identical "Knowledge Hub" entries.
+- **Fix**: Removed `<BatchSelector />` from `AllClasses.tsx`. Replaced with a clean inline filter badge (`Viewing: {batch.title}` + "Show All" button) that doesn't look like a content card.
+
+### Quiz Engine (Full Implementation)
+
+#### Database Tables Created
+- `quizzes`: id (uuid), title, type (dpp|test), course_id (bigint), chapter_id (uuid), lesson_id (uuid), duration_minutes, total_marks, pass_percentage, is_published, created_by, created_at
+- `questions`: id, quiz_id, question_text, question_type (mcq|true_false|numerical), options (JSONB), correct_answer, explanation, marks, negative_marks, order_index
+- `quiz_attempts`: id, user_id, quiz_id, started_at, submitted_at, score, percentage, passed, answers (JSONB), time_taken_seconds
+
+#### RLS Policies
+- Admins: full CRUD on quizzes + questions
+- Students: SELECT on published quizzes only; INSERT/SELECT/UPDATE own attempts
+
+#### New Files
+| File | Purpose |
+|------|---------|
+| `src/pages/QuizAttempt.tsx` | Full-screen quiz: timer, question palette, MCQ/TF/Numerical support, auto-save to localStorage, submit dialog, score calculation |
+| `src/pages/QuizResult.tsx` | Result page: score card, pass/fail, per-question review with correct/wrong/explanation |
+| `src/pages/AdminQuizManager.tsx` | Admin CRUD: list quizzes, create (title/type/course/lesson link), add/edit questions dynamically, publish/unpublish |
+| `src/components/quiz/QuizTimer.tsx` | Countdown timer with warning/critical states |
+| `src/components/quiz/QuestionPalette.tsx` | Navigation grid colored by answered/flagged/unanswered/current state |
+
+#### Routes Added
+- `/quiz/:quizId` → QuizAttempt
+- `/quiz/:quizId/result/:attemptId` → QuizResult
+- `/admin/quiz` → AdminQuizManager
+
+#### Integration Points
+- `LectureListing.tsx`: DPP/TEST lessons with a linked published quiz show a "Attempt DPP" / "Take Test" button below the card
+- `Admin.tsx`: "Quiz Manager" button added to Schedule tab for easy navigation
+- Quiz linked to lesson via `quizzes.lesson_id` — admin sets this in AdminQuizManager create form
+
+#### Scoring Logic (client-side)
+```
+score = sum of: 
+  +marks if answer matches correct_answer
+  -negative_marks if wrong answer and negative_marks > 0
+  0 if skipped
+score = max(0, score)
+percentage = score / total_marks * 100
+passed = percentage >= quiz.pass_percentage
+```
+
+---
+
+
 
 ### Changes Made
 

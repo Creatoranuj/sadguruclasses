@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, PackageOpen, FolderOpen } from "lucide-react";
+import { ChevronLeft, PackageOpen, FolderOpen, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Breadcrumbs, LectureCard, LectureModal } from "@/components/course";
@@ -65,6 +65,7 @@ const LectureListing = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [hasPurchased, setHasPurchased] = useState(false);
   const [showSubChapters, setShowSubChapters] = useState(false);
+  const [lessonQuizMap, setLessonQuizMap] = useState<Record<string, string>>({});
 
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const isModalOpen = searchParams.get("lecture") !== null;
@@ -166,6 +167,27 @@ const LectureListing = () => {
     };
     fetchData();
   }, [courseId, chapterId, user]);
+
+  // Fetch quizzes linked to lessons (DPP/TEST)
+  useEffect(() => {
+    if (lessons.length === 0) return;
+    const lessonIds = lessons
+      .filter(l => l.lecture_type === "DPP" || l.lecture_type === "TEST")
+      .map(l => l.id);
+    if (lessonIds.length === 0) return;
+    supabase
+      .from("quizzes")
+      .select("id, lesson_id")
+      .in("lesson_id", lessonIds)
+      .eq("is_published", true)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, string> = {};
+          data.forEach((q: any) => { if (q.lesson_id) map[q.lesson_id] = q.id; });
+          setLessonQuizMap(map);
+        }
+      });
+  }, [lessons]);
 
   const handleLectureClick = (lesson: Lesson) => {
     if (lesson.is_locked && !hasPurchased && !isAdminOrTeacher) {
@@ -332,19 +354,35 @@ const LectureListing = () => {
             )}>
               {viewMode === "list" && (
                 <div className="space-y-4">
-                  {filteredLessons.map((lesson) => (
-                    <LectureCard
-                      key={lesson.id}
-                      id={lesson.id}
-                      title={lesson.title}
-                      lectureType={lesson.lecture_type as "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST"}
-                      position={lesson.position}
-                      duration={lesson.duration}
-                      createdAt={lesson.created_at}
-                      isLocked={!!lesson.is_locked && !hasPurchased && !isAdminOrTeacher}
-                      onClick={() => handleLectureClick(lesson)}
-                    />
-                  ))}
+                  {filteredLessons.map((lesson) => {
+                    const linkedQuizId = lessonQuizMap[lesson.id];
+                    const isDppOrTest = lesson.lecture_type === "DPP" || lesson.lecture_type === "TEST";
+                    return (
+                      <div key={lesson.id} className="relative">
+                        <LectureCard
+                          id={lesson.id}
+                          title={lesson.title}
+                          lectureType={lesson.lecture_type as "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST"}
+                          position={lesson.position}
+                          duration={lesson.duration}
+                          createdAt={lesson.created_at}
+                          isLocked={!!lesson.is_locked && !hasPurchased && !isAdminOrTeacher}
+                          onClick={() => handleLectureClick(lesson)}
+                        />
+                        {isDppOrTest && linkedQuizId && (
+                          <div className="mt-1 px-1">
+                            <button
+                              onClick={() => navigate(`/quiz/${linkedQuizId}`)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                            >
+                              <ClipboardList className="h-3.5 w-3.5" />
+                              {lesson.lecture_type === "TEST" ? "Take Test" : "Attempt DPP"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 

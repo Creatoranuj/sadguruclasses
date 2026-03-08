@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Search, FileText, BookOpen, ClipboardList, FlaskConical } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, FileText, BookOpen, ClipboardList, FlaskConical, X } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 import { useBatch } from "@/contexts/BatchContext";
@@ -13,7 +13,6 @@ import { Link } from "react-router-dom";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import BatchSelector from "@/components/dashboard/BatchSelector";
 import { LectureModal } from "@/components/course/LectureModal";
 
 interface Course {
@@ -43,7 +42,7 @@ const RESOURCE_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 const AllClasses = () => {
   const navigate = useNavigate();
-  const { selectedBatch } = useBatch();
+  const { selectedBatch, setSelectedBatch } = useBatch();
   const [courses, setCourses] = useState<Course[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,9 +205,20 @@ const AllClasses = () => {
         </div>
       </header>
 
-      <div className="px-5 mb-3">
-        <BatchSelector />
-      </div>
+      {selectedBatch && (
+        <div className="flex items-center justify-between px-5 mb-3 py-2 bg-primary/5 border border-primary/20 rounded-xl mx-5">
+          <span className="text-sm text-muted-foreground">
+            Viewing: <strong className="text-foreground">{selectedBatch.title}</strong>
+          </span>
+          <button
+            onClick={() => setSelectedBatch(null)}
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+          >
+            <X className="h-3.5 w-3.5" />
+            Show All
+          </button>
+        </div>
+      )}
 
       <div className="flex gap-3 px-5 mb-3">
         <div className="relative flex-1">

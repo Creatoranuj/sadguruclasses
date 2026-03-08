@@ -1379,10 +1379,14 @@ const Admin = () => {
                 <p className="text-muted-foreground text-center py-8">
                   Manage upcoming lecture schedules, create new sessions, and share meeting links with students.
                 </p>
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-3 flex-wrap">
                   <Button variant="outline" onClick={() => navigate('/admin/schedule')} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Create & Manage Schedules
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate('/admin/quiz')} className="gap-2">
+                    <ClipboardCheck className="h-4 w-4" />
+                    Quiz Manager (DPP &amp; Tests)
                   </Button>
                 </div>
               </CardContent>

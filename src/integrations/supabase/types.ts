@@ -744,6 +744,176 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          correct_answer: string
+          created_at: string | null
+          explanation: string | null
+          id: string
+          marks: number | null
+          negative_marks: number | null
+          options: Json | null
+          order_index: number | null
+          question_text: string
+          question_type: string | null
+          quiz_id: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string | null
+          explanation?: string | null
+          id?: string
+          marks?: number | null
+          negative_marks?: number | null
+          options?: Json | null
+          order_index?: number | null
+          question_text: string
+          question_type?: string | null
+          quiz_id: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string | null
+          explanation?: string | null
+          id?: string
+          marks?: number | null
+          negative_marks?: number | null
+          options?: Json | null
+          order_index?: number | null
+          question_text?: string
+          question_type?: string | null
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_attempts: {
+        Row: {
+          answers: Json | null
+          created_at: string | null
+          id: string
+          passed: boolean | null
+          percentage: number | null
+          quiz_id: string
+          score: number | null
+          started_at: string | null
+          submitted_at: string | null
+          time_taken_seconds: number | null
+          user_id: string
+        }
+        Insert: {
+          answers?: Json | null
+          created_at?: string | null
+          id?: string
+          passed?: boolean | null
+          percentage?: number | null
+          quiz_id: string
+          score?: number | null
+          started_at?: string | null
+          submitted_at?: string | null
+          time_taken_seconds?: number | null
+          user_id: string
+        }
+        Update: {
+          answers?: Json | null
+          created_at?: string | null
+          id?: string
+          passed?: boolean | null
+          percentage?: number | null
+          quiz_id?: string
+          score?: number | null
+          started_at?: string | null
+          submitted_at?: string | null
+          time_taken_seconds?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          chapter_id: string | null
+          course_id: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          is_published: boolean | null
+          lesson_id: string | null
+          pass_percentage: number | null
+          title: string
+          total_marks: number | null
+          type: string | null
+        }
+        Insert: {
+          chapter_id?: string | null
+          course_id?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_published?: boolean | null
+          lesson_id?: string | null
+          pass_percentage?: number | null
+          title: string
+          total_marks?: number | null
+          type?: string | null
+        }
+        Update: {
+          chapter_id?: string | null
+          course_id?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_published?: boolean | null
+          lesson_id?: string | null
+          pass_percentage?: number | null
+          title?: string
+          total_marks?: number | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_settings: {
         Row: {
           key: string
