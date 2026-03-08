@@ -464,7 +464,7 @@ const ChatWidget = () => {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Quick prompts (first message only) */}
           {messages.length <= 1 && (
