@@ -50,10 +50,13 @@ export const useAdminEnrollment = () => {
         };
       }
 
-      // Create enrollment
+      // Upsert — safe against duplicates thanks to UNIQUE(user_id, course_id)
       const { data: enrollment, error } = await supabase
         .from('enrollments')
-        .insert({ user_id: user.id, course_id: courseId, status: 'active' })
+        .upsert(
+          { user_id: user.id, course_id: courseId, status: 'active' },
+          { onConflict: 'user_id,course_id', ignoreDuplicates: false }
+        )
         .select('id')
         .single();
 

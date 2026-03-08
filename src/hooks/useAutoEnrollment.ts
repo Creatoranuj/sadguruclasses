@@ -42,11 +42,11 @@ export const useAutoEnrollment = () => {
       const enrolledIds: number[] = [];
       for (const course of coursesToEnroll) {
         try {
-          const { error } = await supabase.from("enrollments").insert({
-            user_id: userId,
-            course_id: course.id,
-            status: 'active',
-          });
+          // Use upsert with ignoreDuplicates to prevent duplicates at DB level
+          const { error } = await supabase.from("enrollments").upsert(
+            { user_id: userId, course_id: course.id, status: 'active' },
+            { onConflict: 'user_id,course_id', ignoreDuplicates: true }
+          );
           if (!error) enrolledIds.push(course.id);
         } catch (err) {
           console.error(`Failed to enroll in course ${course.id}:`, err);

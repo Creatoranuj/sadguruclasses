@@ -106,11 +106,10 @@ export const useEnrollments = () => {
         return true;
       }
 
-      const { error: dbError } = await supabase.from("enrollments").insert({
-        user_id: user.id,
-        course_id: courseId,
-        status: 'active',
-      });
+      const { error: dbError } = await supabase.from("enrollments").upsert(
+        { user_id: user.id, course_id: courseId, status: 'active' },
+        { onConflict: 'user_id,course_id', ignoreDuplicates: true }
+      );
 
       if (dbError) throw dbError;
 
