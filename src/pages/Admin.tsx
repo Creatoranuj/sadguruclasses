@@ -225,13 +225,19 @@ const Admin = () => {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
-      // F. Calculate Total Revenue from approved payments
+      // F. Calculate Total Revenue from approved manual + completed Razorpay payments
       const { data: approvedPayments } = await supabase
         .from('payment_requests')
         .select('amount')
         .eq('status', 'approved');
+      const { data: completedRzp } = await supabase
+        .from('razorpay_payments')
+        .select('amount')
+        .eq('status', 'completed');
       
-      const totalRevenue = approvedPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+      const manualRevenue = approvedPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+      const rzpRevenue = completedRzp?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+      const totalRevenue = manualRevenue + rzpRevenue;
 
       // G. Pre-fetch library data so it's ready when tab is opened
       fetchLibraryData();
