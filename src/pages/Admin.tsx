@@ -1916,6 +1916,27 @@ const Admin = () => {
             <HeroBannerManager />
           </TabsContent>
 
+          {/* --- TAB: DOUBTS (Zoom Sessions) --- */}
+          <TabsContent value="doubts">
+            <div className="flex flex-col items-center gap-4 py-8 px-4 text-center">
+              <div className="p-4 rounded-2xl bg-primary/10">
+                <MessageSquare className="h-10 w-10 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground mb-1">Zoom Doubt Sessions</h2>
+                <p className="text-muted-foreground text-sm max-w-sm">
+                  View all student doubt requests, create Zoom meetings, and manage 1:1 sessions.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate("/doubts")}
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors"
+              >
+                <MessageSquare className="h-4 w-4" /> Open Doubt Manager
+              </button>
+            </div>
+          </TabsContent>
+
         </Tabs>
       </main>
     </div>
