@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Bot, Plus, Trash2, Save, Settings, MessageSquare, ToggleLeft, ToggleRight, Loader2,
-  BookOpen, RefreshCw, Eye
+  BookOpen, RefreshCw, Brain, Edit2, Check, X, ChevronDown, ChevronUp, Search
 } from "lucide-react";
 
 interface FAQ {
@@ -43,16 +43,55 @@ interface ChatLog {
   created_at: string;
 }
 
+interface KnowledgeEntry {
+  id: string;
+  category: string;
+  title: string;
+  content: string;
+  keywords: string[];
+  is_active: boolean;
+  position: number;
+  created_at: string;
+}
+
+const CATEGORIES = [
+  { value: 'platform_guide', label: '🖥️ Platform Guide', color: 'bg-blue-100 text-blue-700' },
+  { value: 'courses', label: '📚 Courses', color: 'bg-green-100 text-green-700' },
+  { value: 'faqs', label: '❓ FAQs', color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'policies', label: '📋 Policies', color: 'bg-purple-100 text-purple-700' },
+  { value: 'general', label: '💡 General', color: 'bg-gray-100 text-gray-700' },
+];
+
+const getCategoryStyle = (cat: string) =>
+  CATEGORIES.find(c => c.value === cat)?.color || 'bg-muted text-muted-foreground';
+
+const getCategoryLabel = (cat: string) =>
+  CATEGORIES.find(c => c.value === cat)?.label || cat;
+
 const ChatbotSettings = () => {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<ChatbotSettings | null>(null);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [logs, setLogs] = useState<ChatLog[]>([]);
+  const [knowledge, setKnowledge] = useState<KnowledgeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newFaq, setNewFaq] = useState({ question: "", answer: "", category: "general" });
   const [addingFaq, setAddingFaq] = useState(false);
+
+  // Knowledge base state
+  const [kbSearch, setKbSearch] = useState('');
+  const [kbCategory, setKbCategory] = useState('all');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<Partial<KnowledgeEntry>>({});
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [savingKb, setSavingKb] = useState(false);
+  const [newKbEntry, setNewKbEntry] = useState({
+    category: 'platform_guide', title: '', content: '', keywords: ''
+  });
+  const [addingKb, setAddingKb] = useState(false);
+  const [showAddKb, setShowAddKb] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) { navigate("/dashboard"); return; }
@@ -62,15 +101,17 @@ const ChatbotSettings = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [{ data: settingsData }, { data: faqData }, { data: logsData }] = await Promise.all([
+      const [{ data: settingsData }, { data: faqData }, { data: logsData }, { data: kbData }] = await Promise.all([
         supabase.from("chatbot_settings").select("*").eq("id", 1).single(),
         supabase.from("chatbot_faq").select("*").order("created_at", { ascending: false }),
         supabase.from("chatbot_logs").select("*").order("created_at", { ascending: false }).limit(50),
+        supabase.from("knowledge_base").select("*").order("position", { ascending: true }),
       ]);
       if (settingsData) setSettings(settingsData as ChatbotSettings);
       setFaqs((faqData || []) as FAQ[]);
       setLogs((logsData || []) as ChatLog[]);
-    } catch (e) {
+      setKnowledge((kbData || []) as KnowledgeEntry[]);
+    } catch {
       toast.error("Failed to load chatbot data");
     } finally {
       setLoading(false);
@@ -108,11 +149,7 @@ const ChatbotSettings = () => {
     }
     setAddingFaq(true);
     try {
-      const { data, error } = await supabase
-        .from("chatbot_faq")
-        .insert(newFaq)
-        .select()
-        .single();
+      const { data, error } = await supabase.from("chatbot_faq").insert(newFaq).select().single();
       if (error) throw error;
       setFaqs(prev => [data as FAQ, ...prev]);
       setNewFaq({ question: "", answer: "", category: "general" });
@@ -125,22 +162,105 @@ const ChatbotSettings = () => {
   };
 
   const toggleFaq = async (faq: FAQ) => {
-    const { error } = await supabase
-      .from("chatbot_faq")
-      .update({ is_active: !faq.is_active })
-      .eq("id", faq.id);
-    if (!error) {
-      setFaqs(prev => prev.map(f => f.id === faq.id ? { ...f, is_active: !f.is_active } : f));
-    }
+    const { error } = await supabase.from("chatbot_faq").update({ is_active: !faq.is_active }).eq("id", faq.id);
+    if (!error) setFaqs(prev => prev.map(f => f.id === faq.id ? { ...f, is_active: !f.is_active } : f));
   };
 
   const deleteFaq = async (id: string) => {
     const { error } = await supabase.from("chatbot_faq").delete().eq("id", id);
-    if (!error) {
-      setFaqs(prev => prev.filter(f => f.id !== id));
-      toast.success("FAQ deleted");
+    if (!error) { setFaqs(prev => prev.filter(f => f.id !== id)); toast.success("FAQ deleted"); }
+  };
+
+  // Knowledge base CRUD
+  const addKbEntry = async () => {
+    if (!newKbEntry.title.trim() || !newKbEntry.content.trim()) {
+      toast.error("Title aur content required hai");
+      return;
+    }
+    setAddingKb(true);
+    try {
+      const keywords = newKbEntry.keywords
+        .split(',')
+        .map(k => k.trim().toLowerCase())
+        .filter(k => k.length > 0);
+      const { data, error } = await supabase
+        .from("knowledge_base")
+        .insert({
+          category: newKbEntry.category,
+          title: newKbEntry.title,
+          content: newKbEntry.content,
+          keywords,
+          position: knowledge.length + 1,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      setKnowledge(prev => [...prev, data as KnowledgeEntry]);
+      setNewKbEntry({ category: 'platform_guide', title: '', content: '', keywords: '' });
+      setShowAddKb(false);
+      toast.success("Knowledge entry added! Sarthi ab yeh jaanta hai. 🧠");
+    } catch {
+      toast.error("Failed to add knowledge entry");
+    } finally {
+      setAddingKb(false);
     }
   };
+
+  const startEdit = (entry: KnowledgeEntry) => {
+    setEditingId(entry.id);
+    setEditData({
+      title: entry.title,
+      content: entry.content,
+      category: entry.category,
+      keywords: entry.keywords,
+    });
+  };
+
+  const saveEdit = async (id: string) => {
+    setSavingKb(true);
+    try {
+      const { error } = await supabase
+        .from("knowledge_base")
+        .update({
+          title: editData.title,
+          content: editData.content,
+          category: editData.category,
+          keywords: editData.keywords,
+        })
+        .eq("id", id);
+      if (error) throw error;
+      setKnowledge(prev => prev.map(k => k.id === id ? { ...k, ...editData } as KnowledgeEntry : k));
+      setEditingId(null);
+      toast.success("Knowledge updated! ✅");
+    } catch {
+      toast.error("Failed to update");
+    } finally {
+      setSavingKb(false);
+    }
+  };
+
+  const toggleKbEntry = async (entry: KnowledgeEntry) => {
+    const { error } = await supabase
+      .from("knowledge_base")
+      .update({ is_active: !entry.is_active })
+      .eq("id", entry.id);
+    if (!error) setKnowledge(prev => prev.map(k => k.id === entry.id ? { ...k, is_active: !k.is_active } : k));
+  };
+
+  const deleteKbEntry = async (id: string) => {
+    const { error } = await supabase.from("knowledge_base").delete().eq("id", id);
+    if (!error) {
+      setKnowledge(prev => prev.filter(k => k.id !== id));
+      toast.success("Entry deleted");
+    }
+  };
+
+  // Filter knowledge
+  const filteredKnowledge = knowledge.filter(k => {
+    const matchCat = kbCategory === 'all' || k.category === kbCategory;
+    const matchSearch = !kbSearch || k.title.toLowerCase().includes(kbSearch.toLowerCase()) || k.content.toLowerCase().includes(kbSearch.toLowerCase());
+    return matchCat && matchSearch;
+  });
 
   const MODEL_OPTIONS = [
     "google/gemini-2.5-flash",
@@ -174,14 +294,18 @@ const ChatbotSettings = () => {
           </Button>
         </div>
 
-        <Tabs defaultValue="settings">
-          <TabsList className="w-full grid grid-cols-3">
-            <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" />Settings</TabsTrigger>
-            <TabsTrigger value="faq"><BookOpen className="h-4 w-4 mr-2" />FAQ ({faqs.filter(f => f.is_active).length} active)</TabsTrigger>
-            <TabsTrigger value="logs"><MessageSquare className="h-4 w-4 mr-2" />Logs ({logs.length})</TabsTrigger>
+        <Tabs defaultValue="knowledge">
+          <TabsList className="w-full grid grid-cols-4">
+            <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1" />Settings</TabsTrigger>
+            <TabsTrigger value="knowledge">
+              <Brain className="h-4 w-4 mr-1" />
+              Memory <Badge variant="secondary" className="ml-1 text-xs">{knowledge.filter(k => k.is_active).length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="faq"><BookOpen className="h-4 w-4 mr-1" />FAQ ({faqs.filter(f => f.is_active).length})</TabsTrigger>
+            <TabsTrigger value="logs"><MessageSquare className="h-4 w-4 mr-1" />Logs</TabsTrigger>
           </TabsList>
 
-          {/* Settings Tab */}
+          {/* ============ Settings Tab ============ */}
           <TabsContent value="settings">
             {settings && (
               <Card>
@@ -196,9 +320,7 @@ const ChatbotSettings = () => {
                       onChange={e => setSettings({ ...settings, model: e.target.value })}
                       className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                     >
-                      {MODEL_OPTIONS.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
+                      {MODEL_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                     <p className="text-xs text-muted-foreground">Uses Lovable AI Gateway — no additional API key needed.</p>
                   </div>
@@ -211,22 +333,23 @@ const ChatbotSettings = () => {
                         value={settings.temperature}
                         onChange={e => setSettings({ ...settings, temperature: parseFloat(e.target.value) })}
                       />
-                      <p className="text-xs text-muted-foreground">Lower = more focused, Higher = more creative</p>
+                      <p className="text-xs text-muted-foreground">Lower = focused, Higher = creative</p>
                     </div>
                     <div className="space-y-2">
-                      <Label>Max Tokens</Label>
+                      <Label>Max Tokens (Response Length)</Label>
                       <Input
-                        type="number" min="100" max="2000" step="50"
+                        type="number" min="200" max="2000" step="100"
                         value={settings.max_tokens}
                         onChange={e => setSettings({ ...settings, max_tokens: parseInt(e.target.value) })}
                       />
+                      <p className="text-xs text-muted-foreground">1000 = ~750 words response</p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div>
-                      <p className="font-medium text-sm">Mock Test Help</p>
-                      <p className="text-xs text-muted-foreground">Allow students to ask for quiz/test help</p>
+                      <p className="font-medium text-sm">Mock Test Help Mode</p>
+                      <p className="text-xs text-muted-foreground">Give hints only, not direct answers</p>
                     </div>
                     <button onClick={() => setSettings({ ...settings, enable_mock_help: !settings.enable_mock_help })}>
                       {settings.enable_mock_help
@@ -236,15 +359,17 @@ const ChatbotSettings = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>System Prompt (Core Instructions)</Label>
+                    <Label>System Prompt (Core Identity & Rules)</Label>
                     <Textarea
                       value={settings.system_prompt}
                       onChange={e => setSettings({ ...settings, system_prompt: e.target.value })}
                       rows={8}
                       className="font-mono text-xs"
-                    placeholder="e.g. You are Sadguru Sarthi, a friendly learning companion for Sadguru Coaching Classes. Help students with courses, mock tests, and platform features..."
+                      placeholder="e.g. You are Sadguru Sarthi, a friendly learning companion..."
                     />
-                    <p className="text-xs text-muted-foreground">This is the core identity and rules for the chatbot. FAQs and course data are appended automatically.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Core identity rules. Knowledge Base (Memory tab) is automatically injected as context when relevant.
+                    </p>
                   </div>
 
                   <Button className="w-full" onClick={saveSettings} disabled={saving}>
@@ -256,12 +381,236 @@ const ChatbotSettings = () => {
             )}
           </TabsContent>
 
-          {/* FAQ Tab */}
+          {/* ============ Knowledge Base (RAG Memory) Tab ============ */}
+          <TabsContent value="knowledge" className="space-y-4">
+            {/* Info Banner */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex gap-3">
+              <Brain className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm text-foreground">RAG Memory System 🧠</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Yahan jo bhi information add karoge, Sadguru Sarthi automatically woh use karega relevant questions ke jawab mein.
+                  Platform guide, courses, policies — sab kuch yahan manage karo bina code change kiye.
+                </p>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {CATEGORIES.map(cat => {
+                const count = knowledge.filter(k => k.category === cat.value).length;
+                return (
+                  <button
+                    key={cat.value}
+                    onClick={() => setKbCategory(kbCategory === cat.value ? 'all' : cat.value)}
+                    className={`p-3 rounded-lg border text-left transition-all ${kbCategory === cat.value ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted/50'}`}
+                  >
+                    <p className="text-xs text-muted-foreground">{cat.label}</p>
+                    <p className="text-xl font-bold text-foreground">{count}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Search + Add button */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search knowledge entries..."
+                  value={kbSearch}
+                  onChange={e => setKbSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button onClick={() => setShowAddKb(!showAddKb)} variant={showAddKb ? "outline" : "default"}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Entry
+              </Button>
+            </div>
+
+            {/* Add New Entry Form */}
+            {showAddKb && (
+              <Card className="border-primary/30 bg-primary/2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">New Knowledge Entry</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Category</Label>
+                      <select
+                        value={newKbEntry.category}
+                        onChange={e => setNewKbEntry({ ...newKbEntry, category: e.target.value })}
+                        className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                      >
+                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Keywords (comma-separated)</Label>
+                      <Input
+                        placeholder="login, password, reset"
+                        value={newKbEntry.keywords}
+                        onChange={e => setNewKbEntry({ ...newKbEntry, keywords: e.target.value })}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Title</Label>
+                    <Input
+                      placeholder="e.g. Video Lecture Kaise Dekhein"
+                      value={newKbEntry.title}
+                      onChange={e => setNewKbEntry({ ...newKbEntry, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Content (Hinglish/English/Hindi – Jo Sarthi bolega)</Label>
+                    <Textarea
+                      placeholder="Yahan platform ke baare mein information likho jo Sarthi students ko batayega..."
+                      value={newKbEntry.content}
+                      onChange={e => setNewKbEntry({ ...newKbEntry, content: e.target.value })}
+                      rows={5}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={addKbEntry} disabled={addingKb} className="flex-1">
+                      {addingKb ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Brain className="h-4 w-4 mr-2" />}
+                      Add to Sarthi's Memory
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowAddKb(false)}>Cancel</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Knowledge Entries List */}
+            <Card>
+              <CardHeader className="pb-2 flex-row items-center justify-between">
+                <CardTitle className="text-base">
+                  {filteredKnowledge.length} entries
+                  {kbCategory !== 'all' && <span className="text-sm font-normal text-muted-foreground ml-2">in {getCategoryLabel(kbCategory)}</span>}
+                </CardTitle>
+                {kbCategory !== 'all' && (
+                  <Button variant="ghost" size="sm" onClick={() => setKbCategory('all')}>
+                    <X className="h-3 w-3 mr-1" />Clear filter
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[500px]">
+                  {filteredKnowledge.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Brain className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Koi entry nahi mili</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {filteredKnowledge.map(entry => (
+                        <div key={entry.id} className="p-4">
+                          {editingId === entry.id ? (
+                            /* Edit Mode */
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-2">
+                                <select
+                                  value={editData.category}
+                                  onChange={e => setEditData({ ...editData, category: e.target.value })}
+                                  className="border rounded px-2 py-1 text-sm bg-background"
+                                >
+                                  {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                </select>
+                                <Input
+                                  placeholder="keywords (comma-sep)"
+                                  value={(editData.keywords || []).join(', ')}
+                                  onChange={e => setEditData({ ...editData, keywords: e.target.value.split(',').map(k => k.trim()) })}
+                                  className="text-sm"
+                                />
+                              </div>
+                              <Input
+                                value={editData.title}
+                                onChange={e => setEditData({ ...editData, title: e.target.value })}
+                                className="font-medium text-sm"
+                              />
+                              <Textarea
+                                value={editData.content}
+                                onChange={e => setEditData({ ...editData, content: e.target.value })}
+                                rows={5}
+                                className="text-sm"
+                              />
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => saveEdit(entry.id)} disabled={savingKb}>
+                                  {savingKb ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                                  Save
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                                  <X className="h-3 w-3 mr-1" />Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* View Mode */
+                            <div>
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getCategoryStyle(entry.category)}`}>
+                                      {getCategoryLabel(entry.category)}
+                                    </span>
+                                    {!entry.is_active && <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">Inactive</span>}
+                                  </div>
+                                  <p className="font-semibold text-sm text-foreground">{entry.title}</p>
+                                  {entry.keywords.length > 0 && (
+                                    <div className="flex gap-1 flex-wrap mt-1">
+                                      {entry.keywords.slice(0, 5).map(kw => (
+                                        <span key={kw} className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">#{kw}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                                    className="p-1.5 hover:bg-muted rounded"
+                                  >
+                                    {expandedId === entry.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                  </button>
+                                  <button onClick={() => startEdit(entry)} className="p-1.5 hover:bg-muted rounded" title="Edit">
+                                    <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </button>
+                                  <button onClick={() => toggleKbEntry(entry)} title="Toggle active" className="p-1.5 hover:bg-muted rounded">
+                                    {entry.is_active
+                                      ? <ToggleRight className="h-5 w-5 text-primary" />
+                                      : <ToggleLeft className="h-5 w-5 text-muted-foreground" />}
+                                  </button>
+                                  <button onClick={() => deleteKbEntry(entry.id)} className="p-1.5 hover:bg-muted rounded" title="Delete">
+                                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                  </button>
+                                </div>
+                              </div>
+                              {expandedId === entry.id && (
+                                <div className="mt-3 bg-muted/40 rounded-lg p-3">
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                    {entry.content}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ============ FAQ Tab ============ */}
           <TabsContent value="faq" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Add New FAQ</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Add New FAQ</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
                   <Label>Question</Label>
@@ -296,15 +645,11 @@ const ChatbotSettings = () => {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>FAQ Entries ({faqs.length})</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>FAQ Entries ({faqs.length})</CardTitle></CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-[400px]">
                   {faqs.length === 0 ? (
-                    <div className="text-center py-10 text-muted-foreground">
-                      No FAQs yet. Add some above!
-                    </div>
+                    <div className="text-center py-10 text-muted-foreground">No FAQs yet. Add some above!</div>
                   ) : (
                     <div className="divide-y">
                       {faqs.map(faq => (
@@ -317,7 +662,7 @@ const ChatbotSettings = () => {
                             <p className="text-xs text-muted-foreground line-clamp-2">{faq.answer}</p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
-                            <button onClick={() => toggleFaq(faq)} title="Toggle active">
+                            <button onClick={() => toggleFaq(faq)}>
                               {faq.is_active
                                 ? <ToggleRight className="h-6 w-6 text-primary" />
                                 : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
@@ -335,33 +680,29 @@ const ChatbotSettings = () => {
             </Card>
           </TabsContent>
 
-          {/* Logs Tab */}
+          {/* ============ Logs Tab ============ */}
           <TabsContent value="logs">
             <Card>
-              <CardHeader>
-                <CardTitle>Conversation Logs (Last 50)</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Conversation Logs (Last 50)</CardTitle></CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-[500px]">
                   {logs.length === 0 ? (
-                    <div className="text-center py-10 text-muted-foreground">
-                      No conversations logged yet.
-                    </div>
+                    <div className="text-center py-10 text-muted-foreground">No conversations logged yet.</div>
                   ) : (
                     <div className="divide-y">
                       {logs.map(log => (
                         <div key={log.id} className="p-4 space-y-2">
                           <p className="text-xs text-muted-foreground">
                             {new Date(log.created_at).toLocaleString('en-IN')}
-                            {log.user_id && <span className="ml-2 text-primary">· User logged in</span>}
+                            {log.user_id && <span className="ml-2 text-primary">· Logged in user</span>}
                           </p>
                           <div className="bg-primary/5 rounded-lg px-3 py-2">
                             <p className="text-xs text-muted-foreground mb-0.5">Student:</p>
                             <p className="text-sm">{log.message}</p>
                           </div>
                           <div className="bg-muted rounded-lg px-3 py-2">
-                            <p className="text-xs text-muted-foreground mb-0.5">Chatbot:</p>
-                            <p className="text-sm">{log.response}</p>
+                            <p className="text-xs text-muted-foreground mb-0.5">Sarthi:</p>
+                            <p className="text-sm line-clamp-3">{log.response}</p>
                           </div>
                         </div>
                       ))}
