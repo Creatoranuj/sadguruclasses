@@ -91,6 +91,7 @@ const MyCourseDetail = () => {
    const isPlayerOpen = searchParams.get("lesson") !== null;
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<any[]>([]);
+  const [selectedNoteUrl, setSelectedNoteUrl] = useState<{ url: string; title: string } | null>(null);
  
   useEffect(() => {
     const fetchComments = async () => {
