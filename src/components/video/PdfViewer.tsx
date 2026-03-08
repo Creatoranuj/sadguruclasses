@@ -3,7 +3,7 @@ import { FileText, ExternalLink, Maximize, Minimize, Download } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { downloadFile } from "@/utils/fileUtils";
 import { toast } from "sonner";
-import mahimaLogo from "@/assets/mahima-academy-logo.png";
+import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 
 interface PdfViewerProps {
   url: string;
