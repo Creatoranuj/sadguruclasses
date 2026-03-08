@@ -136,12 +136,7 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [navigate, isAuthenticated, authLoading, user]);
 
-  const teacherFeatures = [
-    { icon: ClipboardCheck, label: "Attendance", color: "text-blue-600 bg-blue-100", path: "/attendance" },
-    { icon: FileText, label: "Report Card", color: "text-purple-600 bg-purple-100", path: "/reports" },
-    { icon: Users, label: "Students", color: "text-green-600 bg-green-100", path: "/students" },
-    { icon: Calendar, label: "Timetable", color: "text-orange-600 bg-orange-100", path: "/timetable" },
-  ];
+  // teacherFeatures is defined outside component — see below
 
   if (loading || authLoading) {
     return (

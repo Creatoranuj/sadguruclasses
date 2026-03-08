@@ -243,28 +243,7 @@ const ObsidianNotes: React.FC<ObsidianNotesProps> = ({
     });
   };
 
-  const SaveStatusIndicator = () => {
-    if (saveStatus === 'idle') return null;
-    if (saveStatus === 'saving') return (
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Loader2 className="w-3 h-3 animate-spin" />
-        Saving...
-      </span>
-    );
-    if (saveStatus === 'saved') return (
-      <span className="flex items-center gap-1 text-xs text-primary">
-        <CheckCircle className="w-3 h-3" />
-        Saved ✓
-      </span>
-    );
-    if (saveStatus === 'error') return (
-      <span className="flex items-center gap-1 text-xs text-destructive">
-        <AlertCircle className="w-3 h-3" />
-        Save failed
-      </span>
-    );
-    return null;
-  };
+  // SaveStatusIndicator is defined outside component (see below) and receives saveStatus as prop
 
   return (
     <div className="space-y-4">
