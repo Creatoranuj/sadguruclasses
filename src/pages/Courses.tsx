@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Layout/Header";
 import Sidebar from "@/components/Layout/Sidebar";
+import BottomNav from "@/components/Layout/BottomNav";
 import CourseCard, { CourseProps } from "@/components/courses/CourseCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
@@ -175,6 +176,7 @@ const Courses = () => {
           </div>
         )}
       </main>
+      <BottomNav />
     </div>
   );
 };

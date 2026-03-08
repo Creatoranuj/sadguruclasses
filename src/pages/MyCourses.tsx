@@ -340,6 +340,7 @@ const MyCourses = () => {
           </div>
         )}
       </main>
+      <BottomNav />
     </div>
   );
 };
