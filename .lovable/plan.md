@@ -1,83 +1,176 @@
 
-## What I Found
+## Analysis
 
-**Database**: The `live_sessions` table exists with correct columns and RLS policies:
-- Admins can fully manage sessions (ALL operations)
-- All authenticated users can view sessions (SELECT)
-- `live_messages` table: authenticated users can INSERT/VIEW, admins/teachers can UPDATE (answer doubts)
+### What this app can and cannot do
 
-**Current State**: The table is EMPTY — no live sessions have been created yet. This is why the student dashboard shows nothing in the "Upcoming Live Classes" or "LIVE NOW" sections.
+This is a **pure React + Vite frontend** project. The user's proposal includes a separate "Node.js/Express Zoom backend microservice" — but this platform **cannot run Node.js servers**. The backend must be Supabase Edge Functions (Deno).
 
-**All code is correct and working.** The only thing needed is to walk through HOW to test it step-by-step.
+The Zoom Meeting SDK for Web is a **npm package** that can absolutely be embedded inside this React app. The Zoom OAuth + signature generation must be a Supabase Edge Function.
 
----
+### What the Zoom integration actually requires
 
-## Complete Walkthrough: How to Test the Live Manager
+1. **Zoom Server-to-Server OAuth App** (not User-managed) — generates JWTs for meeting creation and SDK signatures without needing each teacher to connect their Zoom account. This is the simplest path for a coaching center.
+2. **Two Supabase Edge Functions:**
+   - `create-zoom-meeting` — creates a meeting via Zoom API, returns meetingNumber + password
+   - `get-zoom-signature` — generates the Meeting SDK JWT signature for joining
+3. **New Supabase table: `doubt_sessions`** — stores meeting requests + Zoom meeting metadata
+4. **Frontend components:**
+   - `ZoomMeetingEmbed.tsx` — embeds the Zoom Meeting SDK inline
+   - `DoubtsPage.tsx` (`/doubts`) — student can request a session; teacher/admin can create + manage
+5. **Admin tab** — add "Doubts" tab to Admin.tsx for managing all requests
 
-### Step 1 — Admin Creates a Live Session
+### Architecture (simplified for this stack)
 
-1. Log in as **Admin** → go to `/admin/live` (already on that page)
-2. Fill in the **"Schedule New Live Class"** form:
-   - **Session Title**: e.g. `Physics Chapter 5 – Motion`
-   - **YouTube Live Video ID**: Any valid YouTube video ID to test, e.g. `dQw4w9WgXcQ` (or a real live stream ID)
-   - **Scheduled Date & Time**: Set a future date/time (optional)
-   - **Link to Course**: Select any course (optional)
-3. Click **"Create Session"** → toast "Live session created!" appears
-4. The session appears in the "All Sessions" list with status badge **"Scheduled"**
+```
+React App (this project)
+  │
+  ├── /doubts (student) → create doubt request → saved to doubt_sessions table
+  │
+  ├── Admin panel → "Doubts" tab → see requests → click "Create Zoom Meeting"
+  │     └── calls Edge Function: create-zoom-meeting
+  │           └── Zoom API: creates meeting → returns meetingNumber, password
+  │           └── saves to doubt_sessions row
+  │
+  └── Student/Teacher → click "Join Meeting"
+        └── calls Edge Function: get-zoom-signature
+              └── returns SDK JWT signature
+              └── ZoomMeetingEmbed.tsx launches Zoom SDK inline
+```
 
-### Step 2 — Admin Goes Live
+### Secrets needed from the user
 
-1. In the session card, click the red **"Go Live"** button
-2. Status badge changes to **"LIVE"** with a pulsing animation
+The user needs to:
+1. Go to [marketplace.zoom.us](https://marketplace.zoom.us) → Build App → **Server-to-Server OAuth**
+2. Get: `Account ID`, `Client ID`, `Client Secret`, `SDK Key`, `SDK Secret`
+3. Store as Supabase secrets
 
-### Step 3 — Student Dashboard Shows Live Banner
-
-1. Open the app as a **Student** (in a separate browser window or incognito)
-2. Log in → go to `/dashboard`
-3. The **red pulsing "LIVE CLASS NOW"** banner (`LiveBadge`) appears at the top of the dashboard showing the session title
-4. Also visible: **UpcomingLiveSessions** shows sessions with future scheduled dates
-5. Click **"Join Now"** on the banner → navigates to `/live/{sessionId}`
-
-### Step 4 — Student Joins Live Class (`/live/:id`)
-
-The page shows:
-- **YouTube video** embedded (if the YouTube ID is a real live stream, it plays live; test IDs show the video normally)
-- **Viewer count** (Supabase Realtime Presence — shows how many users are on the page)
-- **"Raise Hand"** button
-- **Chat + Doubts** panel on the right (two tabs)
-
-Student types a message in Chat → sends → **appears instantly** (Supabase Realtime subscription on `live_messages`)
-
-Student asks a doubt → sends → appears in Doubts tab with "Pending" badge
-
-### Step 5 — Admin/Teacher Views Session
-
-1. Back in Admin Live Manager, click the **Eye 👁 icon** on the session card → a side sheet opens showing:
-   - Embedded YouTube video preview
-   - Full LiveChat with moderation mode (`isAdmin=true`)
-   - In Doubts tab: sees student doubts, can click **"Answer this doubt"** → type answer → Submit
-   - The answered doubt shows "Teacher's Answer" box for students in real-time
-
-2. Click the **🎓 (GraduationCap) icon** → opens `/teacher/live/{sessionId}` in a new tab (Teacher View with full controls)
-
-### Step 6 — End the Session
-
-1. Admin clicks **"End Live"** → session status changes to "Ended"
-2. The `LiveBadge` disappears from student dashboard automatically (Realtime subscription)
+### Plan
 
 ---
 
-## Known Behavior Notes
+## Database
 
-| Scenario | What happens |
-|---|---|
-| YouTube ID is not a live stream | Video plays normally (not live) — for real live testing, use an actual YouTube Live stream ID |
-| Student opens `/live/{id}` before "Go Live" | Session loads, video shows, chat works — just no LIVE badge |
-| Multiple students join | Viewer count increments in real-time via Supabase Presence |
-| Admin answers a doubt | Student sees the answer appear instantly without refresh |
+New table: `doubt_sessions`
+```sql
+CREATE TABLE public.doubt_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL REFERENCES auth.users(id),
+  teacher_id uuid REFERENCES auth.users(id),
+  course_id bigint REFERENCES public.courses(id),
+  subject text,
+  description text NOT NULL,
+  status text NOT NULL DEFAULT 'pending', -- pending | scheduled | active | completed | cancelled
+  zoom_meeting_id text,
+  zoom_join_url text,
+  zoom_password text,
+  zoom_meeting_number text,
+  scheduled_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+-- RLS: students see own, teachers/admins see all
+```
 
 ---
 
-## No Code Changes Needed
+## Supabase Edge Functions
 
-Everything is already built and working correctly. The system just needs real session data to be created through the Admin Live Manager.
+### `supabase/functions/create-zoom-meeting/index.ts`
+- Auth: checks caller is admin or teacher
+- Gets Server-to-Server OAuth token from Zoom
+- Creates meeting via `POST /v2/users/me/meetings`
+- Updates `doubt_sessions` row with zoom fields
+- Returns: `{ meetingId, meetingNumber, joinUrl, password }`
+
+### `supabase/functions/get-zoom-signature/index.ts`
+- Takes `{ meetingNumber, role }` (0=participant, 1=host)
+- Generates HMAC-SHA256 JWT signature using SDK Key + Secret
+- Returns `{ signature, sdkKey }`
+
+---
+
+## Frontend Files
+
+### CREATE: `src/pages/Doubts.tsx` (`/doubts`)
+**Student view:**
+- Form: subject, description, preferred time, course selector → submits to `doubt_sessions`
+- List of own past/upcoming sessions with status badges
+- "Join" button when status = active/scheduled (opens ZoomMeetingEmbed)
+
+**Teacher/Admin view:**
+- All pending requests in a list with student name, subject, description
+- "Schedule & Create Zoom" button → calls edge function → updates row
+- "Go Live" / "Mark Complete" controls
+
+### CREATE: `src/components/live/ZoomMeetingEmbed.tsx`
+- Props: `{ meetingNumber, password, userName, role (0|1) }`
+- Calls `get-zoom-signature` edge function on mount
+- Dynamically loads `@zoom/meetingsdk` (CDN script tag, no npm needed to avoid bundle bloat)
+- Renders the Zoom component-view inside a `div#zmmtg-root`
+- Shows loading spinner while SDK initializes
+
+### MODIFY: `src/App.tsx`
+- Add `/doubts` route
+
+### MODIFY: `src/components/Layout/Sidebar.tsx`
+- Add "Doubts" item with `VideoIcon` icon
+
+### MODIFY: `src/components/Layout/BottomNav.tsx`
+- Optionally replace or add "Doubts" tab
+
+### MODIFY: `src/pages/Admin.tsx`
+- Add "Doubts" tab (grid-cols-11 → grid-cols-12)
+- Render a `DoubtsAdminPanel` sub-component showing all sessions with create-meeting action
+
+### MODIFY: `src/pages/Dashboard.tsx`
+- Add small "Upcoming Doubt Sessions" card if student has any scheduled sessions
+
+---
+
+## Summary
+
+```text
+NEEDS FROM USER (before implementation):
+  Zoom Server-to-Server OAuth credentials:
+  - Account ID
+  - Client ID  
+  - Client Secret
+  - SDK Key
+  - SDK Secret
+  → Store as Supabase secrets
+
+CREATE (DB):
+  doubt_sessions table + RLS policies
+
+CREATE (Edge Functions):
+  supabase/functions/create-zoom-meeting/index.ts
+  supabase/functions/get-zoom-signature/index.ts
+
+CREATE (Frontend):
+  src/pages/Doubts.tsx           Student request + join UI
+  src/components/live/ZoomMeetingEmbed.tsx   Embedded Zoom SDK
+
+MODIFY:
+  src/App.tsx                Add /doubts route
+  src/components/Layout/Sidebar.tsx    Add Doubts nav item
+  src/pages/Admin.tsx        Add Doubts tab
+  src/pages/Dashboard.tsx    Add upcoming doubts card
+```
+
+---
+
+## One Critical Blocker
+
+Before any code can be written, the user **must create a Zoom app and provide credentials**. The edge functions are useless without `ZOOM_ACCOUNT_ID`, `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_SDK_KEY`, and `ZOOM_SDK_SECRET`.
+
+**Step-by-step for the user:**
+1. Go to [https://marketplace.zoom.us](https://marketplace.zoom.us)
+2. Sign in → top menu → **Develop** → **Build App**
+3. Choose **"Server-to-Server OAuth"** (NOT General App — simpler, no user OAuth needed)
+4. Name it `Sadguru Doubt Sessions`
+5. After creation: copy `Account ID`, `Client ID`, `Client Secret`
+6. Under **Features** → **Meeting SDK** tab: get `SDK Key` and `SDK Secret`
+7. Add scopes: `meeting:write:admin`, `meeting:read:admin`
+8. Activate the app
+
+I will ask the user for these credentials before proceeding.
