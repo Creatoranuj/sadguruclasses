@@ -105,6 +105,7 @@ const MyCourseDetail = () => {
   const [inlineViewer, setInlineViewer] = useState<{ url: string; title: string } | null>(null);
   const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
   const [activeDiscussionTab, setActiveDiscussionTab] = useState("overview");
+  const [lastWatchedLessonId, setLastWatchedLessonId] = useState<string | null>(null);
 
   // Lesson likes — keyed to the selected lesson
   const { likeCount, hasLiked, toggleLike, loading: likesLoading } = useLessonLikes(selectedLesson?.id);
@@ -205,12 +206,16 @@ const MyCourseDetail = () => {
         if (user?.id) {
           const { data: progressData } = await supabase
             .from("user_progress")
-            .select("lesson_id")
+            .select("lesson_id, last_watched_at")
             .eq("user_id", user.id)
             .eq("course_id", Number(courseId))
-            .eq("completed", true);
+            .eq("completed", true)
+            .order("last_watched_at", { ascending: false });
           completedSet = new Set((progressData || []).map((p: any) => p.lesson_id));
           setCompletedLessonIds(completedSet);
+          if (progressData && progressData.length > 0) {
+            setLastWatchedLessonId(progressData[0].lesson_id);
+          }
         }
 
         const lessonCountMap: Record<string, number> = {};
@@ -597,6 +602,24 @@ const MyCourseDetail = () => {
                     ? `${selectedChapter.code} : ${selectedChapter.title}`
                     : course.title}
               </h1>
+              {/* Resume last watched — only show when no lesson is open */}
+              {!selectedLesson && lastWatchedLessonId && (() => {
+                const resumeLesson = lessons.find(l => l.id === lastWatchedLessonId);
+                if (!resumeLesson) return null;
+                return (
+                  <Button
+                    size="sm"
+                    className="shrink-0 gap-1.5 h-8 text-xs font-medium"
+                    onClick={() => {
+                      setSelectedLesson(resumeLesson);
+                      setSearchParams({ lesson: resumeLesson.id });
+                    }}
+                  >
+                    <Play className="h-3 w-3" />
+                    Resume
+                  </Button>
+                );
+              })()}
               {/* Desktop sidebar collapse toggle */}
               <button
                 onClick={() => setSidebarCollapsed(prev => !prev)}
