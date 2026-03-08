@@ -12,7 +12,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   ArrowLeft, Play, FileText, BookOpen, Grid3X3,
-  Lock, Clock, Download, Star, CheckCircle, MessageCircle, Send, FolderOpen, ChevronRight
+  Lock, Clock, Star, CheckCircle, MessageCircle, Send, FolderOpen, ChevronRight,
+  PanelLeftOpen, PanelLeftClose, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -79,6 +80,7 @@ const MyCourseDetail = () => {
     const isAdminOrTeacher = isAdmin || isTeacher;
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [courseSidebarOpen, setCourseSidebarOpen] = useState(false);
     const [course, setCourse] = useState<Course | null>(null);
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -648,10 +650,10 @@ const MyCourseDetail = () => {
    }
  
    return (
-     <div className="min-h-screen bg-background flex flex-col">
+   <div className="min-h-screen bg-background flex flex-col">
        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
        <Header onMenuClick={() => setSidebarOpen(true)} userName={profile?.fullName || "User"} />
-
+ 
        {/* Inline PDF Viewer overlay — for PDF/DPP/NOTES clicked from grid or chips */}
        {inlineViewer && (
          <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -676,144 +678,235 @@ const MyCourseDetail = () => {
          </div>
        )}
 
-       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto w-full">
+       {/* Mobile sidebar overlay backdrop */}
+       {courseSidebarOpen && (
+         <div
+           className="fixed inset-0 z-30 bg-black/40 md:hidden"
+           onClick={() => setCourseSidebarOpen(false)}
+         />
+       )}
 
-          <Breadcrumbs segments={mainBreadcrumbSegments} />
-
-          <div className="px-4 py-4 border-b">
-             <button 
-               onClick={() => selectedChapterId ? setSelectedChapterId(null) : navigate("/my-courses")} 
-               className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+       <div className="flex flex-1 overflow-hidden">
+         {/* Course Chapter Sidebar */}
+         <aside className={cn(
+           "fixed md:sticky top-0 md:top-auto z-40 h-full md:h-auto flex-shrink-0 w-64 bg-card border-r flex flex-col transition-transform duration-300",
+           "md:translate-x-0 md:flex",
+           courseSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+         )}>
+           {/* Sidebar header */}
+           <div className="flex items-center justify-between px-3 py-3 border-b shrink-0">
+             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Course Content</span>
+             <button
+               onClick={() => setCourseSidebarOpen(false)}
+               className="md:hidden p-1 rounded hover:bg-muted text-muted-foreground"
              >
-               <ArrowLeft className="h-4 w-4" />
-               <span className="text-sm font-medium">
-                 {selectedChapterId ? "Back to Subjects" : "Back to Courses"}
-               </span>
+               <X className="h-4 w-4" />
              </button>
- 
-             <h1 className="text-2xl font-bold text-foreground mb-2">{course.title}</h1>
-             {!selectedChapterId && course.description && (
-               <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 mb-4">
-                 {course.description}
-               </p>
-             )}
            </div>
 
-           {/* Chapter folder view - when no chapter is selected and chapters exist */}
-           {!selectedChapterId && chapters.length > 0 ? (
-             <div className="p-4 space-y-4">
-               <div className="flex items-center justify-between mb-2">
-                  <h2 className="font-semibold text-foreground">Subjects</h2>
-                  <span className="text-xs text-muted-foreground">{chapters.length} subjects</span>
-               </div>
-               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                 {chapters.map((chapter, idx) => (
+           {/* Sidebar chapter list */}
+           <ScrollArea className="flex-1">
+             <div className="p-2 space-y-1">
+               {/* All Content */}
+               <button
+                 onClick={() => { setSelectedChapterId(null); setCourseSidebarOpen(false); }}
+                 className={cn(
+                   "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors",
+                   !selectedChapterId
+                     ? "bg-primary/10 text-primary font-medium border-l-2 border-primary pl-2.5"
+                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                 )}
+               >
+                 <Grid3X3 className="h-4 w-4 shrink-0" />
+                 <span className="flex-1 truncate">All Content</span>
+                 <span className={cn(
+                   "text-xs px-1.5 py-0.5 rounded-full",
+                   !selectedChapterId ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                 )}>
+                   {lessons.length}
+                 </span>
+               </button>
+
+               {/* Chapters */}
+               {chapters.map((chapter) => {
+                 const isActive = selectedChapterId === chapter.id;
+                 const count = chapterLessonCounts[chapter.id] || 0;
+                 return (
                    <button
                      key={chapter.id}
-                     onClick={() => setSelectedChapterId(chapter.id)}
-                     className="p-4 border rounded-2xl bg-card hover:border-primary hover:shadow-md transition-all text-left group"
+                     onClick={() => { setSelectedChapterId(chapter.id); setCourseSidebarOpen(false); }}
+                     className={cn(
+                       "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors",
+                       isActive
+                         ? "bg-primary/10 text-primary font-medium border-l-2 border-primary pl-2.5"
+                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                     )}
                    >
-                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                         <FolderOpen className="h-5 w-5" />
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <p className="font-semibold text-sm text-foreground truncate">{chapter.title}</p>
-                         <p className="text-xs text-muted-foreground">
-                           {chapterLessonCounts[chapter.id] || 0} lessons
-                         </p>
-                       </div>
-                       <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                     </div>
+                     <FolderOpen className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+                     <span className="flex-1 truncate leading-snug">{chapter.title}</span>
+                     {count > 0 && (
+                       <span className={cn(
+                         "text-xs px-1.5 py-0.5 rounded-full shrink-0",
+                         isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                       )}>
+                         {count}
+                       </span>
+                     )}
                    </button>
-                 ))}
+                 );
+               })}
+             </div>
+           </ScrollArea>
+         </aside>
+
+         {/* Main content area */}
+         <main className="flex-1 overflow-y-auto min-w-0">
+           <div className="max-w-5xl mx-auto w-full">
+             <Breadcrumbs segments={mainBreadcrumbSegments} />
+
+             <div className="px-4 py-4 border-b">
+               <div className="flex items-center gap-2 mb-4">
+                 {/* Mobile sidebar toggle */}
+                 <button
+                   onClick={() => setCourseSidebarOpen(true)}
+                   className="md:hidden p-2 rounded-lg border bg-card text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                 >
+                   <PanelLeftOpen className="h-4 w-4" />
+                 </button>
+                 <button
+                   onClick={() => selectedChapterId ? setSelectedChapterId(null) : navigate("/my-courses")}
+                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                 >
+                   <ArrowLeft className="h-4 w-4" />
+                   <span className="text-sm font-medium">
+                     {selectedChapterId ? "Back to Subjects" : "Back to Courses"}
+                   </span>
+                 </button>
                </div>
 
-               {/* Also show ungrouped lessons if any */}
-               {(() => {
-                 const ungrouped = lessons.filter(l => !l.chapterId || !chapters.find(ch => ch.id === l.chapterId));
-                 if (ungrouped.length === 0) return null;
-                 return (
-                   <div className="mt-6">
-                     <h3 className="font-semibold text-foreground text-sm mb-3">Other Content</h3>
+               <h1 className="text-2xl font-bold text-foreground mb-2">{course.title}</h1>
+               {!selectedChapterId && course.description && (
+                 <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 mb-4">
+                   {course.description}
+                 </p>
+               )}
+             </div>
+
+             {/* Chapter folder view - when no chapter selected and chapters exist */}
+             {!selectedChapterId && chapters.length > 0 ? (
+               <div className="p-4 space-y-4">
+                 <div className="flex items-center justify-between mb-2">
+                   <h2 className="font-semibold text-foreground">Subjects</h2>
+                   <span className="text-xs text-muted-foreground">{chapters.length} subjects</span>
+                 </div>
+                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                   {chapters.map((chapter) => (
+                     <button
+                       key={chapter.id}
+                       onClick={() => setSelectedChapterId(chapter.id)}
+                       className="p-4 border rounded-2xl bg-card hover:border-primary hover:shadow-md transition-all text-left group"
+                     >
+                       <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                           <FolderOpen className="h-5 w-5" />
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <p className="font-semibold text-sm text-foreground truncate">{chapter.title}</p>
+                           <p className="text-xs text-muted-foreground">
+                             {chapterLessonCounts[chapter.id] || 0} lessons
+                           </p>
+                         </div>
+                         <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                       </div>
+                     </button>
+                   ))}
+                 </div>
+
+                 {/* Ungrouped lessons */}
+                 {(() => {
+                   const ungrouped = lessons.filter(l => !l.chapterId || !chapters.find(ch => ch.id === l.chapterId));
+                   if (ungrouped.length === 0) return null;
+                   return (
+                     <div className="mt-6">
+                       <h3 className="font-semibold text-foreground text-sm mb-3">Other Content</h3>
+                       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                         {ungrouped.map(lesson => {
+                           const typeConfig = getTypeConfig(lesson.lectureType);
+                           const TypeIcon = typeConfig.icon;
+                           const isLocked = lesson.isLocked && !hasPurchased && !isAdminOrTeacher;
+                           return renderLessonCard(lesson, typeConfig, TypeIcon, !!isLocked);
+                         })}
+                       </div>
+                     </div>
+                   );
+                 })()}
+               </div>
+             ) : (
+               <>
+                 {/* Tab filters */}
+                 <div className="px-4 pt-4 border-b bg-card sticky top-0 z-10">
+                   <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide">
+                     {tabConfig.map((tab) => {
+                       const count = selectedChapterId
+                         ? lessons.filter(l => l.chapterId === selectedChapterId && (tab.id === "all" || typeMapping[tab.id].includes(l.lectureType || "VIDEO"))).length
+                         : counts[tab.id];
+                       const isActive = activeTab === tab.id;
+                       const Icon = tab.icon;
+
+                       return (
+                         <button
+                           key={tab.id}
+                           onClick={() => setActiveTab(tab.id)}
+                           className={cn(
+                             "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                             isActive
+                               ? "bg-primary text-primary-foreground shadow-sm"
+                               : "bg-muted text-muted-foreground hover:bg-muted/80"
+                           )}
+                         >
+                           <Icon className="h-4 w-4" />
+                           {tab.label}
+                           {count > 0 && (
+                             <span className={cn(
+                               "text-xs px-1.5 py-0.5 rounded-full",
+                               isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-foreground"
+                             )}>
+                               {count}
+                             </span>
+                           )}
+                         </button>
+                       );
+                     })}
+                   </div>
+                 </div>
+
+                 <div className="p-4 space-y-4">
+                   {chapterFilteredLessons.length === 0 ? (
+                     <div className="text-center py-16">
+                       <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                       <h3 className="font-semibold text-foreground mb-1">No content available</h3>
+                       <p className="text-sm text-muted-foreground">
+                         There's no content in this section yet.
+                       </p>
+                     </div>
+                   ) : (
                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                       {ungrouped.map(lesson => {
+                       {chapterFilteredLessons.map((lesson) => {
                          const typeConfig = getTypeConfig(lesson.lectureType);
                          const TypeIcon = typeConfig.icon;
                          const isLocked = lesson.isLocked && !hasPurchased && !isAdminOrTeacher;
                          return renderLessonCard(lesson, typeConfig, TypeIcon, !!isLocked);
                        })}
                      </div>
-                   </div>
-                 );
-               })()}
-             </div>
-           ) : (
-             <>
-               {/* Tab filters - shown when inside a chapter or no chapters exist */}
-               <div className="px-4 pt-4 border-b bg-card sticky top-0 z-10">
-                 <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide">
-                   {tabConfig.map((tab) => {
-                     const count = selectedChapterId
-                       ? lessons.filter(l => l.chapterId === selectedChapterId && (tab.id === "all" || typeMapping[tab.id].includes(l.lectureType || "VIDEO"))).length
-                       : counts[tab.id];
-                     const isActive = activeTab === tab.id;
-                     const Icon = tab.icon;
-
-                     return (
-                       <button
-                         key={tab.id}
-                         onClick={() => setActiveTab(tab.id)}
-                         className={cn(
-                           "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
-                           isActive 
-                             ? "bg-primary text-primary-foreground shadow-sm" 
-                             : "bg-muted text-muted-foreground hover:bg-muted/80"
-                         )}
-                       >
-                         <Icon className="h-4 w-4" />
-                         {tab.label}
-                         {count > 0 && (
-                           <span className={cn(
-                             "text-xs px-1.5 py-0.5 rounded-full",
-                             isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-foreground"
-                           )}>
-                             {count}
-                           </span>
-                         )}
-                       </button>
-                     );
-                   })}
+                   )}
                  </div>
-               </div>
-
-               <div className="p-4 space-y-4">
-                 {chapterFilteredLessons.length === 0 ? (
-                   <div className="text-center py-16">
-                     <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                     <h3 className="font-semibold text-foreground mb-1">No content available</h3>
-                     <p className="text-sm text-muted-foreground">
-                       There's no content in this section yet.
-                     </p>
-                   </div>
-                 ) : (
-                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                     {chapterFilteredLessons.map((lesson) => {
-                       const typeConfig = getTypeConfig(lesson.lectureType);
-                       const TypeIcon = typeConfig.icon;
-                       const isLocked = lesson.isLocked && !hasPurchased && !isAdminOrTeacher;
-                       return renderLessonCard(lesson, typeConfig, TypeIcon, !!isLocked);
-                     })}
-                   </div>
-                 )}
-               </div>
-             </>
-           )}
-          </div>
-        </main>
-      </div>
-    );
-  };
+               </>
+             )}
+           </div>
+         </main>
+       </div>
+     </div>
+   );
+ };
  
-  export default MyCourseDetail;
+ export default MyCourseDetail;
