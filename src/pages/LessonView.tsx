@@ -9,9 +9,11 @@ import { MahimaGhostPlayer } from "@/components/video";
 import { formatDuration } from "@/components/video/MahimaVideoPlayer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  ArrowLeft, Play, Lock, Clock, BookOpen, 
+  ArrowLeft, Play, Lock, Clock,
   Loader2, FileText, MessageCircle, Star, CheckCircle, Send, Library, ImageIcon, X
 } from "lucide-react";
+import DriveEmbedViewer from "@/components/course/DriveEmbedViewer";
+import { extractArchiveId } from "@/utils/fileUtils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useComments } from "@/hooks/useComments";
@@ -494,7 +496,10 @@ const LessonView = () => {
                       if (tabsTrigger) tabsTrigger.click();
                     }}
                     onDownloadPdf={currentLesson.class_pdf_url ? () => {
-                      window.open(currentLesson.class_pdf_url!, '_blank');
+                      // Switch to the inline PDF tab instead of opening a new tab
+                      const pdfTab = document.querySelector('[value="pdf"]') as HTMLElement;
+                      if (pdfTab) { pdfTab.click(); window.scrollTo({ top: 500, behavior: 'smooth' }); }
+                      else window.open(currentLesson.class_pdf_url!, '_blank');
                     } : undefined}
                     hasPdf={!!currentLesson.class_pdf_url}
                     likesLoading={likesLoading}
@@ -519,9 +524,15 @@ const LessonView = () => {
                     </div>
 
                     {/* TABS COMPONENT */}
-                    <Tabs defaultValue="overview" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4 lg:w-[500px] mb-6">
+                    <Tabs defaultValue={currentLesson?.class_pdf_url ? "pdf" : "overview"} className="w-full">
+                        <TabsList className={`grid w-full mb-6 ${currentLesson?.class_pdf_url ? "grid-cols-5" : "grid-cols-4"} lg:w-auto lg:inline-flex`}>
                             <TabsTrigger value="overview">Overview</TabsTrigger>
+                            {currentLesson?.class_pdf_url && (
+                              <TabsTrigger value="pdf" className="gap-1">
+                                <FileText className="h-3 w-3" />
+                                PDF
+                              </TabsTrigger>
+                            )}
                             <TabsTrigger value="resources" className="gap-1">
                                 <Library className="h-3 w-3" />
                                 Resources
@@ -541,7 +552,15 @@ const LessonView = () => {
                             </div>
                         </TabsContent>
 
-                        {/* Resources Tab - Archive.org Books */}
+                        {/* PDF Tab — inline Archive.org / Drive / direct PDF embed */}
+                        {currentLesson?.class_pdf_url && (
+                          <TabsContent value="pdf" className="rounded-xl overflow-hidden">
+                            <DriveEmbedViewer
+                              url={currentLesson.class_pdf_url}
+                              title={currentLesson.title}
+                            />
+                          </TabsContent>
+                        )}
                         <TabsContent value="resources" className="bg-white p-6 rounded-xl border shadow-sm">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 mb-4">
