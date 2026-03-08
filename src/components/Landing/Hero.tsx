@@ -47,6 +47,11 @@ const Hero = memo(({ data, stats = [] }: HeroProps) => {
               {data?.title || "Learning Made Fun & Easy"}
             </h1>
 
+            {/* Subheading */}
+            <p className="text-sm md:text-base text-muted-foreground/70 font-medium -mt-2">
+              India's Most Affordable Learning Platform
+            </p>
+
             {/* Dynamic Subtitle */}
             <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto lg:mx-0">
               {data?.subtitle || "Join Sadguru Coaching Classes for world-class education."}
