@@ -194,6 +194,10 @@ const AdminQuizManager = () => {
   const [questionForms, setQuestionForms] = useState<QuestionForm[]>([defaultQuestion()]);
   const [savingQuestions, setSavingQuestions] = useState(false);
 
+  // Bulk image import
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkImageUrls, setBulkImageUrls] = useState("");
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -330,6 +334,22 @@ const AdminQuizManager = () => {
       setExpandedQuestions({ 0: true });
     }
     setView("edit-questions");
+  };
+
+  const handleBulkImport = () => {
+    const urls = bulkImageUrls.split("\n").map(u => u.trim()).filter(Boolean);
+    if (!urls.length) return toast.error("Paste at least one image URL");
+    const startIdx = questionForms.length;
+    const newQs = urls.map(url => ({ ...defaultQuestion(), image_url: url }));
+    setQuestionForms(prev => [...prev, ...newQs]);
+    setExpandedQuestions(prev => {
+      const next = { ...prev };
+      newQs.forEach((_, i) => { next[startIdx + i] = true; });
+      return next;
+    });
+    setBulkImageUrls("");
+    setShowBulkImport(false);
+    toast.success(`${urls.length} question${urls.length > 1 ? "s" : ""} added from image URLs`);
   };
 
   const togglePublish = async (quiz: Quiz) => {
@@ -740,6 +760,16 @@ const AdminQuizManager = () => {
           </Button>
           <Button
             size="sm"
+            variant="outline"
+            className="gap-1 min-h-[44px] shrink-0"
+            onClick={() => setShowBulkImport(v => !v)}
+            title="Bulk import from image URLs"
+          >
+            <ImagePlus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Bulk</span>
+          </Button>
+          <Button
+            size="sm"
             className="gap-1 min-h-[44px] shrink-0"
             onClick={handleSaveQuestions}
             disabled={savingQuestions}
@@ -751,6 +781,36 @@ const AdminQuizManager = () => {
       </header>
 
       <main className="max-w-3xl mx-auto p-4 space-y-4">
+        {/* Bulk Import Panel */}
+        {showBulkImport && (
+          <div className="border rounded-xl p-4 bg-card space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold flex items-center gap-2">
+                <ImagePlus className="h-4 w-4 text-primary" />
+                Bulk Import from Image URLs
+              </p>
+              <button onClick={() => setShowBulkImport(false)} className="text-muted-foreground hover:text-foreground">
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">Paste one image URL per line. A new question will be created for each URL with the image pre-filled.</p>
+            <textarea
+              rows={6}
+              value={bulkImageUrls}
+              onChange={e => setBulkImageUrls(e.target.value)}
+              placeholder={"https://example.com/q1.jpg\nhttps://example.com/q2.jpg\n..."}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleBulkImport} className="gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                Import {bulkImageUrls.split("\n").filter(u => u.trim()).length || 0} Questions
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setBulkImageUrls(""); setShowBulkImport(false); }}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
         {/* Collapse/Expand all */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{questionForms.length} questions</span>
