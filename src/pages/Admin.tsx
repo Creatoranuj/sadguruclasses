@@ -39,9 +39,11 @@ interface UserWithRole {
 
 const Admin = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, isAdmin, isLoading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState("payments");
+  const activeTab = searchParams.get("tab") || "payments";
+  const setActiveTab = (tab: string) => setSearchParams({ tab }, { replace: true });
   
   // -- DATA STATES --
   const [payments, setPayments] = useState<any[]>([]);
