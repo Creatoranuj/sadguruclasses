@@ -101,7 +101,7 @@ const AdminLiveManager = () => {
       toast.error("Failed to create session: " + error.message);
     } else {
       toast.success("Live session created!");
-      setForm({ title: "", description: "", youtube_live_id: "", scheduled_at: "", course_id: "" });
+      setForm({ title: "", description: "", youtube_live_id: "", scheduled_at: "", course_id: "", recording_url: "" });
       fetchSessions();
     }
     setCreating(false);
