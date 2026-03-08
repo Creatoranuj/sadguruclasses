@@ -1646,6 +1646,16 @@ const Admin = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
                     <Input value={newMaterial.title} onChange={(e) => setNewMaterial({...newMaterial, title: e.target.value})} placeholder="Material title *" />
+
+                    {/* File Type Selector */}
+                    <Select value={materialFileType} onValueChange={(v) => setMaterialFileType(v as "PDF" | "NOTES" | "DPP")}>
+                      <SelectTrigger><SelectValue placeholder="File Type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PDF">📄 PDF</SelectItem>
+                        <SelectItem value="NOTES">📝 Notes</SelectItem>
+                        <SelectItem value="DPP">📋 DPP</SelectItem>
+                      </SelectContent>
+                    </Select>
                     
                     {/* Upload Mode Toggle */}
                     <div className="flex items-center gap-2">
@@ -1655,7 +1665,7 @@ const Admin = () => {
                       <Button size="sm" variant={pdfFile ? "default" : "outline"} onClick={() => {
                         document.getElementById('library-file-upload')?.click();
                       }}>
-                        <Upload className="h-3 w-3 mr-1" /> Upload PDF
+                        <Upload className="h-3 w-3 mr-1" /> Upload File
                       </Button>
                     </div>
 
@@ -1676,10 +1686,10 @@ const Admin = () => {
                       }}
                     />
                     {pdfFile && (
-                      <div className="flex items-center gap-2 p-2 bg-green-50 rounded border border-green-200 text-sm text-green-700">
-                        <FileText className="h-4 w-4" />
+                      <div className="flex items-center gap-2 p-2 bg-muted rounded border text-sm">
+                        <FileText className="h-4 w-4 text-primary" />
                         <span className="font-medium truncate">{pdfFile.name}</span>
-                        <Button size="sm" variant="ghost" className="ml-auto h-6 text-red-500" onClick={() => setPdfFile(null)}>✕</Button>
+                        <Button size="sm" variant="ghost" className="ml-auto h-6 text-destructive" onClick={() => setPdfFile(null)}>✕</Button>
                       </div>
                     )}
 
@@ -1700,24 +1710,23 @@ const Admin = () => {
                         const { error: uploadError } = await supabase.storage.from('content').upload(filePath, pdfFile);
                         if (uploadError) { toast.error(uploadError.message); return; }
                         const { data: { publicUrl } } = supabase.storage.from('content').getPublicUrl(filePath);
-                        setNewMaterial(prev => ({ ...prev, file_url: publicUrl }));
-                        // Wait for state then create
                         await supabase.from('materials').insert({
                           title: newMaterial.title,
                           description: newMaterial.description || null,
                           file_url: publicUrl,
-                          file_type: fileExt?.toUpperCase() || 'PDF',
+                          file_type: materialFileType,
                           course_id: newMaterial.course_id ? parseInt(newMaterial.course_id) : null,
                         });
                         toast.success("Material uploaded!");
                         setPdfFile(null);
                         setNewMaterial({ title: "", description: "", file_url: "", course_id: "" });
+                        setMaterialFileType("PDF");
                         fetchLibraryData();
                       } else {
                         handleCreateMaterial();
                       }
                     }}>
-                      <Plus className="h-3 w-3 mr-1" /> {pdfFile ? "Upload & Add Material" : "Add Material"}
+                      <Plus className="h-3 w-3 mr-1" /> {pdfFile ? `Upload & Add ${materialFileType}` : `Add ${materialFileType}`}
                     </Button>
                   </div>
 
