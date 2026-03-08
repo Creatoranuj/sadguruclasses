@@ -149,6 +149,7 @@ const App = () => (
                   <Route path="/admin/quiz" element={<AdminRoute element={<AdminQuizManager />} />} />
                   <Route path="/admin/live" element={<AdminRoute element={<AdminLiveManager />} />} />
                   <Route path="/admin/chatbot" element={<AdminRoute element={<AdminChatbotSettings />} />} />
+                  <Route path="/admin/analytics" element={<AdminRoute element={<AdminAnalytics />} />} />
                   
                   {/* Protected Routes */}
                   <Route path="/dashboard" element={<Dashboard />} />
