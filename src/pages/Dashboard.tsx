@@ -31,7 +31,7 @@ import UpcomingLiveSessions from "@/components/live/UpcomingLiveSessions";
 const studentQuickActions = [
   { iconSrc: cubeIcon, label: "All Classes", path: "/all-classes", bg: "bg-blue-50 dark:bg-blue-950/30" },
   { iconSrc: checkmarkIcon, label: "All Tests", path: "/all-tests", bg: "bg-purple-50 dark:bg-purple-950/30" },
-  { iconSrc: doubtsIcon, label: "My Doubts", path: "/messages", bg: "bg-teal-50 dark:bg-teal-950/30" },
+  { iconSrc: doubtsIcon, label: "My Doubts", path: "/doubts", bg: "bg-teal-50 dark:bg-teal-950/30" },
   { iconSrc: scienceIcon, label: "Library", path: "/materials", bg: "bg-pink-50 dark:bg-pink-950/30" },
   { iconSrc: bellIcon, label: "Notices", path: "/notices", bg: "bg-orange-50 dark:bg-orange-950/30" },
   { iconSrc: checkmarkIcon, label: "Performance", path: "/reports", bg: "bg-green-50 dark:bg-green-950/30" },
