@@ -1,83 +1,94 @@
 
-## Root Cause: Missing `lovable.toml`
+## Two Features to Add
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+### Feature 1 — Compact List-View Toggle on Lesson List
+**Where**: The lesson list area (STATE 2 in `MyCourseDetail.tsx`, lines 757–845), specifically in the tab bar row and the lessons render loop.
 
----
+**What to build**:
+- Add a `viewMode` state: `"card" | "list"`, defaulting to `"card"`, persisted in `localStorage` with key `sadguru_lesson_view`.
+- Add a toggle button (LayoutList / LayoutGrid icons from lucide-react) in the top-right of the tab bar area.
+- In the lessons render section, when `viewMode === "list"`, render a compact `LectureListRow` inline component instead of `LectureCard`.
 
-## Plan
-
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
-
-```toml
-[run]
-dev = "npm run dev"
+**LectureListRow design** (single line, ~44px tall):
 ```
+[TYPE BADGE] [title, truncated, flex-1] [duration or date] [✓ dot or Mark Done]
+```
+- Type badge: colored pill — VIDEO = blue, PDF = purple, DPP = orange, NOTES = green
+- Title: `text-sm font-medium line-clamp-1 flex-1`
+- Duration: `text-xs text-muted-foreground` (right side)
+- Completion dot: green filled circle if completed, gray outline if not; for non-video also shows a tiny "Mark Done" tap target
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+**Changes to `LectureCard.tsx`**: 
+- Add a `compact` boolean prop (optional, default false).
+- When `compact=true`, render the slim row instead of the card.
+- This keeps all logic in one component.
 
----
+### Feature 2 — Course Completion Banner at Top of Lesson List
 
-### 2. Visual Polish — CSS & Theme Improvements
+**Where**: In STATE 2 (lesson list view), just above the tab bar (before line 760), only shown when `selectedChapterId` is set.
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+**What to show**:
+```
+[Progress ring or bar]  X of Y lessons completed  (Z%)
+```
+**Data source**: Already available:
+- `completedLessonIds` Set — updated in real-time
+- `chapterLessons` = the filtered lessons array for current chapter (or all lessons if `__all__`)
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+**Design**: A slim card/banner:
+- Left: a small circular progress ring (SVG, ~36px) showing Z% with primary color stroke
+- Middle: `X of Y lessons · Z% complete`
+- Right: green checkmark badge if 100%
 
----
+**Computing values**: 
+- `totalInChapter` = `chapterLessons.length` where `chapterLessons` = lessons filtered by `selectedChapterId` (already used as `filteredLessons` base before tab filter — but needs to use ALL lessons in chapter, not tab-filtered)
+- `completedInChapter` = count of `completedLessonIds` intersecting `chapterLessons`
 
-### 3. Landing Page & Navigation Visual Fixes
-
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
-
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+**Implementation note**: The banner should show progress for the current chapter (all types, not tab-filtered), so I'll compute it from `lessons.filter(l => l.chapterId === selectedChapterId || selectedChapterId === "__all__")` and intersect with `completedLessonIds`.
 
 ---
 
-## Files to Modify
+## Files to Change
 
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+| File | Lines | Change |
+|------|--------|--------|
+| `src/components/course/LectureCard.tsx` | Full file | Add `compact?: boolean` prop + compact row render |
+| `src/pages/MyCourseDetail.tsx` | ~104 | Add `viewMode` state with localStorage init |
+| `src/pages/MyCourseDetail.tsx` | ~760 | Add view toggle button next to tab bar |
+| `src/pages/MyCourseDetail.tsx` | ~757 | Add completion banner above tab bar |
+| `src/pages/MyCourseDetail.tsx` | ~822 | Pass `compact={viewMode === "list"}` to `LectureCard` |
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+## Compact Row Design (in LectureCard)
 
----
+```
++------------------------------------------------------------------+
+|  [VIDEO]  Chapter 3 - Newton's Laws of Motion     12:34    ✓    |
++------------------------------------------------------------------+
+```
+- Height: `py-3 px-4` → ~48px
+- Type badge: `text-[10px] font-bold uppercase px-2 py-0.5 rounded-full`
+  - VIDEO → `bg-blue-100 text-blue-700`
+  - PDF → `bg-purple-100 text-purple-700`
+  - DPP → `bg-orange-100 text-orange-700`
+  - NOTES → `bg-green-100 text-green-700`
+- Completion indicator right side:
+  - Completed: green filled `CheckCircle2` (16px)
+  - Not completed + markable: small "✓" button tap target (no full "Mark Done" text — just an icon)
+  - Not completed + video: gray clock or nothing
 
-## Note on Visual Editor
+## Completion Banner Design
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+```
+┌─────────────────────────────────────────────────────┐
+│  ◐ [ring]   8 of 24 lessons · 33% complete    →     │
+└─────────────────────────────────────────────────────┘
+```
+- Background: `bg-primary/5 border border-primary/10 rounded-xl`
+- Ring: inline SVG circle, `r=14`, circumference=88, `strokeDashoffset = 88 - (pct/100 * 88)`
+- Shows "All done! 🎉" with green bg when 100%
+- Thin — `px-4 py-2.5`, sits between breadcrumbs and tab bar
+
+## View Toggle Button
+- Placed at the right end of the tab bar row (same `flex` row)
+- `LayoutList` icon for list mode, `LayoutGrid` for card mode
+- `p-1.5 rounded-lg border bg-card` style matching existing sidebar toggle
