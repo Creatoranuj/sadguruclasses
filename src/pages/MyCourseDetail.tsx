@@ -651,7 +651,31 @@ const MyCourseDetail = () => {
      <div className="min-h-screen bg-background flex flex-col">
        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
        <Header onMenuClick={() => setSidebarOpen(true)} userName={profile?.fullName || "User"} />
- 
+
+       {/* Inline PDF Viewer overlay — for PDF/DPP/NOTES clicked from grid or chips */}
+       {inlineViewer && (
+         <div className="fixed inset-0 z-50 bg-background flex flex-col">
+           <header className="flex items-center gap-2 border-b bg-background shrink-0">
+             <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={() => setInlineViewer(null)}>
+               <ArrowLeft className="h-5 w-5" />
+             </Button>
+             <div className="flex-1 min-w-0 overflow-hidden">
+               <Breadcrumbs
+                 segments={[
+                   { label: "My Courses", href: "/my-courses" },
+                   { label: course?.title || "", href: `/my-courses/${courseId}` },
+                   { label: inlineViewer.title },
+                 ]}
+                 className="border-b-0 py-3 px-1 bg-transparent backdrop-blur-none"
+               />
+             </div>
+           </header>
+           <div className="flex-1 min-h-0 p-3">
+             <PdfViewer url={inlineViewer.url} title={inlineViewer.title} />
+           </div>
+         </div>
+       )}
+
        <main className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto w-full">
 
