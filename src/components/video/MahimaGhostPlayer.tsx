@@ -76,9 +76,9 @@ const MahimaGhostPlayer = memo(({
   const [rotation, setRotation] = useState(0);
 
   const rotateCW = useCallback(async () => {
-    const next = (rotation + 90) % 360;
+    const next = rotation === 0 ? 90 : 0;
     setRotation(next);
-    const isLandscape = next === 90 || next === 270;
+    const isLandscape = next === 90;
     if (isLandscape && !document.fullscreenElement) {
       try { await containerRef.current?.requestFullscreen(); setIsFullscreen(true); } catch {}
     } else if (!isLandscape && document.fullscreenElement) {
@@ -806,16 +806,6 @@ const MahimaGhostPlayer = memo(({
                 </Button>
               )}
 
-              {/* Rotate button — custom icon, cycles CW: 0→90→180→270→0 */}
-              <button
-                className="h-8 w-8 md:h-9 md:w-9 flex items-center justify-center outline-none focus:outline-none pointer-events-auto active:scale-90 transition-transform"
-                onClick={(e) => { e.stopPropagation(); rotateCW(); }}
-                title="Rotate screen"
-                aria-label="Rotate screen"
-              >
-                <img src={rotationIcon} alt="Rotate" className="h-6 w-6 md:h-7 md:w-7" draggable={false} style={{ filter: 'drop-shadow(0px 2px 6px rgba(0,0,0,0.8))' }} />
-              </button>
-
               {/* Settings gear — custom icon */}
               <div className="relative">
                 <button
@@ -835,6 +825,16 @@ const MahimaGhostPlayer = memo(({
                   </div>
                 )}
               </div>
+
+              {/* Rotate button — beside settings, toggles 0° ↔ 90° */}
+              <button
+                className="h-8 w-8 md:h-9 md:w-9 flex items-center justify-center outline-none focus:outline-none pointer-events-auto active:scale-90 transition-transform"
+                onClick={(e) => { e.stopPropagation(); rotateCW(); }}
+                title="Rotate screen (90°)"
+                aria-label="Rotate screen"
+              >
+                <img src={rotationIcon} alt="Rotate" className="h-6 w-6 md:h-7 md:w-7" draggable={false} style={{ filter: 'drop-shadow(0px 2px 6px rgba(0,0,0,0.8))' }} />
+              </button>
 
             </div>
           </div>
