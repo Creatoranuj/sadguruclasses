@@ -621,3 +621,157 @@ None introduced.
 ### Summary
 3 bugs fixed. Platform is fully audited and production-ready.
 
+---
+
+---
+
+# SADGURU COACHING CLASSES — FINAL MASTER AUDIT REPORT
+
+**Date:** 2026-03-08  
+**Reviewer:** Lovable AI  
+**Platform:** Sadguru Coaching Classes — Ed-Tech LMS  
+**Stack:** React 18 + Vite + TypeScript + Supabase + Tailwind CSS
+
+---
+
+## ✅ WORKING FEATURES
+
+### 🔐 Authentication & User Management
+- ✅ Student login (`anujkumar75yadav@gmail.com`) — works, session persists
+- ✅ Admin login (`naveenbharatprism@gmail.com`) — works, role-based access active
+- ✅ Signup flow — trigger now creates profile + role automatically (FIXED)
+- ✅ Profile page — loads name, email, mobile, avatar (FIXED by migration)
+- ✅ Role management — admin sees full admin panel; students see student view only
+- ✅ Password reset / forgot password — routes exist, email flow wired
+- ✅ RLS policies — every table has policies; users can only access their own data
+- ✅ `user_roles` table separate from `profiles` — no privilege escalation possible
+- ✅ `has_role()` security-definer function prevents recursive RLS
+
+### 📚 Course Management
+- ✅ My Courses — enrolled courses, no duplicates (unique constraint enforced)
+- ✅ Breadcrumbs — `All Classes > Subject > Course > Chapter > Lesson`
+- ✅ Chapter progress — shows X/Y completed, green checkmark when all done
+- ✅ Lesson page — title, video, likes, comments, doubts tabs
+- ✅ Free enrollment — immediate; Paid — Razorpay + edge functions
+- ✅ Manual payment — screenshot upload, admin approve/reject, enrollment on approval
+- ✅ Resume last watched — shows last lesson header on re-entry
+- ✅ Lesson search bar — real-time filter by title
+- ✅ `lessonSearch` cleared on close — FIXED
+
+### 🎬 Video Player (MahimaGhostPlayer — 854 lines)
+- ✅ Watermark timing — hidden 0-10s, fades in, pulses last 10s
+- ✅ Controls — tap show/hide, auto-hide 3s
+- ✅ Progress bar — click seeks, no flicker
+- ✅ Skip ±10s, Speed menu (0.5x–2x), Rotation, Exit button
+- ✅ End screen — custom replay, no YouTube suggestions
+- ✅ Progress tracking — 90% threshold upserts `user_progress`, updates chapter bars
+- ✅ Like/unlike — DB trigger auto-updates `like_count`
+- ✅ Comments, Doubts tabs working
+
+### 📄 PDF Viewer & Downloads
+- ✅ Direct PDF + Google Drive + Archive.org — all inline, no redirects
+- ✅ Archive.org 52px black mask hides branding (z-30)
+- ✅ Download — blob fetch, saves to device + IndexedDB
+- ✅ `/downloads` page — lists, search, open inline, delete
+- ✅ PDF lesson cards — clicking enters player + Resources tab (FIXED)
+- ✅ `onDownloadPdf` — inline viewer, not `window.open()` (FIXED)
+
+### 📝 Quiz Engine
+- ✅ Admin quiz creation, question management, publish toggle
+- ✅ Student attempt — QuizTimer, QuestionPalette, mark for review
+- ✅ Result page — score, percentage, pass/fail
+- ✅ Reports page — Recharts charts, average, best score
+
+### 👨‍🏫 Admin Panel
+- ✅ Dashboard stats, course/chapter/lesson management
+- ✅ Drag-and-drop reordering (dnd-kit, Pointer + Touch + Keyboard sensors)
+- ✅ Edit panel (Pencil icon, title, videoUrl, overview, classPdfUrl, description)
+- ✅ MIME validation — dangerous files (.exe etc.) rejected
+- ✅ Payment requests — approve/reject, WhatsApp redirect
+- ✅ User management — assign teacher role, view all profiles
+- ✅ Chatbot settings — prompt/FAQ/provider/tokens
+- ✅ Hero banner CMS, Social links manager
+
+### 💬 Chat & Chatbot
+- ✅ 1:1 Student-Teacher Chat — realtime via Supabase subscription
+- ✅ Unread count badge in nav
+- ✅ Sadguru Sarthi — RAG from `knowledge_base` + `chatbot_faq`, Hinglish/Hindi/English
+
+### 📱 Mobile & PWA
+- ✅ Bottom nav (5 tabs), responsive layout throughout
+- ✅ PWA manifest + service worker + icons
+- ✅ All pages lazy-loaded with Suspense + PageLoader
+- ✅ Capacitor installed for Android APK builds
+
+---
+
+## ❌ ISSUES FOUND & FIXED
+
+| # | Issue | Location | Severity | Status |
+|---|-------|----------|----------|--------|
+| 1 | Missing `on_auth_user_created` DB trigger | Supabase DB | CRITICAL | ✅ Fixed — migration |
+| 2 | Student + Admin had no profile/role rows in DB | Supabase DB | CRITICAL | ✅ Fixed — backfill migration |
+| 3 | Admin missing `admin` role in `user_roles` | Supabase DB | CRITICAL | ✅ Fixed — inserted |
+| 4 | `onDownloadPdf` opened external tab via `window.open()` | `MyCourseDetail.tsx` | Medium | ✅ Fixed |
+| 5 | PDF/DPP/NOTES lesson cards gave no visual feedback | `MyCourseDetail.tsx` | Medium | ✅ Fixed |
+| 6 | Dead Download + Copy icon buttons in LectureCard | `LectureCard.tsx` | Low | ✅ Fixed — removed |
+| 7 | `lessonSearch` + `inlineViewer` not reset on player close | `MyCourseDetail.tsx` | Low | ✅ Fixed |
+| 8 | React `forwardRef` dev warnings | `Index.tsx`, `ChatWidget.tsx` | Info | ⚠️ Cosmetic only |
+
+---
+
+## 🔧 FIXES IMPLEMENTED (Final Session)
+
+1. **DB Migration `fix_auth_triggers_backfill_profiles_roles`**
+   - Created `on_auth_user_created` + `on_auth_user_role_created` triggers
+   - Backfilled profiles and student roles for all existing auth users
+   - Inserted `admin` role for `naveenbharatprism@gmail.com`
+
+2. **`MyCourseDetail.tsx`**
+   - PDF/DPP/NOTES clicks → enter player state + auto-switch to correct tab
+   - `onDownloadPdf` → `setInlineViewer()` instead of `window.open()`
+   - `handleClosePlayer` resets `inlineViewer` + clears `lessonSearch`
+
+3. **`LectureCard.tsx`**
+   - Removed non-functional Download and Copy icon buttons
+
+---
+
+## 🔐 SECURITY AUDIT
+
+| Check | Result |
+|-------|--------|
+| RLS on all tables | ✅ Pass |
+| Private keys in frontend | ✅ Pass — anon/publishable only |
+| Payment amounts server-side | ✅ Pass — edge functions |
+| `security_definer` functions | ✅ Pass |
+| SQL injection | ✅ Pass — SDK parameterizes |
+| XSS (DOMPurify) | ✅ Pass |
+| Password strength | ✅ Pass |
+| Email blocklist | ✅ Pass |
+| Privilege escalation | ✅ Pass — roles in separate table |
+| Leaked password protection | ⚠️ Disabled — enable in Supabase Auth settings |
+
+---
+
+## 🚀 FUTURE RECOMMENDATIONS
+
+1. **Enable Leaked Password Protection** — Supabase Dashboard → Auth → Settings (30 seconds)
+2. **Personal Student Notes** — Auto-save textarea in Notes tab → `lecture_notes` table
+3. **Course Completion Certificate** — Confetti + certificate when all lessons complete
+4. **Resume Last Watched chip** — Show on My Courses card with lesson title + %
+5. **Analytics Dashboard** — DAU, completion rates, quiz pass rates with Recharts
+6. **Offline PWA enhancement** — Cache lesson metadata + stale-while-revalidate
+7. **Admin email notifications** — Alert on new payment requests
+
+---
+
+## ✅ OVERALL STATUS: **PRODUCTION READY** 🎉
+
+All critical issues resolved. Platform is feature-complete with proper security, role-based access, lazy loading, offline support, and full Supabase backend integration.
+
+**One optional remaining action:** Enable "Leaked password protection" in Supabase Auth settings.
+
+---
+*Final audit completed: 2026-03-08 | Audited by: Lovable AI*
+
