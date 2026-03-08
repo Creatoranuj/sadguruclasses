@@ -562,7 +562,6 @@ const AdminUpload = () => {
                     ? <p className="text-primary font-medium text-sm">{pdfFile.name}</p>
                     : <p className="text-muted-foreground text-sm">Tap to select file</p>}
                 </label>
-                {/* Camera capture shortcut (mobile) */}
                 <label htmlFor="pdfCamera" className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-muted rounded-full text-xs text-muted-foreground cursor-pointer hover:bg-muted/80 transition-colors">
                   <Camera className="h-3.5 w-3.5" />
                   Use Camera
@@ -579,25 +578,38 @@ const AdminUpload = () => {
         </div>
       )}
 
-      {/* Class PDF (optional) */}
-      <div className="space-y-1.5">
-        <Label>Class PDF (optional - students can download)</Label>
+      {/* ── Overview tab content ── */}
+      <div className="space-y-1.5 rounded-lg border border-border p-3 bg-muted/20">
+        <Label className="flex items-center gap-1.5 text-sm font-semibold">
+          <BookOpen className="h-4 w-4 text-primary" />
+          Overview <span className="text-xs font-normal text-muted-foreground">(shown in Overview tab)</span>
+        </Label>
+        <textarea
+          placeholder="About this lesson — what will students learn? (shown in Overview tab)"
+          value={overviewText}
+          onChange={e => setOverviewText(e.target.value)}
+          className="flex min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          rows={4}
+        />
+      </div>
+
+      {/* ── Class PDF / Resources ── */}
+      <div className="space-y-1.5 rounded-lg border border-border p-3 bg-muted/20">
+        <Label className="flex items-center gap-1.5 text-sm font-semibold">
+          <FileText className="h-4 w-4 text-orange-500" />
+          Class PDF / Resource <span className="text-xs font-normal text-muted-foreground">(shown in Resources tab)</span>
+        </Label>
         <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 text-center hover:border-primary/40 transition-colors">
           <input id="classPdfFile" type="file" accept=".pdf" onChange={e => setClassPdfFile(e.target.files?.[0] || null)} className="hidden" />
           <label htmlFor="classPdfFile" className="cursor-pointer block">
             <FileText className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
             {classPdfFile
               ? <p className="text-primary font-medium text-sm">{classPdfFile.name}</p>
-              : <p className="text-muted-foreground text-sm">Tap to upload Class PDF</p>}
+              : <p className="text-muted-foreground text-sm">Tap to upload PDF</p>}
           </label>
         </div>
         <p className="text-xs text-muted-foreground">Or paste a URL:</p>
         <Input placeholder="https://... class PDF URL" value={classPdfUrl} onChange={e => setClassPdfUrl(e.target.value)} className="h-11" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Watermark Text</Label>
-        <Input value={watermarkText} onChange={e => setWatermarkText(e.target.value)} className="h-11" />
       </div>
 
       <Button
