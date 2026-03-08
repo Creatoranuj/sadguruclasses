@@ -47,6 +47,7 @@ const Admin = () => {
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(false);
+  const [roleChanging, setRoleChanging] = useState<Record<string, boolean>>({});
   const [statsData, setStatsData] = useState({
     totalStudents: 0,
     totalCourses: 0,
@@ -240,6 +241,25 @@ const Admin = () => {
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- ROLE MANAGEMENT ---
+  const handleChangeRole = async (userId: string, newRole: string) => {
+    setRoleChanging(prev => ({ ...prev, [userId]: true }));
+    try {
+      // Delete existing role then insert new one (upsert on user_id conflict)
+      const { error } = await supabase
+        .from('user_roles')
+        .upsert({ user_id: userId, role: newRole as "admin" | "teacher" | "student" }, { onConflict: 'user_id' });
+      if (error) throw error;
+      // Update local state immediately
+      setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      toast.success("Role updated successfully");
+    } catch (err: any) {
+      toast.error("Failed to update role: " + (err?.message || "Unknown error"));
+    } finally {
+      setRoleChanging(prev => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -988,30 +1008,48 @@ const Admin = () => {
                   ) : (
                     <div className="divide-y">
                       {filteredUsers.map((u) => (
-                        <div key={u.id} className="p-4 md:p-5 hover:bg-gray-50 transition-colors flex items-center gap-4">
+                        <div key={u.id} className="p-4 md:p-5 hover:bg-muted/40 transition-colors flex items-center gap-4">
                           {/* Avatar */}
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-blue-600 font-bold text-lg flex-shrink-0">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base flex-shrink-0">
                             {u.full_name?.charAt(0)?.toUpperCase() || u.email?.charAt(0)?.toUpperCase() || '?'}
                           </div>
                           
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-gray-900 truncate">
-                                {u.full_name || 'Unnamed User'}
-                              </h3>
-                              {getRoleBadge(u.role)}
-                            </div>
-                            <p className="text-sm text-gray-500 truncate">{u.email}</p>
+                            <h3 className="font-semibold text-foreground truncate text-sm">
+                              {u.full_name || 'Unnamed User'}
+                            </h3>
+                            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                             {u.mobile && (
-                              <p className="text-xs text-gray-400">{u.mobile}</p>
+                              <p className="text-xs text-muted-foreground/70">{u.mobile}</p>
                             )}
                           </div>
                           
+                          {/* Role Selector */}
+                          <div className="shrink-0">
+                            <Select
+                              value={u.role || 'student'}
+                              onValueChange={(v) => handleChangeRole(u.id, v)}
+                              disabled={roleChanging[u.id]}
+                            >
+                              <SelectTrigger className="w-28 h-8 text-xs">
+                                {roleChanging[u.id]
+                                  ? <span className="text-muted-foreground">Saving…</span>
+                                  : <SelectValue />
+                                }
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="student">Student</SelectItem>
+                                <SelectItem value="teacher">Teacher</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
                           {/* Joined Date */}
-                          <div className="text-right text-sm text-gray-400 hidden md:block">
+                          <div className="text-right text-xs text-muted-foreground hidden md:block shrink-0">
                             <p>Joined</p>
-                            <p className="font-medium text-gray-600">
+                            <p className="font-medium text-foreground/70">
                               {new Date(u.created_at).toLocaleDateString('en-IN', { 
                                 day: 'numeric', 
                                 month: 'short', 

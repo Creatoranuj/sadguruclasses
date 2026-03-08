@@ -4,15 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Layout/Header";
 import Sidebar from "@/components/Layout/Sidebar";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { 
   PlayCircle, Zap, 
-  ClipboardCheck, FileText, Users, Calendar
+  ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle
 } from "lucide-react";
-import refreshLogo from "@/assets/refresh-logo.png";
+import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
 import UpcomingSchedule from "@/components/dashboard/UpcomingSchedule";
 
@@ -33,6 +33,20 @@ const studentQuickActions = [
   { iconSrc: checkmarkIcon, label: "Performance", path: "/reports", bg: "bg-green-50 dark:bg-green-950/30" },
 ];
 
+interface QuizAttemptRow {
+  id: string;
+  quiz_id: string;
+  score: number | null;
+  percentage: number | null;
+  passed: boolean | null;
+  created_at: string | null;
+  quizzes: {
+    title: string;
+    type: string | null;
+    total_marks: number | null;
+  } | null;
+}
+
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
@@ -42,6 +56,7 @@ const Dashboard = () => {
   const [myCourses, setMyCourses] = useState<any[]>([]);
   const [progressPercent, setProgressPercent] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [quizAttempts, setQuizAttempts] = useState<QuizAttemptRow[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -54,15 +69,22 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
-        // Fetch enrollments directly from Supabase
-        const { data: enrollments } = await supabase
-          .from('enrollments')
-          .select('*, courses(*)')
-          .eq('user_id', user!.id)
-          .eq('status', 'active');
+        const [enrollmentsRes, attemptsRes] = await Promise.all([
+          supabase
+            .from('enrollments')
+            .select('*, courses(*)')
+            .eq('user_id', user!.id)
+            .eq('status', 'active'),
+          supabase
+            .from('quiz_attempts')
+            .select('id, quiz_id, score, percentage, passed, created_at, quizzes(title, type, total_marks)')
+            .eq('user_id', user!.id)
+            .order('created_at', { ascending: false })
+            .limit(10),
+        ]);
 
-        if (enrollments && enrollments.length > 0) {
-          const enrolled = enrollments.map((e: any) => ({
+        if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {
+          const enrolled = enrollmentsRes.data.map((e: any) => ({
             id: e.courses?.id,
             title: e.courses?.title,
             description: e.courses?.description,
@@ -73,6 +95,10 @@ const Dashboard = () => {
           }));
           setMyCourses(enrolled);
           setProgressPercent(enrolled[0]?.progressPercent || 0);
+        }
+
+        if (attemptsRes.data) {
+          setQuizAttempts(attemptsRes.data as QuizAttemptRow[]);
         }
       } catch (error) {
         console.error("Error loading dashboard:", error);
@@ -95,7 +121,7 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <div className="relative">
-          <img src={refreshLogo} alt="Loading" className="h-16 w-16 rounded-2xl sadhguru-loader-logo" />
+          <img src={appLogo} alt="Loading" className="h-16 w-16 rounded-2xl sadhguru-loader-logo" />
           <div className="absolute inset-0 rounded-2xl border-2 border-primary/40 sadhguru-loader-ring" />
         </div>
         <p className="mt-4 text-muted-foreground font-medium">Please wait & Deep Breath</p>
@@ -155,7 +181,7 @@ const Dashboard = () => {
                   </div>
                   <div className="p-4 flex-1 flex flex-col justify-center gap-2">
                     <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-xs">
+                      <Badge variant="secondary" className="text-xs">
                         Class {myCourses[0].grade || "General"}
                       </Badge>
                       <span className="text-xs text-muted-foreground">Continue where you left</span>
@@ -211,6 +237,63 @@ const Dashboard = () => {
 
             {/* Upcoming Schedule */}
             <UpcomingSchedule />
+
+            {/* My Quiz Attempts */}
+            {quizAttempts.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Trophy className="h-5 w-5 text-primary" />
+                    My Quiz Attempts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border">
+                    {quizAttempts.map((attempt) => {
+                      const quizTitle = attempt.quizzes?.title ?? "Quiz";
+                      const quizType = attempt.quizzes?.type?.toUpperCase() ?? "DPP";
+                      const totalMarks = attempt.quizzes?.total_marks ?? 0;
+                      const score = attempt.score ?? 0;
+                      const pct = attempt.percentage != null ? Number(attempt.percentage).toFixed(0) : "—";
+                      const passed = attempt.passed;
+                      const date = attempt.created_at
+                        ? new Date(attempt.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                        : "—";
+
+                      return (
+                        <div key={attempt.id} className="flex items-center gap-3 px-4 py-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm text-foreground truncate">{quizTitle}</span>
+                              <Badge variant="outline" className="text-xs shrink-0">{quizType}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{date}</p>
+                          </div>
+                          <div className="text-right shrink-0 space-y-1">
+                            <p className="text-sm font-semibold text-foreground">
+                              {score} / {totalMarks} <span className="text-muted-foreground font-normal text-xs">marks</span>
+                            </p>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <span className="text-xs text-muted-foreground">{pct}%</span>
+                              {passed === true && (
+                                <Badge className="bg-green-500/10 text-green-600 border-green-200 text-xs gap-1 px-1.5">
+                                  <CheckCircle2 className="h-3 w-3" /> Pass
+                                </Badge>
+                              )}
+                              {passed === false && (
+                                <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs gap-1 px-1.5">
+                                  <XCircle className="h-3 w-3" /> Fail
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {myCourses.length > 0 && (
               <section>
