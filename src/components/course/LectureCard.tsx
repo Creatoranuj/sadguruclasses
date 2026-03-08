@@ -1,4 +1,4 @@
-import { Play, Lock, ClipboardCheck, CheckCircle2 } from "lucide-react";
+import { Play, Lock, ClipboardCheck, CheckCircle2, Circle, FileText, BookOpen, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import checkmarkIcon from "@/assets/icons/checkmark-3d.png";
@@ -15,6 +15,7 @@ export interface LectureCardProps {
   duration?: number | null;
   onClick?: () => void;
   onMarkComplete?: (e: React.MouseEvent) => void;
+  compact?: boolean;
 }
 
 const formatDuration = (seconds: number | null | undefined): string => {
@@ -41,6 +42,31 @@ const isVideoType = (type: string) => type === "VIDEO";
 const isNotesType = (type: string) => type === "PDF" || type === "NOTES";
 const isTestType = (type: string) => type === "TEST";
 
+// Badge colors per type for compact row
+const typeBadgeClass: Record<string, string> = {
+  VIDEO:  "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400",
+  PDF:    "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400",
+  DPP:    "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400",
+  NOTES:  "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400",
+  TEST:   "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400",
+};
+
+const typeIcon: Record<string, React.ReactNode> = {
+  VIDEO:  <Play className="h-3 w-3" />,
+  PDF:    <FileText className="h-3 w-3" />,
+  DPP:    <ClipboardList className="h-3 w-3" />,
+  NOTES:  <BookOpen className="h-3 w-3" />,
+  TEST:   <ClipboardCheck className="h-3 w-3" />,
+};
+
+const typeLabel: Record<string, string> = {
+  VIDEO: "VIDEO",
+  PDF:   "PDF",
+  DPP:   "DPP",
+  NOTES: "NOTES",
+  TEST:  "TEST",
+};
+
 export const LectureCard = ({
   title,
   lectureType,
@@ -51,14 +77,68 @@ export const LectureCard = ({
   duration,
   onClick,
   onMarkComplete,
+  compact = false,
 }: LectureCardProps) => {
   const isVideo = isVideoType(lectureType);
   const isNotes = isNotesType(lectureType);
   const isTest = isTestType(lectureType);
-  const isMarkable = !isVideo && !isTest; // PDF, DPP, NOTES can be manually completed
-  const typeLabel = isVideo ? "LECTURE" : lectureType;
+  const isMarkable = !isVideo && !isTest;
+  const displayTypeLabel = isVideo ? "LECTURE" : lectureType;
   const dateStr = formatDate(createdAt);
 
+  // ── COMPACT / LIST ROW ──────────────────────────────────────────────────────
+  if (compact) {
+    return (
+      <div
+        onClick={onClick}
+        className={cn(
+          "flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border/50 cursor-pointer",
+          "transition-all hover:bg-muted/40 hover:border-border active:scale-[0.99]",
+          isLocked && "opacity-60"
+        )}
+      >
+        {/* Type badge */}
+        <span className={cn(
+          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0",
+          typeBadgeClass[lectureType] ?? typeBadgeClass.VIDEO
+        )}>
+          {typeIcon[lectureType]}
+          {typeLabel[lectureType] ?? lectureType}
+        </span>
+
+        {/* Title */}
+        <span className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">
+          {title}
+        </span>
+
+        {/* Duration / date */}
+        <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
+          {isVideo ? formatDuration(duration) : (dateStr || "—")}
+        </span>
+
+        {/* Completion indicator */}
+        <div className="shrink-0 w-6 flex items-center justify-center">
+          {isLocked ? (
+            <Lock className="h-3.5 w-3.5 text-muted-foreground/60" />
+          ) : isCompleted ? (
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+          ) : isMarkable && onMarkComplete ? (
+            <button
+              onClick={onMarkComplete}
+              className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 hover:border-green-400 transition-colors flex items-center justify-center"
+              title="Mark as done"
+            >
+              <Circle className="h-2.5 w-2.5 text-muted-foreground/40" />
+            </button>
+          ) : (
+            <Circle className="h-3.5 w-3.5 text-muted-foreground/25" />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── FULL CARD (default) ─────────────────────────────────────────────────────
   return (
     <div
       onClick={onClick}
@@ -122,7 +202,7 @@ export const LectureCard = ({
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           {/* Meta line */}
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="font-medium tracking-wide">{typeLabel}</span>
+            <span className="font-medium tracking-wide">{displayTypeLabel}</span>
             {dateStr && (
               <>
                 <span>·</span>
