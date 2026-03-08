@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from "react";
-import { FileText, ExternalLink, Maximize, Minimize, Download } from "lucide-react";
+import { FileText, Maximize, Minimize, Download } from "lucide-react";
+import { useDownloads } from "@/hooks/useDownloads";
 import { Button } from "@/components/ui/button";
 import { downloadFile } from "@/utils/fileUtils";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ interface PdfViewerProps {
 const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const { addDownload } = useDownloads();
 
   const { embedUrl, openUrl } = useMemo(() => {
     const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -40,10 +42,11 @@ const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const filename = title ? `${title}.pdf` : undefined;
+      const filename = title ? `${title}.pdf` : "document.pdf";
       await downloadFile(url, filename);
+      await addDownload(title || "Document", url, filename, "PDF");
       toast.success("Download started");
-      onDownloaded?.({ title: title || "Document", url, filename: filename || "document.pdf" });
+      onDownloaded?.({ title: title || "Document", url, filename });
     } catch {
       toast.error("Download failed");
     } finally {
@@ -89,15 +92,6 @@ const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-muted-foreground hover:text-foreground"
-            onClick={() => window.open(openUrl, "_blank", "noopener,noreferrer")}
-            title="Open in new tab"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </Button>
         </div>
       </div>
 
@@ -107,7 +101,7 @@ const PdfViewer = memo(({ url, title, onDownloaded }: PdfViewerProps) => {
           src={embedUrl}
           className="w-full h-full border-0"
           title={title || "PDF Document"}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           loading="lazy"
         />
 

@@ -1,5 +1,6 @@
 import { memo, useMemo, useState, useEffect } from "react";
-import { ExternalLink, Download, Maximize, Minimize, FileText, Loader2 } from "lucide-react";
+import { Download, Maximize, Minimize, FileText, Loader2 } from "lucide-react";
+import { useDownloads } from "@/hooks/useDownloads";
 import { Button } from "@/components/ui/button";
 import { downloadFile, extractArchiveId, extractDocsId, getArchiveDownloadUrl } from "@/utils/fileUtils";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ interface DriveEmbedViewerProps {
 
 const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerProps) => {
   const [downloading, setDownloading] = useState(false);
+  const { addDownload } = useDownloads();
   const [isFullscreen, setIsFullscreen] = useState(false);
   // For Archive.org: resolved direct PDF URL (async via metadata API)
   const [archiveDirectUrl, setArchiveDirectUrl] = useState<string | null>(null);
@@ -85,15 +87,17 @@ const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerPro
         const directUrl = archiveDirectUrl || await getArchiveDownloadUrl(archiveId);
         const filename = title ? `${title}.pdf` : `${archiveId}.pdf`;
         await downloadFile(directUrl, filename);
+        await addDownload(title || archiveId, directUrl, filename, "PDF");
         onDownloaded?.({ title: title || archiveId, url: directUrl, filename });
       } else {
-        const filename = title ? `${title}.pdf` : undefined;
+        const filename = title ? `${title}.pdf` : "document.pdf";
         await downloadFile(url, filename);
-        onDownloaded?.({ title: title || "Document", url, filename: filename || "document.pdf" });
+        await addDownload(title || "Document", url, filename, "PDF");
+        onDownloaded?.({ title: title || "Document", url, filename });
       }
       toast.success("Download started");
     } catch {
-      toast.error("Download failed — try opening in a new tab");
+      toast.error("Download failed");
     } finally {
       setDownloading(false);
     }
@@ -145,15 +149,6 @@ const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerPro
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-muted-foreground hover:text-foreground"
-            onClick={() => window.open(openUrl, "_blank", "noopener,noreferrer")}
-            title="Open in new tab"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </Button>
         </div>
       </div>
 
@@ -174,7 +169,7 @@ const DriveEmbedViewer = memo(({ url, title, onDownloaded }: DriveEmbedViewerPro
             src={isArchive ? `${iframeSrc}#toolbar=0&navpanes=0` : iframeSrc}
             className="absolute inset-0 w-full h-full border-0"
             title={title || "Document Preview"}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             loading="eager"
             allowFullScreen
           />
