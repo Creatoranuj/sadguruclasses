@@ -27,11 +27,12 @@ import bellIcon from "@/assets/icons/bell-3d.png";
 import homeIcon from "@/assets/icons/home-3d.png";
 import studentIcon from "@/assets/icons/student-3d.png";
 import UpcomingLiveSessions from "@/components/live/UpcomingLiveSessions";
+import { Video } from "lucide-react";
 
 const studentQuickActions = [
   { iconSrc: cubeIcon, label: "All Classes", path: "/all-classes", bg: "bg-blue-50 dark:bg-blue-950/30" },
   { iconSrc: checkmarkIcon, label: "All Tests", path: "/all-tests", bg: "bg-purple-50 dark:bg-purple-950/30" },
-  { iconSrc: doubtsIcon, label: "My Doubts", path: "/messages", bg: "bg-teal-50 dark:bg-teal-950/30" },
+  { iconSrc: doubtsIcon, label: "My Doubts", path: "/doubts", bg: "bg-teal-50 dark:bg-teal-950/30" },
   { iconSrc: scienceIcon, label: "Library", path: "/materials", bg: "bg-pink-50 dark:bg-pink-950/30" },
   { iconSrc: bellIcon, label: "Notices", path: "/notices", bg: "bg-orange-50 dark:bg-orange-950/30" },
   { iconSrc: checkmarkIcon, label: "Performance", path: "/reports", bg: "bg-green-50 dark:bg-green-950/30" },
@@ -61,6 +62,7 @@ const Dashboard = () => {
   const [progressPercent, setProgressPercent] = useState(0);
   const [loading, setLoading] = useState(true);
   const [quizAttempts, setQuizAttempts] = useState<QuizAttemptRow[]>([]);
+  const [upcomingDoubts, setUpcomingDoubts] = useState<{ id: string; subject: string | null; scheduled_at: string | null; zoom_join_url: string | null; status: string }[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -73,7 +75,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
-        const [enrollmentsRes, attemptsRes] = await Promise.all([
+        const [enrollmentsRes, attemptsRes, doubtsRes] = await Promise.all([
           supabase
             .from('enrollments')
             .select('*, courses(*)')
@@ -86,6 +88,13 @@ const Dashboard = () => {
             .not('submitted_at', 'is', null)
             .order('created_at', { ascending: false })
             .limit(10),
+          supabase
+            .from('doubt_sessions')
+            .select('id, subject, scheduled_at, zoom_join_url, status')
+            .eq('student_id', user!.id)
+            .in('status', ['scheduled', 'active'])
+            .order('scheduled_at', { ascending: true })
+            .limit(3),
         ]);
 
         if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {
@@ -113,6 +122,9 @@ const Dashboard = () => {
 
         if (attemptsRes.data) {
           setQuizAttempts(attemptsRes.data as QuizAttemptRow[]);
+        }
+        if (doubtsRes.data) {
+          setUpcomingDoubts(doubtsRes.data);
         }
       } catch (error) {
         console.error("Error loading dashboard:", error);
@@ -313,6 +325,32 @@ const Dashboard = () => {
             )}
 
             {/* My Batches section removed — same courses already shown in Continue Learning hero card above */}
+
+            {/* Upcoming Doubt Sessions card */}
+            {upcomingDoubts.length > 0 && (
+              <Card
+                className="border border-primary/20 bg-primary/5 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate("/doubts")}
+              >
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary/10 shrink-0">
+                    <Video className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      {upcomingDoubts.length} Upcoming Zoom Session{upcomingDoubts.length > 1 ? "s" : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {upcomingDoubts[0].subject || "Doubt Session"} —{" "}
+                      {upcomingDoubts[0].scheduled_at
+                        ? new Date(upcomingDoubts[0].scheduled_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                        : "Scheduled"}
+                    </p>
+                  </div>
+                  <Badge className="bg-primary/10 text-primary border-primary/20 shrink-0">Join</Badge>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </main>
