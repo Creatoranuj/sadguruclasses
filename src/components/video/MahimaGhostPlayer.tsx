@@ -87,6 +87,11 @@ const MahimaGhostPlayer = memo(({
   const doubleTapTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const lastTapRef = useRef<{ time: number; side: 'left' | 'right' } | null>(null);
 
+  // Long-press 2x speed state
+  const [isLongPressSpeed, setIsLongPressSpeed] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const longPressSpeedBeforeRef = useRef<number>(1); // speed before long-press
+
   // Rotation state — supports 0, 90, 180, 270 degrees
   const [rotation, setRotation] = useState(0);
 
