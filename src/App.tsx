@@ -144,9 +144,10 @@ const App = () => (
                   <Route path="/admin" element={<AdminRoute element={<Admin />} />} />
                   <Route path="/admin/upload" element={<AdminRoute element={<AdminUpload />} />} />
                   <Route path="/admin/cms" element={<AdminRoute element={<AdminCMS />} />} />
-                  <Route path="/admin/schedule" element={<AdminSchedule />} />
-                   <Route path="/admin/quiz" element={<AdminQuizManager />} />
-                   <Route path="/admin/live" element={<AdminLiveManager />} />
+                  <Route path="/admin/schedule" element={<AdminRoute element={<AdminSchedule />} />} />
+                  <Route path="/admin/quiz" element={<AdminRoute element={<AdminQuizManager />} />} />
+                  <Route path="/admin/live" element={<AdminRoute element={<AdminLiveManager />} />} />
+                  <Route path="/admin/chatbot" element={<AdminRoute element={<AdminChatbotSettings />} />} />
                   
                   {/* Protected Routes */}
                   <Route path="/dashboard" element={<Dashboard />} />
@@ -185,7 +186,6 @@ const App = () => (
                   <Route path="/materials" element={<Materials />} />
                   <Route path="/syllabus" element={<Syllabus />} />
                   
-                   <Route path="/admin/chatbot" element={<AdminChatbotSettings />} />
                    <Route path="/downloads" element={<Downloads />} />
                    <Route path="/doubts" element={<Doubts />} />
                    <Route path="*" element={<NotFound />} />
