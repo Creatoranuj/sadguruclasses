@@ -487,9 +487,10 @@ const Messages = () => {
           )}
         </div>
       </div>
-    </div>
       <BottomNav />
+    </div>
   );
+};
 };
 
 export default Messages;
