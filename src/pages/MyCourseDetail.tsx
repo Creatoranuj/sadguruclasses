@@ -369,6 +369,53 @@ const MyCourseDetail = () => {
     setLessonSearch("");
   }, [setSearchParams]);
 
+  // ── Manual complete for PDF / DPP / NOTES (no video playback) ───────────────
+  const handleManualComplete = useCallback(async (lesson: Lesson) => {
+    if (!user || !courseId) return;
+    if (completedLessonIds.has(lesson.id)) return; // already done
+
+    const lessonId = lesson.id;
+    const lessonChapterId = lesson.chapterId;
+
+    // Optimistic UI update
+    setCompletedLessonIds(prev => new Set([...prev, lessonId]));
+    setChapters(prev => prev.map(ch => {
+      if (ch.id === "__all__") {
+        if (ch.completedLessons >= ch.lessonCount) return ch;
+        return { ...ch, completedLessons: ch.completedLessons + 1 };
+      }
+      if (ch.id === lessonChapterId) {
+        if (ch.completedLessons >= ch.lessonCount) return ch;
+        return { ...ch, completedLessons: ch.completedLessons + 1 };
+      }
+      return ch;
+    }));
+
+    try {
+      const { error } = await supabase.from("user_progress").upsert({
+        user_id: user.id,
+        lesson_id: lessonId,
+        course_id: Number(courseId),
+        completed: true,
+        watched_seconds: 0,
+        last_watched_at: new Date().toISOString(),
+      }, { onConflict: "user_id,lesson_id" });
+      if (error) throw error;
+      progressMarkedRef.current.add(lessonId);
+      toast.success("Marked as complete! 🎉");
+    } catch (err) {
+      // Rollback optimistic update
+      setCompletedLessonIds(prev => { const s = new Set(prev); s.delete(lessonId); return s; });
+      setChapters(prev => prev.map(ch => {
+        if (ch.id === "__all__" || ch.id === lessonChapterId) {
+          return { ...ch, completedLessons: Math.max(0, ch.completedLessons - 1) };
+        }
+        return ch;
+      }));
+      toast.error("Failed to mark complete");
+    }
+  }, [user, courseId, completedLessonIds]);
+
   // ── Single upsert + real-time chapter progress recalculation ──────────────
   const handleVideoProgress = useCallback(async (state: { played: number; playedSeconds: number }) => {
     if (!user || !selectedLesson || !courseId) return;
@@ -798,6 +845,11 @@ const MyCourseDetail = () => {
                         isLocked={!!lesson.isLocked && !hasPurchased && !isAdminOrTeacher}
                         isCompleted={completedLessonIds.has(lesson.id)}
                         onClick={() => handleContentClick(lesson)}
+                        onMarkComplete={
+                          lesson.lectureType !== "VIDEO" && !completedLessonIds.has(lesson.id)
+                            ? (e) => { e.stopPropagation(); handleManualComplete(lesson); }
+                            : undefined
+                        }
                       />
                     ))}
                   </div>

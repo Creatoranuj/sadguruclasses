@@ -1,4 +1,4 @@
-import { Play, Lock, ClipboardCheck } from "lucide-react";
+import { Play, Lock, ClipboardCheck, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import checkmarkIcon from "@/assets/icons/checkmark-3d.png";
@@ -14,6 +14,7 @@ export interface LectureCardProps {
   createdAt?: string | null;
   duration?: number | null;
   onClick?: () => void;
+  onMarkComplete?: (e: React.MouseEvent) => void;
 }
 
 const formatDuration = (seconds: number | null | undefined): string => {
@@ -49,10 +50,12 @@ export const LectureCard = ({
   createdAt,
   duration,
   onClick,
+  onMarkComplete,
 }: LectureCardProps) => {
   const isVideo = isVideoType(lectureType);
   const isNotes = isNotesType(lectureType);
   const isTest = isTestType(lectureType);
+  const isMarkable = !isVideo && !isTest; // PDF, DPP, NOTES can be manually completed
   const typeLabel = isVideo ? "LECTURE" : lectureType;
   const dateStr = formatDate(createdAt);
 
@@ -95,23 +98,30 @@ export const LectureCard = ({
             </span>
           </div>
         ) : (
-          <div className="min-w-[72px] h-[72px] rounded-xl bg-muted/50 flex items-center justify-center flex-shrink-0">
-            <img
-              src={scienceIcon}
-              alt="Notes"
-              width={48}
-              height={48}
-              className="w-12 h-12 object-contain"
-              loading="lazy"
-              decoding="async"
-            />
+          <div className={cn(
+            "min-w-[72px] h-[72px] rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
+            isCompleted ? "bg-green-50 dark:bg-green-950/30" : "bg-muted/50"
+          )}>
+            {isCompleted ? (
+              <CheckCircle2 className="w-9 h-9 text-green-500" />
+            ) : (
+              <img
+                src={scienceIcon}
+                alt="Notes"
+                width={48}
+                height={48}
+                className="w-12 h-12 object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+            )}
           </div>
         )}
 
         {/* Right: Content */}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           {/* Meta line */}
-          <div className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="font-medium tracking-wide">{typeLabel}</span>
             {dateStr && (
               <>
@@ -127,7 +137,7 @@ export const LectureCard = ({
           </h4>
 
           {/* Action row */}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -143,6 +153,24 @@ export const LectureCard = ({
               {isVideo ? "Watch Lecture" : isTest ? "Take Test" : isNotes ? "View Note" : "View DPP"}
             </button>
 
+            {/* Mark Done button — only for non-video, non-test, not yet completed */}
+            {isMarkable && !isCompleted && onMarkComplete && (
+              <button
+                onClick={onMarkComplete}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-950/30 dark:text-green-400 dark:hover:bg-green-950/50 flex items-center gap-1"
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                Mark Done
+              </button>
+            )}
+
+            {/* Completed badge for non-video types */}
+            {isMarkable && isCompleted && (
+              <span className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 flex items-center gap-1 pointer-events-none">
+                <CheckCircle2 className="h-3 w-3" />
+                Completed
+              </span>
+            )}
           </div>
         </div>
       </div>
