@@ -600,9 +600,17 @@ const MahimaGhostPlayer = memo(({
       >
         {/* Video Container */}
         <div className={isFullscreen ? 'mahima-video-container' : 'aspect-video'} style={{ position: 'relative', ...rotationStyle, filter: `brightness(${brightness}%)` }}>
-          {/* Loading spinner — stays visible until playerReady to hide YouTube's red play button */}
+          {/* Thumbnail poster — shows before first play so there's no black screen */}
+          {!isPlaying && !playerReady && youtubeId && (
+            <div
+              className="absolute inset-0 z-[5] bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg)` }}
+            />
+          )}
+
+          {/* Loading spinner — z-40 so it sits above controls but below ghost overlay */}
           {(!playerReady || isBuffering) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black z-30 pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-40 pointer-events-none">
               <Loader2 className="w-14 h-14 text-blue-500 animate-spin" />
             </div>
           )}
@@ -620,14 +628,18 @@ const MahimaGhostPlayer = memo(({
             loading="eager"
             onLoad={() => {
               setIsLoaded(true);
-              setTimeout(() => {
-                setPlayerReady(true);
-                sendCommand("pauseVideo");
-                sendCommand("seekTo", [0, true]);
-                sendCommand("setVolume", volume);
-                setIsPlaying(false);
-                onReady?.();
-              }, 800);
+              // 300ms fallback — if YouTube's onReady postMessage fires first, this is a no-op
+              readyFallbackRef.current = setTimeout(() => {
+                setPlayerReady(prev => {
+                  if (prev) return prev; // already set by onReady event
+                  sendCommand("pauseVideo");
+                  sendCommand("seekTo", [0, true]);
+                  sendCommand("setVolume", volume);
+                  setIsPlaying(false);
+                  onReady?.();
+                  return true;
+                });
+              }, 300);
             }}
           />
 
