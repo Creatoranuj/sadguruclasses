@@ -1,83 +1,110 @@
 
-## Root Cause: Missing `lovable.toml`
+## Admin Panel — Poora Map
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+User pooch raha hai "admin panel me kya hai" — yeh ek informational/audit question hai, koi code change nahi chahiye. Full admin panel structure present karta hoon.
 
----
+### Admin Pages (Routes)
+- `/admin` → Main Admin Dashboard (Admin.tsx — 1946 lines)
+- `/admin/upload` → AdminUpload.tsx
+- `/admin/cms` → AdminCMS.tsx  
+- `/admin/schedule` → AdminSchedule.tsx
+- `/admin/quiz` → AdminQuizManager.tsx
+- `/admin/live` → AdminLiveManager.tsx
+- `/admin/chatbot` → AdminChatbotSettings.tsx
 
-## Plan
+### Main Admin Dashboard (/admin) — 12 Tabs
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+**Tab 1: Payments**
+- UPI Manual + Razorpay — unified list
+- Approve / Reject manual payments
+- View payment screenshot (signed URL)
+- Revenue stats (Manual + Razorpay split)
+- CSV Export
 
-```toml
-[run]
-dev = "npm run dev"
-```
+**Tab 2: Users**
+- All registered users list
+- Search by name/email/phone
+- Filter by role (Student/Teacher/Admin)
+- Change role inline (dropdown)
+- CSV Export
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+**Tab 3: Teachers**
+- Active teachers list
+- Promote student → Teacher
+- Revoke teacher → Student
 
----
+**Tab 4: Courses**
+- Create new course (title, description, price, grade, thumbnail)
+- Edit course inline
+- Delete course
+- Search + Export
 
-### 2. Visual Polish — CSS & Theme Improvements
+**Tab 5: Content (Drill-down)**
+- Course → Chapter → Lessons tree
+- Navigate to upload from within content tree
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+**Tab 6: Upload**
+- Upload Lecture/PDF/DPP/Notes/Test
+- Link paste OR file upload
+- YouTube live preview
+- Course + Chapter selection
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+**Tab 7: Schedule** (links to /admin/schedule)
+- Lecture schedule management
 
----
+**Tab 8: Library**
+- Materials CRUD (PDF, Notes, DPP)
+- Notes CRUD
+- Filter by type and course
 
-### 3. Landing Page & Navigation Visual Fixes
+**Tab 9: Social**
+- Social links manager
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+**Tab 10: Live** 
+- Live sessions management
 
----
+**Tab 11: Banners**
+- Hero banner CRUD
 
-### 4. Global Component Polish in `src/index.css`
+**Tab 12: Doubts**
+- Doubt sessions management
 
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
+### Separate Admin Pages
 
----
+**AdminQuizManager (/admin/quiz)**
+- Create DPP / Test quizzes
+- Add MCQ / True-False / Numerical questions
+- Drag-and-drop question reorder (dnd-kit)
+- Image upload per question
+- Publish/Unpublish quiz
+- Student attempt count view
 
-### 5. Branding Consistency
+**AdminChatbotSettings (/admin/chatbot)**
+- System prompt editor
+- Provider/Model selection (Gemini)
+- Temperature, max tokens settings
+- FAQ management (create/edit/delete)
+- Knowledge Base management
+- Chat logs viewer
 
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+**AdminLiveManager (/admin/live)**
+- Create/manage live sessions
+- Zoom meeting creation
 
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+**AdminSchedule (/admin/schedule)**
+- Lecture schedule calendar
 
----
+**AdminCMS (/admin/cms)**
+- Landing page content management
 
-## Files to Modify
+**AdminUpload (/admin/upload)**
+- Dedicated upload page (separate from main admin)
 
-| File | Change |
-|------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+### Stats Dashboard (Top Cards)
+- Total Students
+- Total Revenue (₹)
+- Total Courses
+- Pending Payments (clickable → Payments tab)
+- Active Enrollments
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
-
----
-
-## Note on Visual Editor
-
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+No code changes needed — this is purely an information audit response. No plan to present, just a comprehensive structured summary.
