@@ -642,6 +642,8 @@ const MahimaGhostPlayer = memo(({
             showEndScreen && "hidden"
           )}
           style={{ paddingBottom: isFullscreen ? 'max(12px, env(safe-area-inset-bottom))' : undefined }}
+          onPointerDown={handleMouseMove}
+          onMouseMove={handleMouseMove}
         >
           {/* Progress Bar */}
           <div
