@@ -6,6 +6,7 @@ import Header from "@/components/Layout/Header";
 import BottomNav from "@/components/Layout/BottomNav";
 import LivePlayer from "@/components/live/LivePlayer";
 import LiveChat from "@/components/live/LiveChat";
+import RaiseHandButton from "@/components/live/RaiseHandButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye, ArrowLeft, Radio } from "lucide-react";

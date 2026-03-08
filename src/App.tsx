@@ -55,6 +55,7 @@ const QuizResult = lazy(() => import("./pages/QuizResult"));
 const AdminQuizManager = lazy(() => import("./pages/AdminQuizManager"));
 const LiveClass = lazy(() => import("./pages/LiveClass"));
 const AdminLiveManager = lazy(() => import("./pages/AdminLiveManager"));
+const TeacherLiveView = lazy(() => import("./pages/TeacherLiveView"));
 
 // Optimized QueryClient with better caching
 const queryClient = new QueryClient({

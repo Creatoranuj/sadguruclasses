@@ -17,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Radio, Plus, Play, Square, Eye, Trash2, Calendar, Clock,
-  MessageSquare, ExternalLink, Loader2,
+  MessageSquare, ExternalLink, Loader2, GraduationCap,
 } from "lucide-react";
 
 interface LiveSession {
