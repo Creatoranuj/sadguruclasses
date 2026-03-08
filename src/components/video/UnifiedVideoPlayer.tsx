@@ -10,6 +10,7 @@ interface UnifiedVideoPlayerProps {
   title?: string;
   onEnded?: () => void;
   onReady?: () => void;
+  onProgress?: (state: { played: number; playedSeconds: number }) => void;
 }
 
 type Platform = "youtube" | "drive" | "docs" | "vimeo" | "archive" | "direct" | "unknown";
@@ -38,14 +39,19 @@ const isArchiveDocument = (url: string): boolean => {
 
 const getVimeoId = (url: string) => url.match(/vimeo\.com\/(\d+)/)?.[1] || "";
 
-const UnifiedVideoPlayer = ({ url, title, onEnded, onReady }: UnifiedVideoPlayerProps) => {
+const UnifiedVideoPlayer = ({ url, title, onEnded, onReady, onProgress }: UnifiedVideoPlayerProps) => {
   const platform = detectPlatform(url);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleTimeUpdate = useCallback((currentTime: number, duration: number) => {
+    if (!onProgress || !duration) return;
+    onProgress({ played: currentTime / duration, playedSeconds: currentTime });
+  }, [onProgress]);
 
   // YouTube — delegate to MahimaGhostPlayer
   if (platform === "youtube") {
     return (
-      <MahimaGhostPlayer videoUrl={url} title={title} onEnded={onEnded} onReady={onReady} />
+      <MahimaGhostPlayer videoUrl={url} title={title} onEnded={onEnded} onReady={onReady} onTimeUpdate={handleTimeUpdate} />
     );
   }
 
