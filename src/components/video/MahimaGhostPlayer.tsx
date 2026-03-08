@@ -657,12 +657,30 @@ const MahimaGhostPlayer = memo(({
             className="absolute inset-0 z-40"
             onClick={handleOverlayTap}
             onTouchStart={(e) => {
-              // Swipe gesture detection (MX Player-style)
               const touch = e.touches[0];
               const container = containerRef.current;
               if (!container) { handleOverlayTouchStart(e); return; }
               const rect = container.getBoundingClientRect();
               const side = touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+
+              // ── Double-tap detection ──────────────────────────────────────
+              const now = Date.now();
+              const last = lastTapRef.current;
+              if (last && now - last.time < 300 && last.side === side) {
+                // Double-tap confirmed — skip 10s
+                clearTimeout(doubleTapTimerRef.current);
+                lastTapRef.current = null;
+                if (side === 'left') skipBackward();
+                else skipForward();
+                setDoubleTapRipple({ side, key: now });
+                setTimeout(() => setDoubleTapRipple(null), 700);
+                return; // don't start swipe / show controls
+              }
+              lastTapRef.current = { time: now, side };
+              doubleTapTimerRef.current = setTimeout(() => { lastTapRef.current = null; }, 300);
+              // ─────────────────────────────────────────────────────────────
+
+              // Swipe gesture detection (MX Player-style)
               swipeTouchRef.current = {
                 startY: touch.clientY,
                 startX: touch.clientX,
@@ -678,31 +696,24 @@ const MahimaGhostPlayer = memo(({
               const touch = e.touches[0];
               const deltaY = touch.clientY - ref.startY;
               const deltaX = touch.clientX - ref.startX;
-              // Ignore if horizontal swipe dominates (seek gesture)
               if (!ref.locked && Math.abs(deltaX) > Math.abs(deltaY)) return;
               if (Math.abs(deltaY) < 8) return;
-              // Lock to vertical swipe
               ref.locked = true;
               e.stopPropagation();
-              const sensitivity = 0.4; // % change per px
+              const sensitivity = 0.4;
               const newVal = Math.max(
                 ref.side === 'left' ? 20 : 0,
                 Math.min(ref.side === 'left' ? 150 : 100, ref.startVal - deltaY * sensitivity)
               );
-              if (ref.side === 'left') {
-                setBrightness(newVal);
-              } else {
-                setPlayerVolume(newVal);
-              }
+              if (ref.side === 'left') setBrightness(newVal);
+              else setPlayerVolume(newVal);
               if (swipeIndicatorTimer.current) clearTimeout(swipeIndicatorTimer.current);
               setSwipeIndicator({ type: ref.side === 'left' ? 'brightness' : 'volume', value: newVal, visible: true });
             }}
             onTouchEnd={() => {
               swipeTouchRef.current = null;
               if (swipeIndicatorTimer.current) clearTimeout(swipeIndicatorTimer.current);
-              swipeIndicatorTimer.current = setTimeout(() => {
-                setSwipeIndicator(null);
-              }, 1500);
+              swipeIndicatorTimer.current = setTimeout(() => setSwipeIndicator(null), 1500);
             }}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDragStart={(e) => e.preventDefault()}
