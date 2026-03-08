@@ -150,15 +150,12 @@ const UnifiedVideoPlayer = ({ url, title, lessonId, onEnded, onReady, onProgress
 
 const BrandingOverlay = () => (
   <div
-    className="absolute bottom-0 left-0 right-0 z-[46] flex items-center justify-between px-3 py-2 select-none pointer-events-none"
+    className="absolute bottom-0 left-0 right-0 z-[46] flex items-center justify-end px-3 py-2 select-none pointer-events-none"
     style={{ background: "transparent" }}
   >
-    <div className="flex items-center gap-2" style={{ pointerEvents: 'auto', cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
-      <img src={sadguruLogo} alt="" className="h-8 w-8 rounded" draggable={false} />
-    </div>
     <div
       className="flex items-center gap-1.5 px-3 py-1 rounded-md"
-      style={{ background: 'rgba(128,128,128,0.65)', backdropFilter: 'blur(4px)', pointerEvents: 'auto', cursor: 'default' }}
+      style={{ background: 'rgba(30,30,30,0.85)', backdropFilter: 'blur(6px)', pointerEvents: 'auto', cursor: 'default' }}
       onClick={(e) => e.stopPropagation()}
     >
       <img src={sadguruLogo} alt="" className="h-5 w-5 rounded-sm" draggable={false} />

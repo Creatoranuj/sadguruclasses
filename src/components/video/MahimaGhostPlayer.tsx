@@ -367,11 +367,25 @@ const MahimaGhostPlayer = memo(({
   }, [preventAll]);
 
   // YouTube API message listener
+  const readyFallbackRef = useRef<ReturnType<typeof setTimeout>>();
+
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (!event.origin.includes('youtube')) return;
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+
+        // YouTube signals the player is ready — cancel fallback timer and enable immediately
+        if (data.event === 'onReady') {
+          if (readyFallbackRef.current) clearTimeout(readyFallbackRef.current);
+          setPlayerReady(true);
+          sendCommand("pauseVideo");
+          sendCommand("seekTo", [0, true]);
+          sendCommand("setVolume", volume);
+          setIsPlaying(false);
+          onReady?.();
+        }
+
         if (data.event === 'onStateChange') {
           switch (data.info) {
             case -1: setIsBuffering(false); break;
@@ -403,7 +417,7 @@ const MahimaGhostPlayer = memo(({
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onEnded, onDurationReady, isSeeking, duration]);
+  }, [onEnded, onDurationReady, isSeeking, duration, sendCommand, volume, onReady]);
 
   // Poll YouTube for real-time progress updates
   useEffect(() => {
