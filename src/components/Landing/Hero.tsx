@@ -43,12 +43,12 @@ const Hero = memo(({ data, stats = [] }: HeroProps) => {
             </div>
 
             {/* Dynamic Title */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
               {data?.title || "Learning Made Fun & Easy"}
             </h1>
 
             {/* Subheading */}
-            <p className="text-sm md:text-base text-muted-foreground/70 font-medium -mt-2">
+            <p className="text-base md:text-lg text-primary font-semibold tracking-wide">
               India's Most Affordable Learning Platform
             </p>
 
@@ -59,7 +59,7 @@ const Hero = memo(({ data, stats = [] }: HeroProps) => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link to="/signup">
-                <Button size="lg" className="w-full sm:w-auto h-12 min-w-[160px] bg-primary text-primary-foreground gap-2">
+                <Button size="lg" className="w-full sm:w-auto h-12 min-w-[160px] rounded-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground gap-2 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-semibold">
                   {data?.cta_text || "Get Started"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -67,15 +67,14 @@ const Hero = memo(({ data, stats = [] }: HeroProps) => {
             </div>
             
             {/* Stats */}
-            <div className="flex items-center justify-center lg:justify-start gap-8 pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{studentCount}</div>
-                <div className="text-sm text-muted-foreground">Students</div>
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-6">
+              <div className="bg-card rounded-2xl px-6 py-4 shadow-md border border-border text-center min-w-[110px]">
+                <div className="text-3xl font-bold text-primary">{studentCount}</div>
+                <div className="text-sm font-medium text-muted-foreground">Students</div>
               </div>
-              <div className="h-10 w-px bg-border" />
-              <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{courseCount}</div>
-                <div className="text-sm text-muted-foreground">Courses</div>
+              <div className="bg-card rounded-2xl px-6 py-4 shadow-md border border-border text-center min-w-[110px]">
+                <div className="text-3xl font-bold text-primary">{courseCount}</div>
+                <div className="text-sm font-medium text-muted-foreground">Courses</div>
               </div>
             </div>
           </div>
