@@ -907,5 +907,6 @@ const MyCourseDetail = () => {
        </div>
      </div>
    );
+ };
  
-  export default MyCourseDetail;
+ export default MyCourseDetail;
