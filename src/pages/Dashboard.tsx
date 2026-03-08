@@ -175,8 +175,9 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            <BatchSelector />
-            <LiveBadge />
+          <BatchSelector />
+          <HeroCarousel />
+          <LiveBadge />
             <UpcomingLiveSessions />
             {myCourses.length > 0 ? (
               <Card

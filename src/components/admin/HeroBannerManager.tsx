@@ -400,7 +400,7 @@ function SortableBannerRow({
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               {banner.is_active ? (
-                <Eye className="h-4 w-4 text-green-500" />
+                <Eye className="h-4 w-4 text-primary" />
               ) : (
                 <EyeOff className="h-4 w-4" />
               )}
