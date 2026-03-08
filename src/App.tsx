@@ -109,6 +109,14 @@ const PageLoader = memo(() => {
 
 PageLoader.displayName = "PageLoader";
 
+// AdminRoute: only accessible to users with admin role
+const AdminRoute = ({ element }: { element: React.ReactElement }) => {
+  const { isAdmin, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!isAdmin) return <Navigate to="/login" replace />;
+  return element;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -128,12 +136,14 @@ const App = () => (
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/install" element={<Install />} />
                   
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<Admin />} />
+                  {/* Admin Login/Register — public */}
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/register" element={<AdminRegister />} />
-                  <Route path="/admin/upload" element={<AdminUpload />} />
-                  <Route path="/admin/cms" element={<AdminCMS />} />
+
+                  {/* Admin Routes — role-guarded */}
+                  <Route path="/admin" element={<AdminRoute element={<Admin />} />} />
+                  <Route path="/admin/upload" element={<AdminRoute element={<AdminUpload />} />} />
+                  <Route path="/admin/cms" element={<AdminRoute element={<AdminCMS />} />} />
                   <Route path="/admin/schedule" element={<AdminSchedule />} />
                    <Route path="/admin/quiz" element={<AdminQuizManager />} />
                    <Route path="/admin/live" element={<AdminLiveManager />} />
