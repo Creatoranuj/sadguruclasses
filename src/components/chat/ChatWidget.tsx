@@ -180,7 +180,7 @@ const ChatWidget = () => {
                       ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-muted text-foreground rounded-bl-sm"
                   )}>
-                    {renderContent(msg.content)}
+                    {msg.role === "assistant" ? <MarkdownMessage content={msg.content} /> : msg.content}
                   </div>
                 </div>
               ))}
