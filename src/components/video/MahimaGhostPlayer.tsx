@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import EndScreenOverlay from "./EndScreenOverlay";
 import sadguruLogo from "@/assets/branding/logo_icon_web.png";
 import settingsGearIcon from "@/assets/icons/setting-gear.png";
-import rotationIcon from "@/assets/icons/rotation-icon.png";
+import rotationIcon from "@/assets/icons/rotation-icon-custom.png";
 import playButtonIcon from "@/assets/icons/play-button.png";
 import skipBack10Icon from "@/assets/icons/skip-back-10.png";
 import skipForward10Icon from "@/assets/icons/skip-forward-10.png";
