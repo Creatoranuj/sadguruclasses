@@ -56,14 +56,14 @@ const Subjects = memo(() => (
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-4xl mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-4xl mx-auto">
         {subjects.map(({ name, icon: Icon, bg, color }) => (
           <div
             key={name}
             className="bg-card rounded-2xl p-6 shadow-md border border-border flex flex-col items-center gap-3 hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-default"
           >
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center ${bg}`}>
-              <Icon className={`w-7 h-7 ${color}`} strokeWidth={1.8} />
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${bg}`}>
+              <Icon className={`w-8 h-8 ${color}`} strokeWidth={1.8} />
             </div>
             <span className="text-sm font-semibold text-foreground">{name}</span>
           </div>
