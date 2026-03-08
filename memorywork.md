@@ -931,22 +931,6 @@ The platform is feature-complete with:
 *Final audit completed: 2026-03-08 | Reviewed by: Lovable AI*
 
 
-
----
-
-## ✅ WORKING FEATURES
-
-### 🔐 Authentication & User Management
-- ✅ Student login (`anujkumar75yadav@gmail.com`) — works, session persists
-- ✅ Admin login (`naveenbharatprism@gmail.com`) — works, role-based access active
-- ✅ Signup flow — trigger now creates profile + role automatically (FIXED)
-- ✅ Profile page — loads name, email, mobile, avatar (FIXED by migration)
-- ✅ Role management — admin sees full admin panel; students see student view only
-- ✅ Password reset / forgot password — routes exist, email flow wired
-- ✅ RLS policies — every table has policies; users can only access their own data
-- ✅ `user_roles` table separate from `profiles` — no privilege escalation possible
-- ✅ `has_role()` security-definer function prevents recursive RLS
-
 ### 📚 Course Management
 - ✅ My Courses — enrolled courses, no duplicates (unique constraint enforced)
 - ✅ Breadcrumbs — `All Classes > Subject > Course > Chapter > Lesson`
