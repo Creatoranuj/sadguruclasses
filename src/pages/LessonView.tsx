@@ -23,6 +23,7 @@ import { ArchiveBookList, type ArchiveBook } from "@/components/archive";
 import { Textarea } from "@/components/ui/textarea";
 import LessonActionBar from "@/components/video/LessonActionBar";
 import { useLessonLikes } from "@/hooks/useLessonLikes";
+import ObsidianNotes from "@/components/lecture/ObsidianNotes";
 import { useDownloads } from "@/hooks/useDownloads";
 
 // Type definitions

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, memo } from "react";
 import { 
   Play, Pause, Volume2, VolumeX,
-  Loader2, MessageCircle, X, Send, SkipForward
+  Loader2, MessageCircle, X, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
