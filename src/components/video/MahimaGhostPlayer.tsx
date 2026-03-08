@@ -215,11 +215,6 @@ const MahimaGhostPlayer = memo(({
   const isInLastTenSeconds = duration > 0 && (duration - currentTime) <= 10;
   const watermarkVisible = currentTime >= 10 || showEndScreen || isInLastTenSeconds;
 
-  // Show/hide controls — prevent auto-hide in last 10 seconds
-  const handleMouseMove = useCallback(() => {
-    showControlsNow();
-  }, [showControlsNow]);
-
   // Show controls immediately on any interaction, reset auto-hide timer
   const showControlsNow = useCallback(() => {
     setShowControls(true);
@@ -232,28 +227,30 @@ const MahimaGhostPlayer = memo(({
     }, 3000);
   }, [isPlaying, showVolumeSlider, showSpeedMenu, showDiscussion, isInLastTenSeconds]);
 
-  // Touch: show controls instantly on touchstart (no 300ms delay)
+  // Mouse move on desktop: show controls + reset timer
+  const handleMouseMove = useCallback(() => {
+    showControlsNow();
+  }, [showControlsNow]);
+
+  // Touch: show controls instantly on touchstart (no 300ms click delay)
   const handleOverlayTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     e.stopPropagation();
     showControlsNow();
   }, [showControlsNow]);
 
-  // Click (desktop): toggle controls
+  // Click: on desktop toggle; on touch it fires after touchstart already showed controls
   const handleOverlayTap = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    // On desktop (no touch), toggle; on touch devices this fires after touchstart already showed controls
     if (!('ontouchstart' in window)) {
       setShowControls(prev => {
         const next = !prev;
-        if (next) {
+        if (next && !isInLastTenSeconds) {
           if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-          if (!isInLastTenSeconds) {
-            controlsTimeoutRef.current = setTimeout(() => {
-              if (isPlaying && !showVolumeSlider && !showSpeedMenu && !showDiscussion) {
-                setShowControls(false);
-              }
-            }, 3000);
-          }
+          controlsTimeoutRef.current = setTimeout(() => {
+            if (isPlaying && !showVolumeSlider && !showSpeedMenu && !showDiscussion) {
+              setShowControls(false);
+            }
+          }, 3000);
         }
         return next;
       });
