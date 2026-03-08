@@ -185,6 +185,51 @@ export type Database = {
         }
         Relationships: []
       }
+      chatbot_feedback: {
+        Row: {
+          created_at: string
+          id: string
+          message_content: string | null
+          rating: number | null
+          response_content: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_content?: string | null
+          rating?: number | null
+          response_content?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_content?: string | null
+          rating?: number | null
+          response_content?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_logs: {
         Row: {
           created_at: string | null
