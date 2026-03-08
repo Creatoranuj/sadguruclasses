@@ -148,6 +148,14 @@ const DriveEmbedViewer = memo(({ url, title }: DriveEmbedViewerProps) => {
           </div>
         )}
 
+        {/* Archive.org left-side controls panel overlay */}
+        {isArchive && (
+          <div
+            className="absolute top-9 left-0 bottom-8 w-11 z-10 select-none pointer-events-none"
+            style={{ background: "hsl(var(--card))" }}
+          />
+        )}
+
         <iframe
           src={embedUrl}
           className="w-full h-full border-0"
