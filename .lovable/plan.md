@@ -1,54 +1,83 @@
 
-## Analysis of the two screenshots
+## Root Cause: Missing `lovable.toml`
 
-**Screenshot 1 (video player):** Layout is already correct — `[⏪10] [▶] [⏩10]` centered, `[⚙] [rotation]` in bottom-right. The `SkipForward` next-video arrow in the bottom bar is only shown when `onNextVideo` prop exists — but the user says there are "fatlu ke arrow" (useless arrows). This `SkipForward` button in the bottom controls row shows up alongside the custom skip-10 overlay buttons — that's redundant. Also, the `MessageCircle` discussion button appears in the bottom bar.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-**Screenshot 2 (Notes tab):** Shows "Lecture Notes / No notes available for this lesson." — this is from `LessonView.tsx` Notes tab which currently has a plain textarea. The user wants the Notes tab to show the proper `ObsidianNotes` editor (same as `MyCourseDetail`).
+---
 
-**Lesson meta strip (MyCourseDetail line 812-823):**
+## Plan
+
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
+
+```toml
+[run]
+dev = "npm run dev"
 ```
-<Clock /> — ★ 4.8 Rating
-```
-The `—` appears when `duration` is null/missing, and "4.8 Rating" is hardcoded fake data. Both are "fatlu" (useless/fake).
 
-## What to change
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-### File 1: `src/pages/MyCourseDetail.tsx` — lesson meta strip (lines 812–823)
-Remove the fake `4.8 Rating` star + `Clock —` when there's no duration. Instead: show duration if available, or nothing if null.
+---
 
-**Before (lines 812–823):**
-```jsx
-<div className="flex items-center gap-3 text-sm text-muted-foreground">
-  <span className="flex items-center gap-1">
-    <Clock className="h-3.5 w-3.5" />
-    {selectedLesson.duration ? `${Math.floor(selectedLesson.duration / 60)}m` : "—"}
-  </span>
-  <span className="flex items-center gap-1">
-    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-    4.8 Rating
-  </span>
-</div>
-```
-**After:** Show duration only if it exists. Remove the hardcoded 4.8 Rating star entirely. Remove `Star` and `Clock` from imports if unused.
+### 2. Visual Polish — CSS & Theme Improvements
 
-### File 2: `src/pages/LessonView.tsx` — Notes tab (lines 672–688)
-Replace the plain textarea notes section with the proper `ObsidianNotes` component — just like `MyCourseDetail.tsx` already does at line 929-935.
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-**Before (lines 672–688):** Plain `<Textarea>` with "Your Notes" heading  
-**After:** Use `<ObsidianNotes lessonId={currentLesson.id} userId={user?.id} lessonTitle={currentLesson.title} />`  
-Add import for `ObsidianNotes` from `@/components/lecture/ObsidianNotes`.
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-### File 3: `src/components/video/MahimaGhostPlayer.tsx` — remove redundant SkipForward arrow from bottom bar (lines 796–807)
-The `SkipForward` Lucide icon in the bottom bar (the "next video" button) is a standard Lucide arrow icon placed right beside the custom skip-10 overlay icons — this is the "fatlu arrow". 
+---
 
-Remove the `SkipForward` next-video button from the bottom controls. Move next-video functionality to only the end screen overlay (which already has a "Next Video" button). The `onNextVideo` callback and `nextVideoTitle` props stay — only the bottom bar button gets removed.
+### 3. Landing Page & Navigation Visual Fixes
 
-Also remove `SkipForward` from the Lucide import.
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
 
-## Summary of changes
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `MyCourseDetail.tsx` | Remove fake "4.8 Rating" + remove `—` dash when no duration (show nothing instead) |
-| `LessonView.tsx` | Replace plain textarea Notes tab with `ObsidianNotes` component |
-| `MahimaGhostPlayer.tsx` | Remove the `SkipForward` next-lecture icon from bottom controls bar |
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

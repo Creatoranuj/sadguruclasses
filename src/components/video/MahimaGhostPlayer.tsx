@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, memo } from "react";
 import { 
   Play, Pause, Volume2, VolumeX,
-  Loader2, MessageCircle, X, Send, SkipForward
+  Loader2, MessageCircle, X, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -793,18 +793,6 @@ const MahimaGhostPlayer = memo(({
                 </Button>
               )}
 
-              {/* Next lecture button */}
-              {onNextVideo && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 md:h-9 md:w-9 text-white hover:bg-white/20"
-                  onClick={handleNextVideo}
-                  title={nextVideoTitle ? `Next: ${nextVideoTitle}` : 'Next lecture'}
-                >
-                  <SkipForward className="h-4 w-4" />
-                </Button>
-              )}
 
               {/* Settings gear — custom icon */}
               <div className="relative">
