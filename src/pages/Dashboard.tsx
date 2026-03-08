@@ -166,6 +166,7 @@ const Dashboard = () => {
         ) : (
           <div className="space-y-6">
             <BatchSelector />
+            <LiveBadge />
             {myCourses.length > 0 ? (
               <Card
                 className="overflow-hidden shadow-sm cursor-pointer group hover:shadow-md transition-shadow"
