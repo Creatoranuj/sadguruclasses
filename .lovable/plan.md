@@ -1,75 +1,83 @@
 
-## What The User Wants
+## Root Cause: Missing `lovable.toml`
 
-The screenshot shows: when a lesson is clicked, the **video player + Overview/Resources/Notes/Discussion tabs should appear inline within the course page**, NOT as a full-screen takeover overlay. The chapter sidebar must remain visible. The user can switch lessons from the sidebar/lesson list. No redirect to another page.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-## Current Behavior (the problem)
-
-Lines 406–658: When `isPlayerOpen && selectedLesson` is true, the entire page returns a `fixed inset-0 z-50` full-screen overlay — hiding the sidebar, hiding the main layout, replacing everything. This is the "redirect-like" experience the user dislikes.
-
-## Target Behavior
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│  Header                                                 │
-├──────────────┬──────────────────────────────────────────┤
-│ Chapter      │  ← Back button + lesson title            │
-│ Sidebar      │─────────────────────────────────────────-│
-│              │  [VIDEO PLAYER]                          │
-│  ALL  3/10   │                                          │
-│  CH01 2/5    │  Overview │ Resources │ Notes │ Discussion│
-│  CH02 1/5    │  ─────────────────────────────────────── │
-│  ...         │  [Tab content]                           │
-└──────────────┴──────────────────────────────────────────┘
-```
+---
 
 ## Plan
 
-### Remove the full-screen overlay block (lines 406–658)
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-The `if (isPlayerOpen && selectedLesson) { return <fixed overlay> }` block will be removed. Instead, the player renders **inside `<main>`** in the existing layout.
-
-### Restructure `<main>` content (lines 854–965)
-
-Change the main content area to show **3 states**:
-1. `!selectedChapterId` → chapter grid (existing ✅)
-2. `selectedChapterId && !selectedLesson` → lesson list (existing ✅)  
-3. `selectedLesson` → **inline lesson player + tabs** (new — replaces the overlay)
-
-When a lesson is selected (`selectedLesson` is truthy), show inside `<main>`:
-
-```
-[← Back to lesson list]  Lesson title
-[Video Player - full width]
-─────────────────────────────────
-Overview | Resources | Notes | Discussion
-[tab content]
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-Back button calls `handleClosePlayer()` (sets `selectedLesson = null`, clears `?lesson=` param).
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-### Changes
+---
 
-**Remove**: Lines 405–658 (the `if (isPlayerOpen && selectedLesson)` full-screen block).
+### 2. Visual Polish — CSS & Theme Improvements
 
-**Add inside `<main>` after `{selectedChapterId && (` block**: A new `{selectedLesson && (` block that shows the inline player + tabs. When this is active, hide the lesson list. The `selectedChapterId && !selectedLesson` state shows the lesson list.
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-**`handleContentClick`** (line 288): For VIDEO lessons, just `setSelectedLesson(lesson)` + `setSearchParams({ lesson: lesson.id })` — same as now. No routing change needed.
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-**URL**: Keep `?lesson=lessonId` in search params for deep-linking — same as today.
+---
 
-**`handleClosePlayer`**: Same logic — clears lesson, clears search param — but now returns to the lesson list instead of the full-screen overlay.
+### 3. Landing Page & Navigation Visual Fixes
 
-### Key layout detail for the inline player
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
 
-The video player inside `<main>`:
-- `<UnifiedVideoPlayer>` with `onProgress={handleVideoProgress}` — same as before
-- Below it: `<Tabs>` with Overview, Resources, Notes, Discussion — same content as lines 448–653, now inside `<main>` scrollable area
-- No `fixed inset-0` — it's just normal page flow
+---
 
-### Files to change
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
 | File | Change |
 |------|--------|
-| `src/pages/MyCourseDetail.tsx` | Remove full-screen overlay block (lines 405–658). Add inline lesson player inside `<main>` within the existing layout. Sidebar stays visible. |
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-No other files need to change.
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
