@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronLeft, Eye, EyeOff, Save, Loader2,
-  ClipboardList, FlaskConical, Edit2, ArrowLeft, Check, X,
+  ClipboardList, FlaskConical, Edit2, ArrowLeft, Check, X, Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,7 @@ interface Quiz {
   course_id: number | null;
   lesson_id: string | null;
   created_at: string;
+  lessons?: { title: string } | null;
 }
 
 interface QuestionForm {
@@ -92,7 +93,7 @@ const AdminQuizManager = () => {
   }, []);
 
   const fetchQuizzes = async () => {
-    const { data } = await supabase.from("quizzes").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("quizzes").select("*, lessons(title)").order("created_at", { ascending: false });
     setQuizzes((data || []) as Quiz[]);
   };
 
@@ -275,6 +276,11 @@ const AdminQuizManager = () => {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {quiz.total_marks} marks · {quiz.duration_minutes > 0 ? `${quiz.duration_minutes} min` : "No limit"} · Pass: {quiz.pass_percentage}%
                     </p>
+                    {quiz.lessons?.title && (
+                      <p className="text-xs text-primary/70 mt-0.5 flex items-center gap-1">
+                        <Link2 className="h-3 w-3" /> {quiz.lessons.title}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => loadQuizForEdit(quiz)} title="Edit questions">
