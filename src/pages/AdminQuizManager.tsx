@@ -268,8 +268,21 @@ const AdminQuizManager = () => {
 
     setSavingQuestions(true);
     try {
+      // Upload any pending image files first
+      const formsWithUrls = await Promise.all(questionForms.map(async (q) => {
+        if (q._imageFile) {
+          const fileExt = q._imageFile.name.split('.').pop();
+          const fileName = `questions/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const { error: uploadErr } = await supabase.storage.from('content').upload(fileName, q._imageFile);
+          if (uploadErr) throw uploadErr;
+          const { data: { publicUrl } } = supabase.storage.from('content').getPublicUrl(fileName);
+          return { ...q, image_url: publicUrl, _imageFile: null };
+        }
+        return q;
+      }));
+
       await supabase.from("questions").delete().eq("quiz_id", editingQuizId);
-      const rows = questionForms.map((q, idx) => ({
+      const rows = formsWithUrls.map((q, idx) => ({
         quiz_id: editingQuizId,
         question_text: q.question_text.trim(),
         question_type: q.question_type,
@@ -278,11 +291,12 @@ const AdminQuizManager = () => {
         explanation: q.explanation || null,
         marks: q.marks,
         negative_marks: q.negative_marks,
+        image_url: q.image_url || null,
         order_index: idx,
       }));
       const { error } = await supabase.from("questions").insert(rows);
       if (error) throw error;
-      const totalMarks = questionForms.reduce((s, q) => s + q.marks, 0);
+      const totalMarks = formsWithUrls.reduce((s, q) => s + q.marks, 0);
       await supabase.from("quizzes").update({ total_marks: totalMarks }).eq("id", editingQuizId);
       toast.success("Questions saved!");
       await fetchQuizzes();
