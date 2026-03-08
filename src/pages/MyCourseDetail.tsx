@@ -92,6 +92,8 @@ const MyCourseDetail = () => {
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<any[]>([]);
   const [selectedNoteUrl, setSelectedNoteUrl] = useState<{ url: string; title: string } | null>(null);
+  // Inline PDF viewer for non-VIDEO content clicked from grid
+  const [inlineViewer, setInlineViewer] = useState<{ url: string; title: string } | null>(null);
  
   useEffect(() => {
     const fetchComments = async () => {
