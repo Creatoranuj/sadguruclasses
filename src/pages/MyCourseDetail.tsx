@@ -20,6 +20,9 @@ import { Breadcrumbs } from "@/components/course/Breadcrumbs";
 import { ChapterCard } from "@/components/course/ChapterCard";
 import { LectureCard } from "@/components/course";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LessonActionBar from "@/components/video/LessonActionBar";
+import CourseContent from "@/components/lecture/CourseContent";
+import { useLessonLikes } from "@/hooks/useLessonLikes";
 
 interface Lesson {
   id: string;
