@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Play, FileText, BookOpen, Grid3X3,
   Lock, Clock, CheckCircle, MessageCircle, Send,
-  PanelLeftOpen, PanelLeftClose, X, ChevronLeft, Search
+  PanelLeftOpen, PanelLeftClose, X, ChevronLeft, Search,
+  LayoutList, LayoutGrid, CheckCircle2, Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -115,6 +116,9 @@ const MyCourseDetail = () => {
   const [activeTab, setActiveTab] = useState<ContentType>("all");
   const [hasPurchased, setHasPurchased] = useState(false);
   const [chapterTab, setChapterTab] = useState<"chapters" | "material">("chapters");
+  const [viewMode, setViewMode] = useState<"card" | "list">(() => {
+    try { return (localStorage.getItem("sadguru_lesson_view") as "card" | "list") || "card"; } catch { return "card"; }
+  });
 
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [newComment, setNewComment] = useState("");
@@ -124,6 +128,11 @@ const MyCourseDetail = () => {
   const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
   const [activeDiscussionTab, setActiveDiscussionTab] = useState("overview");
   const [lastWatchedLessonId, setLastWatchedLessonId] = useState<string | null>(null);
+
+  const handleViewModeChange = useCallback((mode: "card" | "list") => {
+    setViewMode(mode);
+    try { localStorage.setItem("sadguru_lesson_view", mode); } catch {}
+  }, []);
 
   // Lesson likes — keyed to the selected lesson
   const { likeCount, hasLiked, toggleLike, loading: likesLoading } = useLessonLikes(selectedLesson?.id);
@@ -754,96 +763,215 @@ const MyCourseDetail = () => {
           )}
 
           {/* ── STATE 2: Lesson list ── */}
-          {selectedChapterId && !selectedLesson && (
-            <>
-              {/* Tab bar */}
-              <div className="flex gap-3 px-5 py-2 overflow-x-auto scrollbar-none">
-                {tabs.map((tab) => {
-                  const count = tabCounts[tab.id];
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap",
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "bg-muted/60 text-muted-foreground hover:bg-muted"
+          {selectedChapterId && !selectedLesson && (() => {
+            // Compute chapter-level completion (all types, not tab-filtered)
+            const chapterLessons = selectedChapterId === "__all__"
+              ? lessons
+              : lessons.filter(l => l.chapterId === selectedChapterId);
+            const totalInChapter = chapterLessons.length;
+            const completedInChapter = chapterLessons.filter(l => completedLessonIds.has(l.id)).length;
+            const pct = totalInChapter > 0 ? Math.round((completedInChapter / totalInChapter) * 100) : 0;
+            const circumference = 2 * Math.PI * 14; // r=14 → ~88
+            const strokeDashoffset = circumference - (pct / 100) * circumference;
+            const isAllDone = totalInChapter > 0 && completedInChapter === totalInChapter;
+
+            return (
+              <>
+                {/* ── Completion banner ── */}
+                {totalInChapter > 0 && (
+                  <div className={cn(
+                    "mx-5 mt-3 px-4 py-3 rounded-xl border flex items-center gap-3 transition-all",
+                    isAllDone
+                      ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800/40"
+                      : "bg-primary/5 border-primary/10"
+                  )}>
+                    {/* Circular progress ring */}
+                    <div className="shrink-0">
+                      <svg width="36" height="36" viewBox="0 0 36 36" className="-rotate-90">
+                        <circle
+                          cx="18" cy="18" r="14"
+                          fill="none"
+                          strokeWidth="3"
+                          className="stroke-muted"
+                        />
+                        <circle
+                          cx="18" cy="18" r="14"
+                          fill="none"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={strokeDashoffset}
+                          className={isAllDone ? "stroke-green-500" : "stroke-primary"}
+                          style={{ transition: "stroke-dashoffset 0.4s ease" }}
+                        />
+                        <text
+                          x="18" y="18"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          className="rotate-90"
+                          style={{ transform: "rotate(90deg) translate(0px, -36px)", fontSize: "8px", fontWeight: 700, fill: "currentColor" }}
+                        />
+                      </svg>
+                      {/* Percentage label in center */}
+                      <div className="relative -mt-[34px] flex items-center justify-center h-[36px]">
+                        <span className={cn(
+                          "text-[10px] font-bold tabular-nums",
+                          isAllDone ? "text-green-600 dark:text-green-400" : "text-primary"
+                        )}>
+                          {pct}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Text */}
+                    <div className="flex-1 min-w-0">
+                      {isAllDone ? (
+                        <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+                          Chapter complete! 🎉
+                        </p>
+                      ) : (
+                        <p className="text-sm font-medium text-foreground">
+                          {completedInChapter} of {totalInChapter} lessons
+                        </p>
                       )}
-                    >
-                      {tab.label}
-                      <span className={cn(
-                        "text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center",
-                        isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
-                      )}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {isAllDone ? "All lessons completed" : `${totalInChapter - completedInChapter} remaining`}
+                      </p>
+                    </div>
 
-              {/* Search bar */}
-              <div className="px-5 pb-1 pt-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search lessons…"
-                    value={lessonSearch}
-                    onChange={(e) => setLessonSearch(e.target.value)}
-                    className="w-full pl-9 pr-8 py-2 text-sm bg-muted rounded-xl border-0 outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
-                  />
-                  {lessonSearch && (
-                    <button
-                      onClick={() => setLessonSearch("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Lessons */}
-              <div className="p-5 space-y-4">
-                {filteredLessons.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-muted-foreground font-medium">
-                      {lessonSearch ? `No lessons match "${lessonSearch}"` : "No content found"}
-                    </p>
-                    <p className="text-sm text-muted-foreground/70 mt-1">
-                      {lessonSearch ? "Try a different search term." : "Try switching tabs or check back later."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredLessons.map((lesson) => (
-                      <LectureCard
-                        key={lesson.id}
-                        id={lesson.id}
-                        title={lesson.title}
-                        lectureType={(lesson.lectureType || "VIDEO") as "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST"}
-                        position={lesson.position ?? undefined}
-                        duration={lesson.duration}
-                        createdAt={lesson.createdAt}
-                        isLocked={!!lesson.isLocked && !hasPurchased && !isAdminOrTeacher}
-                        isCompleted={completedLessonIds.has(lesson.id)}
-                        onClick={() => handleContentClick(lesson)}
-                        onMarkComplete={
-                          lesson.lectureType !== "VIDEO" && !completedLessonIds.has(lesson.id)
-                            ? (e) => { e.stopPropagation(); handleManualComplete(lesson); }
-                            : undefined
-                        }
-                      />
-                    ))}
+                    {/* Trophy / checkmark badge */}
+                    {isAllDone ? (
+                      <Trophy className="h-5 w-5 text-green-500 shrink-0" />
+                    ) : (
+                      <div className="shrink-0 text-right">
+                        <span className="text-xs text-muted-foreground tabular-nums font-medium">
+                          {completedInChapter}/{totalInChapter}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            </>
-          )}
+
+                {/* Tab bar + view toggle */}
+                <div className="flex items-center gap-2 px-5 py-2">
+                  <div className="flex gap-2 overflow-x-auto scrollbar-none flex-1">
+                    {tabs.map((tab) => {
+                      const count = tabCounts[tab.id];
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
+                          className={cn(
+                            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap",
+                            isActive
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                          )}
+                        >
+                          {tab.label}
+                          <span className={cn(
+                            "text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center",
+                            isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+                          )}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* View mode toggle */}
+                  <div className="flex items-center gap-1 shrink-0 bg-muted/50 rounded-lg p-1">
+                    <button
+                      onClick={() => handleViewModeChange("card")}
+                      title="Card view"
+                      className={cn(
+                        "p-1.5 rounded-md transition-all",
+                        viewMode === "card"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleViewModeChange("list")}
+                      title="List view"
+                      className={cn(
+                        "p-1.5 rounded-md transition-all",
+                        viewMode === "list"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <LayoutList className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search bar */}
+                <div className="px-5 pb-1 pt-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search lessons…"
+                      value={lessonSearch}
+                      onChange={(e) => setLessonSearch(e.target.value)}
+                      className="w-full pl-9 pr-8 py-2 text-sm bg-muted rounded-xl border-0 outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+                    />
+                    {lessonSearch && (
+                      <button
+                        onClick={() => setLessonSearch("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Lessons */}
+                <div className={cn("p-5", viewMode === "list" ? "space-y-2" : "space-y-4")}>
+                  {filteredLessons.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                      <p className="text-muted-foreground font-medium">
+                        {lessonSearch ? `No lessons match "${lessonSearch}"` : "No content found"}
+                      </p>
+                      <p className="text-sm text-muted-foreground/70 mt-1">
+                        {lessonSearch ? "Try a different search term." : "Try switching tabs or check back later."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className={viewMode === "list" ? "space-y-1.5" : "space-y-4"}>
+                      {filteredLessons.map((lesson) => (
+                        <LectureCard
+                          key={lesson.id}
+                          id={lesson.id}
+                          title={lesson.title}
+                          lectureType={(lesson.lectureType || "VIDEO") as "VIDEO" | "PDF" | "DPP" | "NOTES" | "TEST"}
+                          position={lesson.position ?? undefined}
+                          duration={lesson.duration}
+                          createdAt={lesson.createdAt}
+                          isLocked={!!lesson.isLocked && !hasPurchased && !isAdminOrTeacher}
+                          isCompleted={completedLessonIds.has(lesson.id)}
+                          onClick={() => handleContentClick(lesson)}
+                          compact={viewMode === "list"}
+                          onMarkComplete={
+                            lesson.lectureType !== "VIDEO" && !completedLessonIds.has(lesson.id)
+                              ? (e) => { e.stopPropagation(); handleManualComplete(lesson); }
+                              : undefined
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
 
           {/* ── STATE 3: Inline lesson player ── */}
           {selectedLesson && (
