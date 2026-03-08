@@ -850,4 +850,126 @@ const LessonView = () => {
   );
 };
 
+// ─── Helper: Read More description ───────────────────────────────────────────
+const LessonDescription = ({ description }: { description: string }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = description.length > 120;
+  return (
+    <div className="mt-2">
+      <p className={cn("text-sm text-muted-foreground leading-relaxed", !expanded && isLong && "line-clamp-2")}>
+        {description}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="text-xs font-semibold text-primary mt-1 hover:underline"
+        >
+          {expanded ? "Show Less" : "Read More"}
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ─── Helper: Topics Covered timeline ─────────────────────────────────────────
+interface TopicsCoveredProps {
+  lessonId: string;
+  overview: string | null;
+  isAdmin: boolean;
+}
+
+const TopicsCovered = ({ lessonId, overview, isAdmin }: TopicsCoveredProps) => {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(overview || "");
+  const [saving, setSaving] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Parse "timestamp|topic" lines from overview
+  const topics = (overview || "")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line.includes("|"))
+    .map(line => {
+      const [ts, ...rest] = line.split("|");
+      return { ts: ts.trim(), topic: rest.join("|").trim() };
+    });
+
+  const handleSave = async () => {
+    if (!lessonId) return;
+    setSaving(true);
+    try {
+      await supabase.from("lessons").update({ overview: editText }).eq("id", lessonId);
+      toast.success("Topics saved!");
+      setEditing(false);
+      // Optimistically update
+      window.location.reload();
+    } catch {
+      toast.error("Failed to save topics");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="border border-border rounded-xl overflow-hidden">
+      {/* Header */}
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors"
+      >
+        <span className="font-semibold text-sm text-foreground">Topics Covered</span>
+        <div className="flex items-center gap-2">
+          {isAdmin && !editing && (
+            <span
+              onClick={(e) => { e.stopPropagation(); setEditing(true); setCollapsed(false); }}
+              className="p-1 rounded-md hover:bg-border transition-colors"
+            >
+              <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+            </span>
+          )}
+          {collapsed ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronUp className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </button>
+
+      {!collapsed && (
+        <div className="px-4 py-3">
+          {editing ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Enter one topic per line as: <code className="bg-muted px-1 rounded">timestamp|topic</code></p>
+              <textarea
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                className="w-full h-40 text-xs font-mono border border-border rounded-lg p-2 bg-background text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder={"0:00:18|Beginning the chapter\n0:02:06|Introduction\n0:07:48|System of Classification"}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+                <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : topics.length > 0 ? (
+            <div className="space-y-0">
+              {topics.map((t, i) => (
+                <div key={i} className="flex items-start gap-3 py-2 border-b border-border/50 last:border-0">
+                  <span className="text-[11px] font-mono font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5">
+                    {t.ts}
+                  </span>
+                  <span className="text-sm text-foreground leading-snug">{t.topic}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-2">
+              {isAdmin ? 'Click ✏️ to add topics covered with timestamps.' : 'Topics will be added soon.'}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default LessonView;
