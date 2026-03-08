@@ -22,6 +22,7 @@ import { LectureCard } from "@/components/course";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LessonActionBar from "@/components/video/LessonActionBar";
 import CourseContent from "@/components/lecture/CourseContent";
+import ObsidianNotes from "@/components/lecture/ObsidianNotes";
 import { useLessonLikes } from "@/hooks/useLessonLikes";
 
 interface Lesson {
