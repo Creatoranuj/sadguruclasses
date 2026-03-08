@@ -236,8 +236,8 @@ const ChatWidget = () => {
                           className={cn(
                             "p-1 rounded-md transition-colors text-xs flex items-center gap-0.5",
                             msg.feedbackGiven === "up"
-                              ? "text-green-600 bg-green-100"
-                              : "text-muted-foreground hover:text-green-600 hover:bg-green-50"
+                              ? "text-primary bg-primary/15"
+                              : "text-muted-foreground hover:text-primary hover:bg-primary/10"
                           )}
                           title="Helpful"
                         >
@@ -249,8 +249,8 @@ const ChatWidget = () => {
                           className={cn(
                             "p-1 rounded-md transition-colors text-xs flex items-center gap-0.5",
                             msg.feedbackGiven === "down"
-                              ? "text-red-500 bg-red-100"
-                              : "text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                              ? "text-destructive bg-destructive/15"
+                              : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           )}
                           title="Not helpful"
                         >
