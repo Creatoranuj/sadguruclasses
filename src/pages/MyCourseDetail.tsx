@@ -528,6 +528,7 @@ const MyCourseDetail = () => {
                         setSelectedChapterId(chapter.id);
                         setSelectedLesson(null);
                         setSearchParams({});
+                        setLessonSearch("");
                         setCourseSidebarOpen(false);
                       }}
                       className={cn(
