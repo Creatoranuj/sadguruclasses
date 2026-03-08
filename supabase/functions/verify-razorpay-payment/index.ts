@@ -112,15 +112,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create enrollment
+    // Create enrollment — upsert to handle any race conditions or duplicate attempts
     const { data: enrollment, error: enrollmentError } = await supabaseAdmin
       .from('enrollments')
-      .insert({
-        user_id: user.id,
-        course_id: Number(course_id),
-        status: 'active',
-        purchased_at: new Date().toISOString(),
-      })
+      .upsert(
+        {
+          user_id: user.id,
+          course_id: Number(course_id),
+          status: 'active',
+          purchased_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,course_id', ignoreDuplicates: false }
+      )
       .select('id')
       .single();
 

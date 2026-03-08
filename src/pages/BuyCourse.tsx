@@ -64,7 +64,10 @@ const BuyCourse = () => {
 
       const { error } = await supabase
         .from("enrollments")
-        .insert({ user_id: user.id, course_id: courseIdNum, status: "active" });
+        .upsert(
+          { user_id: user.id, course_id: courseIdNum, status: "active" },
+          { onConflict: "user_id,course_id", ignoreDuplicates: true }
+        );
 
       if (error) throw error;
 
