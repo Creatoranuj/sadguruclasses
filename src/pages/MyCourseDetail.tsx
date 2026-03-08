@@ -12,7 +12,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   ArrowLeft, Play, FileText, BookOpen, Grid3X3,
-  Lock, Clock, Download, Star, CheckCircle, MessageCircle, Send, FolderOpen, ChevronRight
+  Lock, Clock, Star, CheckCircle, MessageCircle, Send, FolderOpen, ChevronRight,
+  PanelLeftOpen, PanelLeftClose, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
