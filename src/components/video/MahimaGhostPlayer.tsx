@@ -617,9 +617,23 @@ const MahimaGhostPlayer = memo(({
             onDragStart={(e) => e.preventDefault()}
             style={{ background: 'transparent', cursor: showControls ? 'default' : 'none' }}
           >
-            {/* Center controls - Play/Pause + skip buttons */}
-            {/* Fix 1: Increased gap so skip arrows are well away from play button */}
-            <div className="absolute inset-0 flex flex-row items-center justify-center gap-24 md:gap-28">
+            {/* Center controls: [↺ CCW] [⏪10s] [▶ PLAY] [⏩10s] [↻ CW] */}
+            <div className="absolute inset-0 flex flex-row items-center justify-center gap-5 md:gap-8">
+              {/* Rotate CCW */}
+              <button
+                className={cn(
+                  "flex items-center justify-center text-white bg-black/40 rounded-full p-2 md:p-3",
+                  "transition-all duration-200 pointer-events-auto active:scale-90",
+                  showControls ? "opacity-100 scale-100" : "opacity-0 scale-90"
+                )}
+                onClick={(e) => { e.stopPropagation(); rotateCCW(); }}
+                title="Rotate counter-clockwise"
+                aria-label="Rotate counter-clockwise"
+              >
+                <RotateCcw className="w-6 h-6 md:w-7 md:h-7" style={{ filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.9))' }} />
+              </button>
+
+              {/* Skip back 10s */}
               <button
                 className={cn(
                   "flex items-center justify-center bg-transparent border-none",
@@ -630,9 +644,10 @@ const MahimaGhostPlayer = memo(({
                 title="Backward 10s"
                 aria-label="Backward 10s"
               >
-                <img src={skipBack10Icon} alt="Backward 10s" className="w-14 h-14 md:w-16 md:h-16" style={{ filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.9))' }} />
+                <img src={skipBack10Icon} alt="Backward 10s" className="w-12 h-12 md:w-14 md:h-14" style={{ filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.9))' }} />
               </button>
 
+              {/* Play / Pause */}
               <button
                 className={cn(
                   "flex items-center justify-center bg-transparent border-none",
@@ -650,6 +665,7 @@ const MahimaGhostPlayer = memo(({
                 )}
               </button>
 
+              {/* Skip forward 10s */}
               <button
                 className={cn(
                   "flex items-center justify-center bg-transparent border-none",
@@ -660,7 +676,21 @@ const MahimaGhostPlayer = memo(({
                 title="Forward 10s"
                 aria-label="Forward 10s"
               >
-                <img src={skipForward10Icon} alt="Forward 10s" className="w-14 h-14 md:w-16 md:h-16" style={{ filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.9))' }} />
+                <img src={skipForward10Icon} alt="Forward 10s" className="w-12 h-12 md:w-14 md:h-14" style={{ filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.9))' }} />
+              </button>
+
+              {/* Rotate CW */}
+              <button
+                className={cn(
+                  "flex items-center justify-center text-white bg-black/40 rounded-full p-2 md:p-3",
+                  "transition-all duration-200 pointer-events-auto active:scale-90",
+                  showControls ? "opacity-100 scale-100" : "opacity-0 scale-90"
+                )}
+                onClick={(e) => { e.stopPropagation(); rotateCW(); }}
+                title="Rotate clockwise"
+                aria-label="Rotate clockwise"
+              >
+                <RotateCw className="w-6 h-6 md:w-7 md:h-7" style={{ filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.9))' }} />
               </button>
             </div>
           </div>
@@ -803,25 +833,6 @@ const MahimaGhostPlayer = memo(({
                 )}
               </div>
 
-              {/* Rotate CCW button */}
-              <button
-                className="h-10 w-10 md:h-11 md:w-11 flex items-center justify-center outline-none focus:outline-none pointer-events-auto text-white hover:bg-white/20 rounded-lg transition-colors"
-                onClick={(e) => { e.stopPropagation(); rotateCCW(); }}
-                title="Rotate counter-clockwise"
-                aria-label="Rotate counter-clockwise"
-              >
-                <RotateCcw className="h-5 w-5 md:h-6 md:w-6" />
-              </button>
-
-              {/* Rotate CW button */}
-              <button
-                className="h-10 w-10 md:h-11 md:w-11 flex items-center justify-center outline-none focus:outline-none pointer-events-auto text-white hover:bg-white/20 rounded-lg transition-colors"
-                onClick={(e) => { e.stopPropagation(); rotateCW(); }}
-                title="Rotate clockwise"
-                aria-label="Rotate clockwise"
-              >
-                <RotateCw className="h-5 w-5 md:h-6 md:w-6" />
-              </button>
             </div>
           </div>
         </div>
