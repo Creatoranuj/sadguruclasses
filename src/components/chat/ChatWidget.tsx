@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { X, Send, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
+import { X, Send, RotateCcw, ThumbsUp, ThumbsDown, Mic, MicOff, Paperclip, ImageIcon } from "lucide-react";
 import logoIcon from "@/assets/sarthi-avatar.png"; // Sarthi guru avatar
 
 interface Message {
@@ -15,6 +15,7 @@ interface Message {
   id: string;
   feedbackGiven?: "up" | "down" | null;
   queryType?: string;
+  imageUrl?: string; // for image/doc preview in chat
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://wegamscqtvqhxowlskfm.supabase.co";
@@ -27,7 +28,19 @@ const QUICK_PROMPTS = [
   "🔥 NEET Physics syllabus batao",
 ];
 
-const WELCOME_MSG = "👋 नमस्ते! मैं **Sadguru Sarthi** हूँ – आपका 24×7 personal learning assistant। ✨\n\nमैं आपकी मदद कर सकता हूँ:\n- 📚 **Courses** और **Syllabus** के बारे में\n- 📝 **Mock Test** doubts में guidance\n- 🎯 **Study tips** और **mnemonics**\n- 🔧 **Platform** की technical help\n\nआज मैं आपके लिए क्या कर सकता हूँ?";
+const WELCOME_MSG = "👋 नमस्ते! मैं **Sadguru Sarthi** हूँ – आपका 24×7 personal learning assistant। ✨\n\nमैं आपकी मदद कर सकता हूँ:\n- 📚 **Courses** और **Syllabus** के बारे में\n- 📝 **Mock Test** doubts में guidance\n- 🎯 **Study tips** और **mnemonics**\n- 🔧 **Platform** की technical help\n- 🖼️ **Image doubt** upload करें और मैं समझाऊंगा!\n\nआज मैं आपके लिए क्या कर सकता हूँ?";
+
+// Allowed image/doc types
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Web Speech API type declarations
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 
 const ChatWidget = () => {
   const { user } = useAuth();
@@ -40,6 +53,22 @@ const ChatWidget = () => {
   const [sessionId] = useState(() => crypto.randomUUID());
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Voice input state
+  const [isListening, setIsListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Image/doc upload state
+  const [uploadedFile, setUploadedFile] = useState<{ file: File; previewUrl: string; type: "image" | "pdf" } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Check voice support
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    setVoiceSupported(!!SpeechRecognition);
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -51,18 +80,145 @@ const ChatWidget = () => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 100);
   }, [isOpen]);
 
+  // Cleanup recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  // Voice input handler
+  const toggleVoice = () => {
+    if (!voiceSupported) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+
+    recognition.lang = "hi-IN"; // Hindi + English support
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+
+    recognition.onstart = () => setIsListening(true);
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
+  // File upload handler
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      alert("❌ Only images (JPG, PNG, GIF, WebP) and PDF files allowed!");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      alert("❌ File size must be under 5MB!");
+      return;
+    }
+
+    const isImage = file.type.startsWith("image/");
+    const previewUrl = isImage ? URL.createObjectURL(file) : "";
+
+    setUploadedFile({ file, previewUrl, type: isImage ? "image" : "pdf" });
+
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeUploadedFile = () => {
+    if (uploadedFile?.previewUrl) URL.revokeObjectURL(uploadedFile.previewUrl);
+    setUploadedFile(null);
+  };
+
+  // Upload file to Supabase storage and get URL
+  const uploadFileToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `chat-doubts/${user?.id || "anon"}/${Date.now()}.${ext}`;
+
+      const { data, error } = await (await import("@/integrations/supabase/client")).supabase.storage
+        .from("chat-attachments")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = (await import("@/integrations/supabase/client")).supabase.storage
+        .from("chat-attachments")
+        .getPublicUrl(data.path);
+
+      return publicUrl;
+    } catch (err) {
+      console.error("Upload error:", err);
+      return null;
+    }
+  };
+
   const sendMessage = async (text?: string) => {
     const msg = (text || input).trim();
-    if (!msg || isLoading) return;
+    if ((!msg && !uploadedFile) || isLoading) return;
     setInput("");
 
+    let filePublicUrl: string | null = null;
+    let fileType: "image" | "pdf" | null = null;
+    const fileToSend = uploadedFile;
+    setUploadedFile(null);
+
+    if (fileToSend) {
+      setIsUploading(true);
+      filePublicUrl = await uploadFileToStorage(fileToSend.file);
+      fileType = fileToSend.type;
+      setIsUploading(false);
+      if (fileToSend.previewUrl) URL.revokeObjectURL(fileToSend.previewUrl);
+    }
+
+    const displayMsg = msg || (fileType === "image" ? "🖼️ [Image doubt]" : "📄 [Document]");
     const userMsgId = crypto.randomUUID();
-    const userMsg: Message = { role: "user", content: msg, timestamp: new Date(), id: userMsgId };
+    const userMsg: Message = {
+      role: "user",
+      content: displayMsg,
+      timestamp: new Date(),
+      id: userMsgId,
+      imageUrl: fileType === "image" && filePublicUrl ? filePublicUrl : undefined,
+    };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
     try {
       const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+
+      // Build message with image context if file uploaded
+      let fullMsg = msg;
+      if (filePublicUrl && fileType === "image") {
+        fullMsg = `${msg ? msg + "\n\n" : ""}[Student ne ek image/doubt upload ki hai: ${filePublicUrl}]\nIs image mein jo bhi question ya concept hai usse explain karein step by step.`;
+      } else if (filePublicUrl && fileType === "pdf") {
+        fullMsg = `${msg ? msg + "\n\n" : ""}[Student ne ek PDF document upload kiya hai: ${filePublicUrl}]\nIs document ke baare mein help karein.`;
+      }
 
       const response = await fetch(`${SUPABASE_URL}/functions/v1/chatbot`, {
         method: "POST",
@@ -70,7 +226,7 @@ const ChatWidget = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${ANON_KEY}`,
         },
-        body: JSON.stringify({ message: msg, history, userId: user?.id, sessionId }),
+        body: JSON.stringify({ message: fullMsg, history, userId: user?.id, sessionId }),
       });
 
       const data = await response.json();
@@ -101,7 +257,6 @@ const ChatWidget = () => {
     const msg = messages.find(m => m.id === msgId);
     if (!msg || msg.feedbackGiven) return;
 
-    // Find the preceding user message
     const msgIndex = messages.findIndex(m => m.id === msgId);
     const userMsg = msgIndex > 0 ? messages[msgIndex - 1] : null;
 
@@ -128,6 +283,7 @@ const ChatWidget = () => {
   }, [messages, user, sessionId]);
 
   const resetChat = () => {
+    removeUploadedFile();
     setMessages([{
       role: "assistant",
       content: "👋 नमस्ते! मैं **Sadguru Sarthi** हूँ – नई बातचीत शुरू करते हैं! आज मैं आपकी कैसे मदद कर सकता हूँ? 🎓",
@@ -167,6 +323,15 @@ const ChatWidget = () => {
 
   return (
     <>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
       {/* Floating trigger button */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
@@ -219,6 +384,16 @@ const ChatWidget = () => {
                     </div>
                   )}
                   <div className="flex flex-col gap-1 max-w-[82%]">
+                    {/* Image preview in user message */}
+                    {msg.imageUrl && (
+                      <div className="rounded-xl overflow-hidden border border-border">
+                        <img
+                          src={msg.imageUrl}
+                          alt="Uploaded doubt"
+                          className="max-w-full max-h-48 object-contain bg-muted"
+                        />
+                      </div>
+                    )}
                     <div className={cn(
                       "rounded-2xl px-3 py-2 text-sm leading-relaxed",
                       msg.role === "user"
@@ -268,19 +443,23 @@ const ChatWidget = () => {
               ))}
 
               {/* Animated typing indicator */}
-              {isLoading && (
+              {(isLoading || isUploading) && (
                 <div className="flex gap-2 justify-start">
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <img src={logoIcon} className="w-4 h-4 object-contain" alt="Sarthi" />
                   </div>
                   <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
-                    {[0, 1, 2].map(i => (
-                      <span
-                        key={i}
-                        className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce"
-                        style={{ animationDelay: `${i * 0.15}s` }}
-                      />
-                    ))}
+                    {isUploading ? (
+                      <span className="text-xs text-muted-foreground">Uploading...</span>
+                    ) : (
+                      [0, 1, 2].map(i => (
+                        <span
+                          key={i}
+                          className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce"
+                          style={{ animationDelay: `${i * 0.15}s` }}
+                        />
+                      ))
+                    )}
                   </div>
                 </div>
               )}
@@ -302,22 +481,86 @@ const ChatWidget = () => {
             </div>
           )}
 
-          {/* Input */}
-          <div className="p-3 border-t flex gap-2 shrink-0">
+          {/* File preview strip */}
+          {uploadedFile && (
+            <div className="px-3 pb-1 shrink-0">
+              <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl px-3 py-2">
+                {uploadedFile.type === "image" ? (
+                  <>
+                    <img src={uploadedFile.previewUrl} alt="preview" className="w-8 h-8 rounded object-cover" />
+                    <span className="text-xs text-foreground flex-1 truncate">{uploadedFile.file.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-xs text-foreground flex-1 truncate">{uploadedFile.file.name}</span>
+                  </>
+                )}
+                <button onClick={removeUploadedFile} className="text-muted-foreground hover:text-destructive transition-colors ml-1">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Voice listening indicator */}
+          {isListening && (
+            <div className="px-4 pb-1 shrink-0">
+              <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-full px-3 py-1.5">
+                <span className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                <span className="text-xs text-destructive font-medium">सुन रहा हूँ... बोलिए 🎤</span>
+              </div>
+            </div>
+          )}
+
+          {/* Input area */}
+          <div className="p-3 border-t flex gap-2 shrink-0 items-center">
+            {/* Attach file button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              title="Image/PDF doubt upload karein"
+            >
+              <ImageIcon className="h-4 w-4" />
+            </Button>
+
             <Input
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-              placeholder="Sarthi se kuch poochein... 🙏"
+              placeholder={isListening ? "बोल रहे हैं..." : "Sarthi se kuch poochein... 🙏"}
               className="flex-1 text-sm h-10"
               disabled={isLoading}
             />
+
+            {/* Voice button */}
+            {voiceSupported && (
+              <Button
+                variant={isListening ? "destructive" : "ghost"}
+                size="icon"
+                className={cn(
+                  "h-10 w-10 shrink-0 transition-all",
+                  !isListening && "text-muted-foreground hover:text-primary",
+                  isListening && "animate-pulse"
+                )}
+                onClick={toggleVoice}
+                disabled={isLoading}
+                title={isListening ? "Voice रोकें" : "Voice से बोलें"}
+              >
+                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+            )}
+
+            {/* Send button */}
             <Button
               size="icon"
               className="h-10 w-10 shrink-0"
               onClick={() => sendMessage()}
-              disabled={!input.trim() || isLoading}
+              disabled={(!input.trim() && !uploadedFile) || isLoading}
             >
               <Send className="h-4 w-4" />
             </Button>
