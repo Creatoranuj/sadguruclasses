@@ -328,7 +328,6 @@ const MahimaGhostPlayer = memo(({
       container.removeEventListener('cut', preventAll);
       container.removeEventListener('dragstart', preventAll);
       container.removeEventListener('click', blockLinks);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     };
@@ -558,7 +557,7 @@ const MahimaGhostPlayer = memo(({
         ref={containerRef}
         className={cn(
           "mahima-ghost-player relative rounded-xl overflow-hidden bg-black select-none group",
-          isFullscreen && "mahima-fullscreen"
+          isFakeFullscreen && "mahima-fake-fullscreen"
         )}
         onContextMenu={(e) => e.preventDefault()}
         onMouseMove={handleMouseMove}
@@ -567,7 +566,7 @@ const MahimaGhostPlayer = memo(({
         style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}
       >
         {/* Video Container */}
-        <div className={isFullscreen ? 'mahima-video-container' : 'aspect-video'} style={{ position: 'relative', ...rotationStyle, filter: `brightness(${brightness}%)` }}>
+        <div className={isFakeFullscreen ? 'mahima-video-container' : 'aspect-video'} style={{ position: 'relative', ...rotationStyle, filter: `brightness(${brightness}%)` }}>
           {/* Thumbnail poster — shows before first play so there's no black screen */}
           {!isPlaying && !playerReady && youtubeId && (
             <div
@@ -929,7 +928,7 @@ const MahimaGhostPlayer = memo(({
             (showControls || !isPlaying) ? "opacity-100 transition-opacity duration-200" : "opacity-0 pointer-events-none transition-opacity duration-500",
             showEndScreen && "hidden"
           )}
-          style={{ paddingBottom: isFullscreen ? 'max(12px, env(safe-area-inset-bottom))' : undefined }}
+          style={{ paddingBottom: isFakeFullscreen ? 'max(12px, env(safe-area-inset-bottom))' : undefined }}
           onPointerDown={handleMouseMove}
           onMouseMove={handleMouseMove}
         >
