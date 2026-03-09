@@ -74,6 +74,7 @@ const MarkdownMessage = ({ content }: { content: string }) => (
 const ChatWidget = forwardRef<HTMLDivElement>(() => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [showLoginTip, setShowLoginTip] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: WELCOME_MSG, timestamp: new Date(), id: "welcome", feedbackGiven: null },
   ]);
