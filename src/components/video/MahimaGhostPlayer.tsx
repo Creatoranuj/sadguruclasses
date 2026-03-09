@@ -419,11 +419,11 @@ const MahimaGhostPlayer = memo(({
   const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsSeeking(true);
-    const newTime = calculateTimeFromPosition(e.clientX, e.clientY);
+    const newTime = calculateTimeFromPosition(e.clientX);
     setCurrentTime(newTime);
-    const handleMouseMove = (moveEvent: MouseEvent) => setCurrentTime(calculateTimeFromPosition(moveEvent.clientX, moveEvent.clientY));
+    const handleMouseMove = (moveEvent: MouseEvent) => setCurrentTime(calculateTimeFromPosition(moveEvent.clientX));
     const handleMouseUp = (upEvent: MouseEvent) => {
-      seekTo(calculateTimeFromPosition(upEvent.clientX, upEvent.clientY));
+      seekTo(calculateTimeFromPosition(upEvent.clientX));
       setIsSeeking(false);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -438,17 +438,17 @@ const MahimaGhostPlayer = memo(({
     e.stopPropagation();
     setIsSeeking(true);
     const touch = e.touches[0];
-    const newTime = calculateTimeFromPosition(touch.clientX, touch.clientY);
+    const newTime = calculateTimeFromPosition(touch.clientX);
     setCurrentTime(newTime);
 
     const handleTouchMove = (moveEvent: TouchEvent) => {
       moveEvent.preventDefault();
       const t = moveEvent.touches[0];
-      setCurrentTime(calculateTimeFromPosition(t.clientX, t.clientY));
+      setCurrentTime(calculateTimeFromPosition(t.clientX));
     };
     const handleTouchEnd = (endEvent: TouchEvent) => {
       const t = endEvent.changedTouches[0];
-      seekTo(calculateTimeFromPosition(t.clientX, t.clientY));
+      seekTo(calculateTimeFromPosition(t.clientX));
       setIsSeeking(false);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
