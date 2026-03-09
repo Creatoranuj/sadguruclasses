@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   PlayCircle, Zap, 
   ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle,
+  Download, X,
 } from "lucide-react";
 import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
