@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,7 @@ const MarkdownMessage = ({ content }: { content: string }) => (
   </ReactMarkdown>
 );
 
-const ChatWidget = () => {
+const ChatWidget = forwardRef<HTMLDivElement>(() => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -569,6 +569,8 @@ const ChatWidget = () => {
       )}
     </>
   );
-};
+});
+
+ChatWidget.displayName = "ChatWidget";
 
 export default ChatWidget;

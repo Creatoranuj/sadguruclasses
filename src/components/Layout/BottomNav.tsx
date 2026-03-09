@@ -61,6 +61,19 @@ const BottomNav = () => {
         </button>
 
         <button
+          onClick={() => navigate("/messages")}
+          className="flex flex-col items-center gap-0.5 flex-1 min-h-[44px] justify-center"
+        >
+          <MessageCircle
+            size={22}
+            className={isActive("/messages") ? "text-accent" : "text-muted-foreground opacity-40"}
+          />
+          <span className={`text-[9px] font-medium ${isActive("/messages") ? "text-accent" : "text-muted-foreground"}`}>
+            Messages
+          </span>
+        </button>
+
+        <button
           onClick={() => navigate("/profile")}
           className="flex flex-col items-center gap-0.5 flex-1 min-h-[44px] justify-center"
         >

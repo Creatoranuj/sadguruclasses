@@ -1,114 +1,83 @@
 
-## Full App Audit Report + Fix Plan
+## Root Cause: Missing `lovable.toml`
 
-### What I Verified (Read-Only Audit)
-
-**Security Confirmed ✅**
-- `questions` table: only `Admins manage questions` policy — `Authenticated read questions` is GONE. Critical fix confirmed.
-- `chatbot_settings` table: only `Admins manage chatbot settings` policy — system prompt is locked. Critical fix confirmed.
-- `attendance` table: single PERMISSIVE policy — fixed correctly.
-- `enrollments` table: `Users can update own enrollment progress` policy EXISTS. Fixed.
-- `user_sessions` table: EXISTS with correct schema + 4 PERMISSIVE policies.
-- Linter: only 2 WARN remain — `leads` INSERT (intentional, public form) and Leaked Password Protection (dashboard-only config). Zero CRITICAL.
-- Payment: Razorpay Edge Function uses HMAC-SHA256 server-side. Enrollment created only after verification.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
 ---
 
-### Bugs Found in This Audit
+## Plan
 
-**BUG 1 — Console Errors: Two `forwardRef` warnings on every page load** (MEDIUM)
-- `SocialLinks` component is being passed a `ref` by its parent (`Footer`) but is not wrapped in `React.forwardRef`.
-- `ChatWidget` is being passed a `ref` somewhere in `App.tsx` at line 171 but is not wrapped in `React.forwardRef`.
-- These are red console warnings on every render. They don't crash but indicate a code smell.
-- **Fix**: Wrap both `SocialLinks` and `ChatWidget` with `React.forwardRef`, or remove the erroneous ref passing from their parents.
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-Checking the exact ref sources:
-- `Footer.tsx` passes a ref to `<SocialLinks>` — need to fix Footer so it doesn't pass a ref, OR make SocialLinks accept one.
-- `App.tsx` line ~171 has `<ChatWidget` with a ref — need to verify and fix.
-
-**BUG 2 — `user_sessions` INSERT policy missing** (HIGH — session management broken)
-- The `user_sessions` RLS policies are: SELECT (users own), UPDATE (users own), SELECT (admins), UPDATE (admins).
-- There is NO INSERT policy for users, and NO INSERT policy at all.
-- The plan was that the Edge Function inserts using service_role (bypasses RLS). But there is also no DELETE policy.
-- The Edge Function uses service_role — so INSERT works. This is correct by design.
-- However, the manage-session Edge Function also needs to be able to insert rows. Let me confirm — yes, service_role bypasses RLS, so this is fine.
-- Sessions count is 0 because login via the test page happens but `manage-session` function gets called. The session IS created since service_role is used.
-
-**BUG 3 — ChatWidget ref warning causing console noise** (MEDIUM)
-- `App.tsx` at line 63 imports `ChatWidget` as a regular (non-lazy) import. Around line 171 it's used.
-- Let me check: `<ChatWidget` is rendered directly in App, the warning says "Check the render method of App" meaning `App` is passing a ref to `ChatWidget`. This needs `React.forwardRef` on ChatWidget.
-
-**BUG 4 — `questions_for_students` view has no RLS policy** (MEDIUM — students can't read quiz questions)
-- The `questions_for_students` table/view shows empty RLS policies `[]`.
-- This is a VIEW not a table, but in Supabase, views inherit the RLS of their source tables OR need explicit grants.
-- Currently: admin policy only on `questions`. Students query `questions_for_students` view but there's no explicit policy.
-- In Postgres, views don't use RLS directly — they use the permissions of the view creator (security_invoker vs security_definer). Without `GRANT SELECT ON questions_for_students TO authenticated`, students get permission denied.
-- **Fix**: Add `GRANT SELECT ON public.questions_for_students TO authenticated;`
-
-**BUG 5 — `profiles_public` view has no RLS policy** (MEDIUM)
-- Still shows empty RLS policies in the schema. Previous migration added a policy to `profiles` but `profiles_public` itself has no policies.
-- This is likely a view as well — needs a GRANT.
-- **Fix**: `GRANT SELECT ON public.profiles_public TO authenticated;`
-
-**BUG 6 — Bottom nav missing Chat/Messages link** (LOW — UX)
-- BottomNav has: Home, Courses, My Courses, Downloads, Profile — but NO Messages link.
-- The mentor chat feature is hidden from mobile navigation. Students can't reach it easily on mobile.
-- **Fix**: Add Messages tab to BottomNav.
-
----
-
-### Features Confirmed Working (Code Review) ✅
-
-1. **Login/Logout**: Correct flow, `manage-session` called on login to enforce 2-device limit.
-2. **Auth guards**: `AdminRoute`, `ProtectedRoute` wrappers present in `App.tsx`.
-3. **Video Player** (`MahimaGhostPlayer`): Has watermark, playback speed, skip arrows, rotation, end screen overlay, touch controls with 3s auto-hide.
-4. **Quiz**: `QuizAttempt.tsx` queries `questions_for_students` view (safe, no `correct_answer`). Submission goes to `score-quiz` Edge Function.
-5. **PDF Viewer**: `PdfViewer.tsx` handles Drive, Archive.org, and direct PDF links. Download button saves to IndexedDB.
-6. **Downloads page**: Uses `useDownloads` hook backed by IndexedDB. Renders list with delete, search, and inline preview.
-7. **Admin panel**: 13 tabs, scrollable on mobile, 44px touch targets. Stats cards load from DB.
-8. **Session management**: `user_sessions` table exists, Edge Function deployed, AuthContext fully wired with heartbeat + realtime eviction.
-9. **Payments**: `BuyCourse.tsx` has Razorpay + manual payment + free enrollment paths. Duplicate enrollment prevented.
-10. **RLS**: All critical policies verified in DB. Zero critical linter issues.
-
----
-
-### Fix Plan
-
-#### Fix 1: `forwardRef` on `SocialLinks` and `ChatWidget`
-
-**`src/components/Landing/SocialLinks.tsx`**  
-Wrap with `React.forwardRef` and expose it (or remove the ref from Footer):
-
-The simpler fix is: remove the `ref` from the parent — Footer doesn't need to pass a ref to SocialLinks.
-
-**`src/App.tsx`** — line ~171 passes ref to ChatWidget. Wrap ChatWidget with `forwardRef`.
-
-#### Fix 2: Grant SELECT on views for students
-
-Migration needed:
-```sql
-GRANT SELECT ON public.questions_for_students TO authenticated;
-GRANT SELECT ON public.profiles_public TO authenticated;
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-#### Fix 3: Add Messages to BottomNav
-
-Add a Messages button (MessageCircle icon) to the BottomNav tab row.
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
 ---
 
-### Files to Change
+### 2. Visual Polish — CSS & Theme Improvements
+
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/migrations/[timestamp]_grant_views.sql` | GRANT SELECT on `questions_for_students` and `profiles_public` to `authenticated` role |
-| `src/components/Landing/Footer.tsx` | Remove ref prop from `<SocialLinks>` (or wrap SocialLinks in forwardRef) |
-| `src/components/chat/ChatWidget.tsx` | Wrap with `React.forwardRef` to fix App.tsx ref warning |
-| `src/components/Layout/BottomNav.tsx` | Add Messages tab with MessageCircle icon |
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-### Remaining Manual Action (Cannot be done via code)
-- Enable **Leaked Password Protection** in Supabase Dashboard → Auth → Security
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
 
-### Console Status After Fixes
-- Current: 2 red warnings (forwardRef × 2)
-- After: 0 red console errors
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
