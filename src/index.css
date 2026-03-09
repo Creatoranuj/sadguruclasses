@@ -9,26 +9,27 @@
 
 @layer base {
   :root {
-    --background: 209 40% 96%;
-    --foreground: 222 47% 11%;
+    /* ── Sadguru Brand: Saffron + Indigo ─────────────────── */
+    --background: 45 60% 97%;           /* warm cream-white */
+    --foreground: 255 40% 12%;          /* deep indigo-black text */
 
-    --card: 210 40% 98%;
-    --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%;                  /* pure white cards */
+    --card-foreground: 255 40% 12%;
 
-    --popover: 214 31% 91%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 255 40% 12%;
 
-    --primary: 216 19% 26%;
-    --primary-foreground: 210 19% 98%;
+    --primary: 25 95% 53%;              /* 🟠 Saffron #F97316 */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 19% 34%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 255 55% 35%;           /* 🟣 Deep Indigo */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 215 20% 65%;
-    --muted-foreground: 222 47% 11%;
+    --muted: 45 25% 92%;                /* warm grey-cream */
+    --muted-foreground: 255 20% 48%;
 
-    --accent: 210 40% 98%;
-    --accent-foreground: 215 16% 46%;
+    --accent: 45 80% 92%;               /* soft golden tint */
+    --accent-foreground: 255 45% 20%;
 
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 85% 97%;
@@ -36,64 +37,65 @@
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
-    --border: 212 26% 83%;
-    --input: 212 26% 83%;
-    --ring: 216 19% 26%;
+    --border: 45 28% 87%;               /* warm border */
+    --input: 45 28% 87%;
+    --ring: 25 95% 53%;                 /* saffron ring */
 
-    --radius: 0rem;
+    --radius: 0.75rem;                  /* rounded cards */
 
-    --sidebar-background: 225 25% 15%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 216 19% 26%;
-    --sidebar-primary-foreground: 210 19% 98%;
-    --sidebar-accent: 215 19% 34%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 212 26% 83%;
-    --sidebar-ring: 216 19% 26%;
+    --sidebar-background: 255 60% 16%; /* deep indigo sidebar */
+    --sidebar-foreground: 45 80% 95%;
+    --sidebar-primary: 25 95% 53%;     /* saffron accent */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 255 50% 26%;
+    --sidebar-accent-foreground: 45 80% 95%;
+    --sidebar-border: 255 40% 24%;
+    --sidebar-ring: 25 95% 53%;
 
-    --chart-1: 217 10% 64%;
-    --chart-2: 215 20% 65%;
-    --chart-3: 215 16% 46%;
-    --chart-4: 219 8% 46%;
-    --chart-5: 215 19% 34%;
+    --chart-1: 25 95% 53%;             /* saffron */
+    --chart-2: 255 55% 50%;            /* indigo */
+    --chart-3: 142 71% 45%;            /* green */
+    --chart-4: 38 95% 55%;             /* amber */
+    --chart-5: 200 80% 50%;            /* teal */
 
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --sidebar: 210 40% 98%;
-    --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --shadow-sm: 0 1px 3px 0px hsl(255 40% 12% / 0.08), 0 1px 2px -1px hsl(255 40% 12% / 0.06);
+    --shadow-md: 0 4px 12px -2px hsl(255 40% 12% / 0.1), 0 2px 4px -1px hsl(255 40% 12% / 0.06);
+    --shadow-lg: 0 8px 24px -4px hsl(255 40% 12% / 0.12), 0 4px 8px -2px hsl(255 40% 12% / 0.07);
+    --shadow-xl: 0 16px 40px -6px hsl(255 40% 12% / 0.15), 0 8px 16px -4px hsl(255 40% 12% / 0.08);
+    --sidebar: 0 0% 100%;
+    --font-sans: 'Poppins', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-serif: 'Crimson Pro', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-    --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --shadow-2xs: 0 1px 2px 0px hsl(255 40% 12% / 0.04);
+    --shadow-xs: 0 1px 3px 0px hsl(255 40% 12% / 0.06);
+    --shadow: 0 4px 12px -2px hsl(255 40% 12% / 0.1), 0 2px 4px -1px hsl(255 40% 12% / 0.06);
+    --shadow-2xl: 0 24px 60px -8px hsl(255 40% 12% / 0.2);
     --tracking-normal: 0em;
     --spacing: 0.25rem;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    /* ── Dark Mode: Deep Indigo Night ────────────────────── */
+    --background: 255 40% 8%;           /* deep purple-black */
+    --foreground: 45 60% 94%;           /* warm cream text */
 
-    --card: 217 32% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 255 35% 13%;                /* dark indigo card */
+    --card-foreground: 45 60% 94%;
 
-    --popover: 215 24% 26%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 255 35% 16%;
+    --popover-foreground: 45 60% 94%;
 
-    --primary: 212 26% 83%;
-    --primary-foreground: 228 84% 4%;
+    --primary: 25 95% 60%;              /* 🟠 brighter saffron on dark */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 19% 34%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 255 45% 45%;           /* medium indigo */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 215 16% 46%;
-    --muted-foreground: 210 40% 98%;
+    --muted: 255 30% 20%;               /* dark muted */
+    --muted-foreground: 255 20% 65%;
 
-    --accent: 228 84% 4%;
-    --accent-foreground: 215 20% 65%;
+    --accent: 255 35% 17%;              /* dark indigo accent */
+    --accent-foreground: 45 60% 90%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 85% 97%;
@@ -101,34 +103,34 @@
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
-    --border: 215 19% 34%;
-    --input: 215 19% 34%;
-    --ring: 212 26% 83%;
+    --border: 255 30% 22%;              /* subtle indigo border */
+    --input: 255 30% 22%;
+    --ring: 25 95% 60%;                 /* saffron ring */
 
-    --sidebar-background: 225 28% 6%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 212 26% 83%;
-    --sidebar-primary-foreground: 228 84% 4%;
-    --sidebar-accent: 215 20% 65%;
-    --sidebar-accent-foreground: 228 84% 4%;
-    --sidebar-border: 215 19% 34%;
-    --sidebar-ring: 212 26% 83%;
+    --sidebar-background: 255 50% 5%;  /* darkest indigo sidebar */
+    --sidebar-foreground: 45 60% 92%;
+    --sidebar-primary: 25 95% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 255 40% 18%;
+    --sidebar-accent-foreground: 45 60% 92%;
+    --sidebar-border: 255 35% 20%;
+    --sidebar-ring: 25 95% 60%;
 
-    --chart-1: 215 12% 83%;
-    --chart-2: 212 26% 83%;
-    --chart-3: 215 20% 65%;
-    --chart-4: 217 10% 64%;
-    --chart-5: 215 16% 46%;
+    --chart-1: 25 95% 60%;             /* saffron */
+    --chart-2: 255 55% 65%;            /* indigo lighter */
+    --chart-3: 142 71% 55%;            /* green */
+    --chart-4: 38 95% 65%;             /* amber */
+    --chart-5: 200 80% 60%;            /* teal */
 
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --sidebar: 217 32% 17%;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.3), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
+    --shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 8px 24px -4px hsl(0 0% 0% / 0.5), 0 4px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 16px 40px -6px hsl(0 0% 0% / 0.6), 0 8px 16px -4px hsl(0 0% 0% / 0.3);
+    --sidebar: 255 35% 13%;
+    --shadow-2xs: 0 1px 2px 0px hsl(0 0% 0% / 0.2);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --shadow: 0 4px 12px -2px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-2xl: 0 24px 60px -8px hsl(0 0% 0% / 0.6);
   }
 }
 
