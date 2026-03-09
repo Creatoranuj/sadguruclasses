@@ -668,10 +668,167 @@ const ChatbotSettings = () => {
             </Card>
           </TabsContent>
 
+          {/* ============ Web Crawler (Crawl4AI) Tab ============ */}
+          <TabsContent value="crawler" className="space-y-4">
+            {/* Setup Banner */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 dark:bg-amber-950/20 dark:border-amber-800">
+              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-sm text-amber-800 dark:text-amber-300">🐳 Crawl4AI Setup Required (One-Time)</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Deploy Crawl4AI Docker on Railway (free): <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">docker run -p 11235:11235 -e CRAWL4AI_API_TOKEN=yourtoken unclecode/crawl4ai:latest</code>
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Then set <strong>CRAWL4AI_API_URL</strong> and <strong>CRAWL4AI_API_TOKEN</strong> as Supabase secrets. Keys are already saved — just deploy the Docker container.
+                </p>
+              </div>
+            </div>
+
+            {/* How it works info */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex gap-3">
+              <Globe className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm">Web Crawler → Sarthi's Memory 🧠</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Koi bhi URL paste karo (NCERT chapter, study site, Sadguru website page) → Crawl4AI us page ka content scrape karega → automatically <strong>knowledge_base</strong> mein save hoga → Sarthi us content se answers dega.
+                </p>
+              </div>
+            </div>
+
+            {/* Crawl Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Link className="h-4 w-4" />
+                  Crawl URL & Add to Memory
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>URL to Crawl</Label>
+                  <Input
+                    placeholder="https://ncert.nic.in/textbook/pdf/leph101.pdf  or  https://example.com/chapter"
+                    value={crawlUrl}
+                    onChange={e => setCrawlUrl(e.target.value)}
+                    disabled={crawling}
+                  />
+                  <p className="text-xs text-muted-foreground">NCERT pages, Sadguru website pages, study materials, current affairs — koi bhi public URL</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Knowledge Category</Label>
+                  <select
+                    value={crawlCategory}
+                    onChange={e => setCrawlCategory(e.target.value)}
+                    className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                    disabled={crawling}
+                  >
+                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+
+                <Button
+                  className="w-full"
+                  onClick={triggerCrawl}
+                  disabled={crawling || !crawlUrl.trim()}
+                >
+                  {crawling ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Crawling... (20-30 sec)
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="h-4 w-4 mr-2" />
+                      Crawl & Add to Sarthi's Memory
+                    </>
+                  )}
+                </Button>
+
+                {crawling && (
+                  <div className="bg-muted/50 rounded-lg p-3 text-center">
+                    <p className="text-sm text-muted-foreground animate-pulse">🕷️ Page crawl ho raha hai... Headless browser page load kar raha hai...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Crawl History */}
+            <Card>
+              <CardHeader className="flex-row items-center justify-between pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Crawl History (Last 20)
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={fetchCrawlHistory} disabled={loadingHistory}>
+                  <RefreshCw className={`h-4 w-4 ${loadingHistory ? 'animate-spin' : ''}`} />
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[360px]">
+                  {crawlHistory.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Globe className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Abhi tak koi URL crawl nahi kiya</p>
+                      <p className="text-xs mt-1">Upar URL daalo aur crawl karo!</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {crawlHistory.map(entry => (
+                        <div key={entry.id} className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5">
+                              {entry.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                              {entry.status === 'failed' && <AlertCircle className="h-4 w-4 text-destructive" />}
+                              {entry.status === 'pending' && <Loader2 className="h-4 w-4 text-amber-500 animate-spin" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <a
+                                  href={entry.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-medium text-primary hover:underline truncate max-w-xs flex items-center gap-1"
+                                >
+                                  {entry.title || new URL(entry.url).hostname}
+                                  <ExternalLink className="h-3 w-3 shrink-0" />
+                                </a>
+                                <Badge
+                                  variant={entry.status === 'completed' ? 'default' : entry.status === 'failed' ? 'destructive' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {entry.status}
+                                </Badge>
+                                {entry.status === 'completed' && (
+                                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                                    +{entry.knowledge_entries_created} entries
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1 truncate">{entry.url}</p>
+                              {entry.content_preview && (
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 italic">"{entry.content_preview}"</p>
+                              )}
+                              {entry.error_message && (
+                                <p className="text-xs text-destructive mt-1">❌ {entry.error_message}</p>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(entry.crawled_at).toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* ============ FAQ Tab ============ */}
           <TabsContent value="faq" className="space-y-4">
-            <Card>
-              <CardHeader><CardTitle>Add New FAQ</CardTitle></CardHeader>
+
               <CardContent className="space-y-3">
                 <div className="space-y-2">
                   <Label>Question</Label>
