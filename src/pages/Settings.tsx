@@ -3,28 +3,43 @@
  * =============
  * User settings and preferences page.
  */
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Layout/Header";
 import Sidebar from "@/components/Layout/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Bell, Moon, Lock, Shield, 
-  Smartphone, Globe, Trash2, LogOut, Save 
+  Monitor, Smartphone, Trash2, LogOut, Save,
+  RefreshCw, WifiOff
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+
+const SESSION_TOKEN_KEY = "sg_session_token";
+
+interface SessionRow {
+  id: string;
+  session_token: string;
+  device_type: "web" | "mobile";
+  user_agent: string | null;
+  last_active_at: string;
+  logged_in_at: string;
+  is_active: boolean;
+}
 
 const Settings = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
-  const { isAuthenticated, profile, logout, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, profile, user, logout, isLoading: authLoading } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   
   // Settings state
@@ -32,18 +47,71 @@ const Settings = () => {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [twoFactor, setTwoFactor] = useState(false);
 
-  // Handle logout
+  // Sessions state
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [terminatingToken, setTerminatingToken] = useState<string | null>(null);
+
+  const currentToken = localStorage.getItem(SESSION_TOKEN_KEY);
+
+  const fetchSessions = useCallback(async () => {
+    if (!user) return;
+    setSessionsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("user_sessions")
+        .select("id, session_token, device_type, user_agent, last_active_at, logged_in_at, is_active")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("logged_in_at", { ascending: false });
+
+      if (!error && data) setSessions(data as SessionRow[]);
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) fetchSessions();
+  }, [isAuthenticated, user, fetchSessions]);
+
+  const handleTerminateSession = async (sessionToken: string) => {
+    if (sessionToken === currentToken) return; // can't kill own current session here
+    setTerminatingToken(sessionToken);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/manage-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: "terminate", session_token: sessionToken }),
+      });
+
+      if (res.ok) {
+        toast.success("Session terminated");
+        setSessions(prev => prev.filter(s => s.session_token !== sessionToken));
+      } else {
+        toast.error("Failed to terminate session");
+      }
+    } finally {
+      setTerminatingToken(null);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate("/");
   };
 
-  // Handle delete account (placeholder)
   const handleDeleteAccount = () => {
     toast.info("Please contact support to delete your account");
   };
 
-  // Auth redirect
   if (!authLoading && !isAuthenticated) {
     navigate("/login");
     return null;
@@ -124,6 +192,81 @@ const Settings = () => {
                 checked={isDarkMode}
                 onCheckedChange={toggleTheme}
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Sessions */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Active Sessions
+                </CardTitle>
+                <CardDescription>Devices currently logged into your account (max 2)</CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" onClick={fetchSessions} disabled={sessionsLoading}>
+                <RefreshCw className={`h-4 w-4 ${sessionsLoading ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {sessionsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-muted-foreground">
+                <WifiOff className="h-8 w-8" />
+                <p className="text-sm">No active sessions found</p>
+                <p className="text-xs">Sessions are tracked when you log in via the app</p>
+              </div>
+            ) : (
+              sessions.map((s) => {
+                const isCurrent = s.session_token === currentToken;
+                return (
+                  <div
+                    key={s.id}
+                    className={`flex items-start gap-3 p-3 rounded-lg border ${isCurrent ? "border-primary/30 bg-primary/5" : "border-border"}`}
+                  >
+                    <div className={`p-2 rounded-lg shrink-0 ${s.device_type === "mobile" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                      {s.device_type === "mobile" ? <Smartphone className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm capitalize">{s.device_type}</span>
+                        {isCurrent && <Badge className="text-xs bg-primary/10 text-primary border-primary/20">This device</Badge>}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {s.user_agent ? s.user_agent.substring(0, 60) + "..." : "Unknown browser"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Last active {formatDistanceToNow(new Date(s.last_active_at), { addSuffix: true })}
+                      </p>
+                    </div>
+                    {!isCurrent && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 text-destructive border-destructive/20 hover:bg-destructive/10"
+                        onClick={() => handleTerminateSession(s.session_token)}
+                        disabled={terminatingToken === s.session_token}
+                      >
+                        {terminatingToken === s.session_token ? (
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <LogOut className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+            <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 mt-2">
+              <strong>Session Limit Policy:</strong> Each account can be used on up to 2 devices simultaneously. If you log in from a third device, your oldest session will be automatically signed out.
             </div>
           </CardContent>
         </Card>

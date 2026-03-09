@@ -2,3 +2,6 @@ project_id = "wegamscqtvqhxowlskfm"
 
 [functions.score-quiz]
 verify_jwt = false
+
+[functions.manage-session]
+verify_jwt = false

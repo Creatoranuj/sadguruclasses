@@ -20,7 +20,7 @@ import {
   Upload, Video, FileText, Users, CreditCard, CheckCircle, XCircle, Clock,
   BarChart3, Trash2, Plus, BookOpen, ExternalLink, ShieldAlert, Search,
   Download, Filter, RefreshCw, ChevronDown, Eye, IndianRupee, Loader2, ClipboardCheck, Library, Calendar,
-  GraduationCap, UserCheck, UserX, Radio, ImageIcon, MessageSquare
+  GraduationCap, UserCheck, UserX, Radio, ImageIcon, MessageSquare, Monitor, Smartphone, LogOut
 } from "lucide-react";
 
 import ContentDrillDown from "@/components/admin/ContentDrillDown";
@@ -58,8 +58,14 @@ const Admin = () => {
     totalCourses: 0,
     pendingPayments: 0,
     activeEnrollments: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    activeSessions: 0,
   });
+
+  // -- SESSIONS STATE --
+  const [sessionsList, setSessionsList] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
 
   // -- SEARCH & FILTER STATES (Notion-like) --
   const [paymentSearch, setPaymentSearch] = useState("");
@@ -247,12 +253,19 @@ const Admin = () => {
       // G. Pre-fetch library data so it's ready when tab is opened
       fetchLibraryData();
 
+      // H. Count active sessions
+      const { count: sessionsCount } = await supabase
+        .from("user_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+
       setStatsData({
         totalStudents: studentCount || 0,
         totalCourses: coursesData?.length || 0,
         pendingPayments: pendingCount || 0,
         activeEnrollments: enrollCount || 0,
-        totalRevenue
+        totalRevenue,
+        activeSessions: sessionsCount || 0,
       });
 
     } catch (error) {
@@ -723,13 +736,55 @@ const Admin = () => {
     else { toast.success("Updated!"); setEditingNoteId(null); fetchLibraryData(); }
   };
 
+  // Fetch all active sessions (admin view)
+  const fetchSessionsData = async () => {
+    setSessionsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("user_sessions")
+        .select("id, session_token, user_id, device_type, user_agent, last_active_at, logged_in_at, is_active")
+        .eq("is_active", true)
+        .order("last_active_at", { ascending: false });
+      if (!error && data) setSessionsList(data);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const handleForceLogout = async (sessionToken: string, targetUserId: string) => {
+    if (!confirm("Force logout this session?")) return;
+    setTerminatingSession(sessionToken);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/manage-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: "terminate", session_token: sessionToken }),
+      });
+      if (res.ok) {
+        toast.success("Session terminated");
+        setSessionsList(prev => prev.filter(s => s.session_token !== sessionToken));
+        setStatsData(prev => ({ ...prev, activeSessions: Math.max(0, prev.activeSessions - 1) }));
+      } else {
+        toast.error("Failed to terminate session");
+      }
+    } finally {
+      setTerminatingSession(null);
+    }
+  };
+
   // Stats UI Config with tab navigation targets
   const stats = [
     { label: "Total Students", value: statsData.totalStudents, icon: Users, color: "text-blue-600 bg-blue-100", tab: "users" },
     { label: "Total Revenue", value: `₹${statsData.totalRevenue.toLocaleString()}`, icon: IndianRupee, color: "text-emerald-600 bg-emerald-100", tab: "payments" },
     { label: "Total Courses", value: statsData.totalCourses, icon: BookOpen, color: "text-green-600 bg-green-100", tab: "courses" },
     { label: "Pending Payments", value: statsData.pendingPayments, icon: Clock, color: "text-orange-600 bg-orange-100", tab: "payments" },
-    { label: "Active Enrollments", value: statsData.activeEnrollments, icon: CheckCircle, color: "text-purple-600 bg-purple-100", tab: "" },
+    { label: "Active Sessions", value: statsData.activeSessions, icon: Monitor, color: "text-cyan-600 bg-cyan-100", tab: "sessions" },
   ];
 
 
@@ -844,7 +899,7 @@ const Admin = () => {
         </div>
 
         {/* TABS SECTION */}
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'library') fetchLibraryData(); }} className="w-full space-y-6">
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'library') fetchLibraryData(); if (v === 'sessions') fetchSessionsData(); }} className="w-full space-y-6">
           <TabsList className="bg-card p-1 border rounded-lg w-full overflow-x-auto scrollbar-hide flex flex-nowrap h-auto gap-0.5">
             <TabsTrigger value="payments" className="py-2 min-h-[44px] shrink-0">Payments <Badge variant="destructive" className="ml-2">{statsData.pendingPayments}</Badge></TabsTrigger>
             <TabsTrigger value="users" className="py-2 min-h-[44px] shrink-0">Users</TabsTrigger>
@@ -858,6 +913,7 @@ const Admin = () => {
             <TabsTrigger value="live" className="py-2 min-h-[44px] shrink-0 gap-1 text-destructive data-[state=active]:text-destructive"><Radio className="h-4 w-4" />Live</TabsTrigger>
             <TabsTrigger value="banners" className="py-2 min-h-[44px] shrink-0 gap-1"><ImageIcon className="h-4 w-4" />Banners</TabsTrigger>
             <TabsTrigger value="doubts" className="py-2 min-h-[44px] shrink-0 gap-1"><MessageSquare className="h-4 w-4" />Doubts</TabsTrigger>
+            <TabsTrigger value="sessions" className="py-2 min-h-[44px] shrink-0 gap-1"><Monitor className="h-4 w-4" />Sessions</TabsTrigger>
           </TabsList>
 
           {/* --- TAB 1: UNIFIED PAYMENTS --- */}
@@ -1937,6 +1993,77 @@ const Admin = () => {
                 <MessageSquare className="h-4 w-4" /> Open Doubt Manager
               </button>
             </div>
+          </TabsContent>
+
+          {/* --- TAB: SESSIONS --- */}
+          <TabsContent value="sessions">
+            <Card className="border shadow-sm">
+              <CardHeader className="border-b pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Monitor className="h-5 w-5 text-primary" />
+                    Active Sessions ({sessionsList.length})
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={fetchSessionsData} disabled={sessionsLoading}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${sessionsLoading ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Monitor all active device sessions. Force-logout suspicious or excess sessions.
+                </p>
+              </CardHeader>
+              <CardContent className="p-0">
+                {sessionsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : sessionsList.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+                    <Monitor className="h-10 w-10" />
+                    <p className="font-medium">No active sessions</p>
+                    <p className="text-sm">Sessions are created when users log in</p>
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {sessionsList.map((s) => (
+                      <div key={s.id} className="flex items-start gap-3 p-4 hover:bg-muted/30 transition-colors">
+                        <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${s.device_type === "mobile" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                          {s.device_type === "mobile" ? <Smartphone className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs capitalize shrink-0">{s.device_type}</Badge>
+                            <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px]">{s.user_id}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {s.user_agent ? s.user_agent.substring(0, 70) + "..." : "Unknown browser"}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span>Logged in: {new Date(s.logged_in_at).toLocaleString()}</span>
+                            <span>·</span>
+                            <span>Last active: {new Date(s.last_active_at).toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 text-destructive border-destructive/20 hover:bg-destructive/10"
+                          onClick={() => handleForceLogout(s.session_token, s.user_id)}
+                          disabled={terminatingSession === s.session_token}
+                        >
+                          {terminatingSession === s.session_token ? (
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <><LogOut className="h-3 w-3 mr-1" />Logout</>
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
         </Tabs>
