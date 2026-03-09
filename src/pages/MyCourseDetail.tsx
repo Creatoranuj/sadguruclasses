@@ -977,7 +977,7 @@ const MyCourseDetail = () => {
           {selectedLesson && (
             <div className="flex flex-col">
               {/* Video player */}
-              <div className="w-full bg-black">
+              <div className="w-full bg-black min-h-[200px]">
                 {(() => {
                   // Find next lesson in the current chapter/filtered list
                   const currentIndex = filteredLessons.findIndex(l => l.id === selectedLesson.id);
