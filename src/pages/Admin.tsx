@@ -1995,6 +1995,77 @@ const Admin = () => {
             </div>
           </TabsContent>
 
+          {/* --- TAB: SESSIONS --- */}
+          <TabsContent value="sessions">
+            <Card className="border shadow-sm">
+              <CardHeader className="border-b pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Monitor className="h-5 w-5 text-primary" />
+                    Active Sessions ({sessionsList.length})
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={fetchSessionsData} disabled={sessionsLoading}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${sessionsLoading ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Monitor all active device sessions. Force-logout suspicious or excess sessions.
+                </p>
+              </CardHeader>
+              <CardContent className="p-0">
+                {sessionsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : sessionsList.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+                    <Monitor className="h-10 w-10" />
+                    <p className="font-medium">No active sessions</p>
+                    <p className="text-sm">Sessions are created when users log in</p>
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {sessionsList.map((s) => (
+                      <div key={s.id} className="flex items-start gap-3 p-4 hover:bg-muted/30 transition-colors">
+                        <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${s.device_type === "mobile" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                          {s.device_type === "mobile" ? <Smartphone className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs capitalize shrink-0">{s.device_type}</Badge>
+                            <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px]">{s.user_id}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {s.user_agent ? s.user_agent.substring(0, 70) + "..." : "Unknown browser"}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span>Logged in: {new Date(s.logged_in_at).toLocaleString()}</span>
+                            <span>·</span>
+                            <span>Last active: {new Date(s.last_active_at).toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 text-destructive border-destructive/20 hover:bg-destructive/10"
+                          onClick={() => handleForceLogout(s.session_token, s.user_id)}
+                          disabled={terminatingSession === s.session_token}
+                        >
+                          {terminatingSession === s.session_token ? (
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <><LogOut className="h-3 w-3 mr-1" />Logout</>
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
       </main>
     </div>
