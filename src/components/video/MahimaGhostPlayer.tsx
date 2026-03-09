@@ -302,13 +302,7 @@ const MahimaGhostPlayer = memo(({
     const handlePopState = (e: PopStateEvent) => {
       if (rotation !== 0) {
         setRotation(0);
-        // Exit fullscreen if still in it
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {});
-          setIsFullscreen(false);
-        }
-        // Re-push guard so a second back actually navigates
-        // (don't re-push — let the next back go through naturally)
+        setIsFakeFullscreen(false);
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -328,8 +322,6 @@ const MahimaGhostPlayer = memo(({
       if (target.tagName === 'A' || target.closest('a')) { e.preventDefault(); e.stopPropagation(); }
     };
     container.addEventListener('click', blockLinks, { capture: true });
-    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => {
       container.removeEventListener('contextmenu', preventAll);
       container.removeEventListener('copy', preventAll);
