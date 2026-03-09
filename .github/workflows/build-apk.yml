@@ -21,6 +21,13 @@ jobs:
         with:
           fetch-depth: 0   # needed for tag creation
           submodules: false  # prevent fatal error from phantom submodule path
+          clean: false       # skip post-cleanup that triggers stale submodule warning
+
+      # ── 1b. Remove stale submodule config ─────────────────────────────
+      - name: 🧹 Clear stale submodule references
+        run: |
+          git submodule deinit --all --force 2>/dev/null || true
+          git config --remove-section submodule 2>/dev/null || true
 
       # ── 2. Set VERSION env variable ───────────────────────────────────
       - name: 🏷️ Set version name
