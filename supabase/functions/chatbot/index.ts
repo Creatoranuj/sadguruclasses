@@ -45,7 +45,6 @@ const emotionalResponses = [
 // =============================================
 async function retrieveKnowledge(query: string, supabase: any): Promise<string> {
   try {
-    // Extract meaningful keywords (4+ chars) from the query
     const stopWords = new Set(['kaise', 'karna', 'karo', 'hoga', 'hai', 'hain', 'mein', 'the', 'and', 'for', 'with', 'this', 'that', 'from', 'they', 'have', 'what', 'when', 'where', 'which', 'will', 'your', 'about']);
     const words = query.toLowerCase()
       .replace(/[?!.,;:'"()]/g, ' ')
@@ -54,7 +53,6 @@ async function retrieveKnowledge(query: string, supabase: any): Promise<string> 
 
     if (words.length === 0) return '';
 
-    // Build OR filter: match any keyword in content or title
     const orFilters = words.slice(0, 6).map(w => `content.ilike.%${w}%,title.ilike.%${w}%`).join(',');
 
     const { data, error } = await supabase
@@ -67,7 +65,6 @@ async function retrieveKnowledge(query: string, supabase: any): Promise<string> 
 
     if (error || !data || data.length === 0) return '';
 
-    // Format retrieved chunks as clean context
     const context = data.map((d: any) =>
       `### ${d.title}\n${d.content.trim()}`
     ).join('\n\n---\n\n');
@@ -75,6 +72,58 @@ async function retrieveKnowledge(query: string, supabase: any): Promise<string> 
     return context;
   } catch (e) {
     console.error('RAG retrieval error:', e);
+    return '';
+  }
+}
+
+// =============================================
+// Crawl4AI Web Fallback: fetch live web content
+// =============================================
+const CRAWL4AI_API_URL = Deno.env.get('CRAWL4AI_API_URL');
+const CRAWL4AI_API_TOKEN = Deno.env.get('CRAWL4AI_API_TOKEN');
+
+async function fetchWebContext(query: string): Promise<string> {
+  if (!CRAWL4AI_API_URL) return '';
+  try {
+    // Build a relevant search URL based on the query
+    const searchQuery = encodeURIComponent(query.trim());
+    const targetUrl = `https://www.google.com/search?q=${searchQuery}+site:ncert.nic.in+OR+site:byjus.com+OR+site:vedantu.com`;
+
+    const crawlHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (CRAWL4AI_API_TOKEN) crawlHeaders['Authorization'] = `Bearer ${CRAWL4AI_API_TOKEN}`;
+
+    // Submit async crawl job
+    const submitRes = await fetch(`${CRAWL4AI_API_URL}/crawl`, {
+      method: 'POST',
+      headers: crawlHeaders,
+      body: JSON.stringify({
+        urls: [targetUrl],
+        crawler_params: { headless: true },
+        extra: { only_text: true },
+        priority: 5,
+      }),
+    });
+
+    if (!submitRes.ok) return '';
+    const submitData = await submitRes.json();
+    const taskId = submitData.task_id;
+    if (!taskId) return '';
+
+    // Poll up to 10 times with 2s delay
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const pollRes = await fetch(`${CRAWL4AI_API_URL}/task/${taskId}`, { headers: crawlHeaders });
+      if (!pollRes.ok) continue;
+      const pollData = await pollRes.json();
+      if (pollData.status === 'completed') {
+        const markdown = pollData.results?.[0]?.markdown || '';
+        return markdown.slice(0, 3000); // limit context size
+      }
+      if (pollData.status === 'failed') return '';
+    }
+    return '';
+  } catch (e) {
+    console.error('Web fallback error:', e);
     return '';
   }
 }
@@ -166,9 +215,22 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Web fallback: if RAG returns nothing and query is technical/general, try live web scrape
+    let webContext = '';
+    let webUsed = false;
+    if (!ragContext && CRAWL4AI_API_URL && (queryType === 'technical' || queryType === 'general' || queryType === 'mock_test')) {
+      webContext = await fetchWebContext(message);
+      webUsed = webContext.length > 100;
+    }
+
     // Build RAG context section
     const ragSection = ragContext
       ? `\n\n## 📚 PLATFORM KNOWLEDGE BASE (RAG Memory – USE THIS FIRST):\nYe information Sadguru Coaching Classes ke baare mein specific hai. Jab bhi relevant ho, IS information ko priority do over general knowledge:\n\n${ragContext}\n\n---`
+      : '';
+
+    // Build web context section (only when RAG has no result)
+    const webSection = webUsed
+      ? `\n\n## 🌐 LIVE WEB CONTENT (Crawled just now – use as supplementary reference):\nThis is freshly scraped content from the web. Use it to provide up-to-date information but always frame answers in context of the student's learning at Sadguru Coaching Classes:\n\n${webContext}\n\n---`
       : '';
 
     // Build FAQ context
@@ -223,7 +285,7 @@ Deno.serve(async (req) => {
 - Warm, encouraging, student-friendly
 - Concise but complete — never cut off mid-thought
 - For syllabus/topic questions: include weightage if known, difficulty level ⭐, priority order
-` + (queryInstructions[queryType] || '') + ragSection + faqContext + courseContext;
+` + (queryInstructions[queryType] || '') + ragSection + webSection + faqContext + courseContext;
 
     const model = (settings?.model && settings.model.includes('/')) ? settings.model : `google/${settings?.model || 'gemini-2.5-flash'}`;
     const temperature = settings?.temperature ?? 0.7;
@@ -265,7 +327,7 @@ Deno.serve(async (req) => {
       await supabase.from('chatbot_logs').insert({ user_id: userId, message, response, session_id: sessionId });
     }
 
-    return new Response(JSON.stringify({ response, queryType, ragUsed: ragContext.length > 0 }), {
+    return new Response(JSON.stringify({ response, queryType, ragUsed: ragContext.length > 0, webUsed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
