@@ -122,6 +122,13 @@ const Install = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const copyApkLink = () => {
+    navigator.clipboard.writeText(APK_DOWNLOAD_URL);
+    setCopiedApk(true);
+    toast.success("APK link copied!");
+    setTimeout(() => setCopiedApk(false), 2000);
+  };
+
   const shareWhatsApp = () => {
     window.open(
       `https://wa.me/?text=${encodeURIComponent(
