@@ -899,7 +899,7 @@ const Admin = () => {
         </div>
 
         {/* TABS SECTION */}
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'library') fetchLibraryData(); }} className="w-full space-y-6">
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'library') fetchLibraryData(); if (v === 'sessions') fetchSessionsData(); }} className="w-full space-y-6">
           <TabsList className="bg-card p-1 border rounded-lg w-full overflow-x-auto scrollbar-hide flex flex-nowrap h-auto gap-0.5">
             <TabsTrigger value="payments" className="py-2 min-h-[44px] shrink-0">Payments <Badge variant="destructive" className="ml-2">{statsData.pendingPayments}</Badge></TabsTrigger>
             <TabsTrigger value="users" className="py-2 min-h-[44px] shrink-0">Users</TabsTrigger>
@@ -913,6 +913,7 @@ const Admin = () => {
             <TabsTrigger value="live" className="py-2 min-h-[44px] shrink-0 gap-1 text-destructive data-[state=active]:text-destructive"><Radio className="h-4 w-4" />Live</TabsTrigger>
             <TabsTrigger value="banners" className="py-2 min-h-[44px] shrink-0 gap-1"><ImageIcon className="h-4 w-4" />Banners</TabsTrigger>
             <TabsTrigger value="doubts" className="py-2 min-h-[44px] shrink-0 gap-1"><MessageSquare className="h-4 w-4" />Doubts</TabsTrigger>
+            <TabsTrigger value="sessions" className="py-2 min-h-[44px] shrink-0 gap-1"><Monitor className="h-4 w-4" />Sessions</TabsTrigger>
           </TabsList>
 
           {/* --- TAB 1: UNIFIED PAYMENTS --- */}
