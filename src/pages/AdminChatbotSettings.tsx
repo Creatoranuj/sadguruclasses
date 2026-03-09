@@ -355,12 +355,13 @@ const ChatbotSettings = () => {
         </div>
 
         <Tabs defaultValue="knowledge">
-          <TabsList className="w-full grid grid-cols-4">
+          <TabsList className="w-full grid grid-cols-5">
             <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1" />Settings</TabsTrigger>
             <TabsTrigger value="knowledge">
               <Brain className="h-4 w-4 mr-1" />
               Memory <Badge variant="secondary" className="ml-1 text-xs">{knowledge.filter(k => k.is_active).length}</Badge>
             </TabsTrigger>
+            <TabsTrigger value="crawler"><Globe className="h-4 w-4 mr-1" />Crawler</TabsTrigger>
             <TabsTrigger value="faq"><BookOpen className="h-4 w-4 mr-1" />FAQ ({faqs.filter(f => f.is_active).length})</TabsTrigger>
             <TabsTrigger value="logs"><MessageSquare className="h-4 w-4 mr-1" />Logs</TabsTrigger>
           </TabsList>
