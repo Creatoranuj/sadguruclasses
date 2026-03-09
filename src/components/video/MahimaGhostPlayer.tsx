@@ -99,12 +99,14 @@ const MahimaGhostPlayer = memo(({
     const next = rotation === 0 ? 90 : 0;
     setRotation(next);
     setIsFakeFullscreen(next === 90);
+    document.body.style.overflow = next === 90 ? 'hidden' : '';
   }, [rotation]);
 
   const rotateCCW = useCallback(() => {
     const next = (rotation - 90 + 360) % 360;
     setRotation(next);
     setIsFakeFullscreen(next === 90 || next === 270);
+    document.body.style.overflow = (next === 90 || next === 270) ? 'hidden' : '';
   }, [rotation]);
 
   // Discussion state
@@ -213,7 +215,14 @@ const MahimaGhostPlayer = memo(({
   }, [isMuted, volume, sendCommand]);
 
   const toggleFullscreen = useCallback(() => {
-    setIsFakeFullscreen(prev => !prev);
+    setIsFakeFullscreen(prev => {
+      const next = !prev;
+      if (!next) {
+        setRotation(0);
+        document.body.style.overflow = '';
+      }
+      return next;
+    });
   }, []);
 
   const preventAll = useCallback((e: Event) => {
@@ -299,15 +308,21 @@ const MahimaGhostPlayer = memo(({
     if (rotation === 0) return;
     // Push a dummy history entry so the back button fires popstate here
     window.history.pushState({ rotationGuard: true }, '');
-    const handlePopState = (e: PopStateEvent) => {
+    const handlePopState = () => {
       if (rotation !== 0) {
         setRotation(0);
         setIsFakeFullscreen(false);
+        document.body.style.overflow = '';
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [rotation]);
+
+  // Restore body scroll on unmount (in case component unmounts while rotated)
+  useEffect(() => {
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   // Anti-piracy + fullscreen listener
   useEffect(() => {
@@ -553,7 +568,8 @@ const MahimaGhostPlayer = memo(({
       <div
         ref={containerRef}
         className={cn(
-          "mahima-ghost-player relative rounded-xl overflow-hidden bg-black select-none group",
+          "mahima-ghost-player relative overflow-hidden bg-black select-none group",
+          !isLandscapeRotation && "rounded-xl",
           isFakeFullscreen && "mahima-fake-fullscreen"
         )}
         onContextMenu={(e) => e.preventDefault()}
@@ -611,10 +627,9 @@ const MahimaGhostPlayer = memo(({
             }}
           />
         </div>
-        {/* ─── VIDEO CONTAINER CLOSED — overlays below are NOT rotated ─── */}
+        {/* ─── VIDEO IFRAME CLOSED — all overlays below ARE rotated (they're inside the outer rotating div) ─── */}
 
-        {/* Brightness overlay — applied over the iframe but outside the rotated container
-             so it never interferes with the transform/dimension CSS cascade */}
+        {/* Brightness overlay — inside the rotating outer container, so it rotates correctly with the video */}
         {brightness !== 100 && (
           <div
             className="absolute inset-0 z-[1] pointer-events-none"
@@ -622,7 +637,7 @@ const MahimaGhostPlayer = memo(({
           />
         )}
 
-        {/* TOP OVERLAY - Title + Exit button — always axis-aligned in screen space */}
+        {/* TOP OVERLAY - Title + Exit button — rotates with the entire player container */}
         <div className={cn(
           "absolute top-0 left-0 right-0 z-[55] flex items-start justify-between p-3 md:p-4 transition-opacity duration-300",
           "bg-gradient-to-b from-black/70 via-black/30 to-transparent",
@@ -669,8 +684,7 @@ const MahimaGhostPlayer = memo(({
            </span>
         </div>
 
-        {/* GHOST OVERLAY — axis-aligned, NOT inside the rotated video container.
-            Touch/click coordinates are always in screen-space: no rotation compensation needed. */}
+        {/* GHOST OVERLAY — inside the rotating outer container, so all controls rotate correctly with the video. */}
         <div
           className="absolute inset-0 z-40"
             onClick={handleOverlayTap}
