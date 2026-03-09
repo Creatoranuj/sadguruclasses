@@ -558,10 +558,11 @@ const MahimaGhostPlayer = memo(({
         tabIndex={0}
         style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}
       >
-        {/* Video Container */}
+        {/* Video Container — rotationStyle applied here; brightness filter is on a sibling overlay
+             so it doesn't interfere with the CSS transform + dimension calculations */}
         <div
           className={isFakeFullscreen ? 'mahima-video-container w-full h-full' : 'aspect-video relative'}
-          style={{ ...(isFakeFullscreen ? {} : { position: 'relative' }), ...rotationStyle, filter: `brightness(${brightness}%)` }}
+          style={{ ...(isFakeFullscreen ? {} : { position: 'relative' }), ...rotationStyle }}
         >
           {/* Thumbnail poster — shows before first play so there's no black screen */}
           {!isPlaying && !playerReady && youtubeId && (
