@@ -361,6 +361,57 @@ export type Database = {
         }
         Relationships: []
       }
+      crawl_history: {
+        Row: {
+          content_preview: string | null
+          crawled_at: string
+          crawled_by: string | null
+          error_message: string | null
+          id: string
+          knowledge_entries_created: number
+          status: string
+          title: string | null
+          url: string
+        }
+        Insert: {
+          content_preview?: string | null
+          crawled_at?: string
+          crawled_by?: string | null
+          error_message?: string | null
+          id?: string
+          knowledge_entries_created?: number
+          status?: string
+          title?: string | null
+          url: string
+        }
+        Update: {
+          content_preview?: string | null
+          crawled_at?: string
+          crawled_by?: string | null
+          error_message?: string | null
+          id?: string
+          knowledge_entries_created?: number
+          status?: string
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crawl_history_crawled_by_fkey"
+            columns: ["crawled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crawl_history_crawled_by_fkey"
+            columns: ["crawled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doubt_sessions: {
         Row: {
           course_id: number | null
