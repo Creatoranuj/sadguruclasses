@@ -1,156 +1,83 @@
 
-## Root Cause Analysis
+## Root Cause: Missing `lovable.toml`
 
-Looking at the screenshot and code carefully:
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-**The Problem**: When user taps the rotate button, `rotation = 90` is set. The **video iframe container** (`div.mahima-video-container`) gets `transform: rotate(90deg)` via `rotationStyle`. BUT all the overlaid controls (top bar, ghost overlay with play/skip/pause buttons, bottom controls bar, watermarks, end screen) are **siblings/children of the outer container** that are rendered with `position: absolute` OUTSIDE the rotated div — they stay in portrait screen coordinates.
+---
 
-**Screenshot confirms**: The video is rotated 90°, but play/pause, skip arrows, progress bar, settings gear, speed indicator — all are still portrait-oriented, making them physically perpendicular to what the user is looking at. The app becomes unusable.
+## Plan
 
-### Current Architecture (broken):
-```text
-.mahima-ghost-player (fixed fullscreen, NOT rotated)
-├── .mahima-video-container  ← ONLY THIS gets rotated 90°
-│   └── <iframe>
-├── brightness overlay       ← NOT rotated (portrait coords)
-├── TOP bar (title, exit)    ← NOT rotated (portrait coords)  
-├── GHOST overlay (skip/play)← NOT rotated (portrait coords)
-├── BOTTOM controls bar      ← NOT rotated (portrait coords)
-├── Watermarks               ← NOT rotated (portrait coords)
-└── Discussion sheet         ← NOT rotated (portrait coords)
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
+
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-### The Fix
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-Instead of rotating only the video iframe container inside a portrait wrapper, **rotate the ENTIRE player container** when in landscape mode. This means all controls rotate together with the video.
+---
 
-The approach:
-- When `rotation === 90`: Apply `transform: rotate(90deg)` on the **outermost `.mahima-ghost-player` div** — the whole player rotates as one unit
-- Set `width: 100vh; height: 100vw` on the outer container + reposition it centered via negative margins so it fills the landscape screen
-- Remove `rotationStyle` from the inner video container (it goes back to normal aspect-video)
-- The `mahima-fake-fullscreen` CSS stays but the rotation moves up one level
+### 2. Visual Polish — CSS & Theme Improvements
 
-### New Architecture (fixed):
-```text
-.mahima-ghost-player  ← THIS gets rotated 90° (entire player)
-  width: 100vh, height: 100vw, transform: rotate(90deg)
-  centered via: top:50%, left:50%, margin: -50vw -50vh
-├── .mahima-video-container  ← normal, NO rotation
-│   └── <iframe>
-├── TOP bar (title, exit)    ← rotates WITH player ✓
-├── GHOST overlay (skip/play)← rotates WITH player ✓
-├── BOTTOM controls bar      ← rotates WITH player ✓
-├── Watermarks               ← rotate WITH player ✓
-└── Discussion sheet         ← rotates WITH player ✓
-```
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-## Files to Change
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-### 1. `src/components/video/MahimaGhostPlayer.tsx`
+---
 
-**Change 1** — Rotation styles: Move the `transform: rotate(90deg)` from `rotationStyle` (applied on the inner video div) to the outer container div's inline style.
+### 3. Landing Page & Navigation Visual Fixes
 
-Current `rotationStyle` (lines 528–541) rotates the inner div. We need to:
-- Remove `rotationStyle` from the inner div (line 565)
-- Apply rotation + dimension swap directly on the outer `containerRef` div (line 549) via inline `style` prop
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
 
-**New outer container style** when `rotation === 90`:
-```css
-position: fixed;
-top: 50%;
-left: 50%;
-width: 100vh;
-height: 100vw;
-margin-left: -50vh;
-margin-top: -50vw;
-transform: rotate(90deg);
-transform-origin: center center;
-transition: transform 0.3s ease;
-z-index: 9999;
-```
+---
 
-When `rotation === 0`:
-```css
-/* normal, no transform */
-```
+### 4. Global Component Polish in `src/index.css`
 
-**Change 2** — Inner video div (line 563–565): Remove `rotationStyle` from `style` prop. Keep `isFakeFullscreen` class. The inner div should always be `w-full h-full` inside the now-correctly-sized outer container.
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
 
-**Change 3** — The `rotateCW` function currently sets `isFakeFullscreen` based on rotation. Keep this logic. When rotation is 90, `isFakeFullscreen = true`. The CSS class `.mahima-fake-fullscreen` should now NOT apply fixed positioning (the inline style handles it), OR we update the CSS too.
+---
 
-**Change 4** — Update `mahima-fake-fullscreen` CSS to NOT conflict with the new rotation approach:
-- The `position: fixed; inset: 0` CSS is now applied via inline style for rotation
-- Keep `.mahima-fake-fullscreen` CSS as fallback for non-rotated fullscreen if needed
+### 5. Branding Consistency
 
-### 2. `src/index.css`
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
 
-**Update `.mahima-ghost-player.mahima-fake-fullscreen`** CSS:
-- When rotation = 90, the inline style handles positioning & transform
-- The CSS class now only needs to set: `background: #000; border-radius: 0; overflow: hidden; z-index: 9999`
-- Remove `position: fixed; inset: 0; width: 100vw; height: 100vh` from CSS since inline style will handle these differently for rotated vs non-rotated states
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
 
-## Exact Line Changes
+---
 
-### `MahimaGhostPlayer.tsx`
+## Files to Modify
 
-**Lines 526–541** (rotationStyle computation) — REPLACE with new logic that builds the outer container style:
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-```typescript
-// Rotation styles — applied to the ENTIRE player container so all controls rotate together
-const isLandscapeRotation = rotation === 90 || rotation === 270;
-const playerContainerStyle: React.CSSProperties = isLandscapeRotation ? {
-  position: 'fixed',
-  top: '50%',
-  left: '50%',
-  width: '100vh',
-  height: '100vw',
-  marginLeft: '-50vh',
-  marginTop: '-50vw',
-  transform: `rotate(${rotation}deg)`,
-  transformOrigin: 'center center',
-  transition: 'transform 0.3s ease',
-  zIndex: 9999,
-  borderRadius: 0,
-  background: '#000',
-  overflow: 'hidden',
-} : {
-  transition: 'transform 0.3s ease',
-};
-```
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
 
-**Lines 549–560** (outer container div) — ADD `style={playerContainerStyle}` to the outer div.
+---
 
-**Lines 563–566** (inner video div) — REMOVE `...rotationStyle` from its style. Just use `isFakeFullscreen` class, no inline rotation.
+## Note on Visual Editor
 
-### `src/index.css`
-
-**Lines 542–564** — Update the fake-fullscreen CSS to be simpler (since inline style handles the heavy lifting for the rotated case):
-
-```css
-.mahima-ghost-player.mahima-fake-fullscreen {
-  border-radius: 0 !important;
-  background: #000 !important;
-  overflow: hidden !important;
-}
-/* Only apply fixed positioning when NOT rotated (rotation=0 but isFakeFullscreen=true) */
-.mahima-ghost-player.mahima-fake-fullscreen:not([style*="rotate"]) {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 9999 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-}
-```
-
-Wait — actually simpler: since we always set inline style when `isFakeFullscreen` (which matches rotation===90), just remove the conflicting `position/width/height` from CSS and let inline style govern it. The CSS class only ensures background and no border-radius.
-
-## Summary of Precise Changes
-
-| File | Lines | Change |
-|------|-------|--------|
-| `MahimaGhostPlayer.tsx` | 526–541 | Replace `rotationStyle` with `playerContainerStyle` that targets outer div |
-| `MahimaGhostPlayer.tsx` | ~549–560 | Add `style={playerContainerStyle}` to outer container div |
-| `MahimaGhostPlayer.tsx` | ~563–566 | Remove `...rotationStyle` from inner video div style |
-| `src/index.css` | 542–574 | Simplify `.mahima-fake-fullscreen` CSS — remove conflicting position/size rules |
-
-This is a **surgical 4-change fix** that makes the entire player rotate as one unit, ensuring all controls (play, skip, progress bar, settings, watermark, title bar) rotate correctly with the video — exactly as seen in professional video players like MX Player.
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
