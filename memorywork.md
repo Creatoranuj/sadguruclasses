@@ -2,6 +2,40 @@
 
 ---
 
+## Date: 2026-03-09 (Security Hardening – Full RLS Audit)
+
+### Security Audit Summary
+
+Performed a comprehensive security audit covering RLS policies, payment flow, admin/student access control, and code-level exposure. All 7 fixable issues resolved via DB migration.
+
+| # | Severity | Issue | Status |
+|---|----------|-------|--------|
+| 1 | CRITICAL | Quiz `correct_answer` exposed to all authenticated students via `questions` table direct access | ✅ FIXED — Dropped `Authenticated read questions` policy |
+| 2 | CRITICAL | Chatbot `system_prompt`, `model`, `temperature` readable by all students | ✅ FIXED — Dropped `Authenticated users can read chatbot settings` policy |
+| 3 | HIGH | Notices readable by unauthenticated users (target_role IS NULL evaluated as true for NULL uid) | ✅ FIXED — New policy requires `auth.uid() IS NOT NULL` |
+| 4 | HIGH | `enrollments` had no UPDATE policy — `progress_percentage` / `last_watched_lesson_id` silently failed | ✅ FIXED — Added `Users can update own enrollment progress` policy |
+| 5 | HIGH | `profiles_public` view: no cross-user read policy for chat/comments/mentor list | ✅ FIXED — Added authenticated SELECT on `profiles` base table |
+| 6 | MEDIUM | `attendance` had RESTRICTIVE-only policy (no PERMISSIVE = zero access for anyone) | ✅ FIXED — Re-created as PERMISSIVE ALL with WITH CHECK |
+| 7 | MEDIUM | Leaked Password Protection (HaveIBeenPwned) disabled | ⚠️ PENDING — Enable in Supabase Dashboard → Auth → Security |
+| 8 | LOW | `leads` INSERT uses `WITH CHECK (true)` | ✅ ACCEPTED by design (public lead form) |
+
+### Payment Security — VERIFIED SECURE ✅
+- Razorpay Key Secret never exposed in frontend (Edge Function only)
+- HMAC-SHA256 verification server-side (`verify-razorpay-payment`)
+- Enrollment created only after verified signature
+- Duplicate enrollment prevented (upsert + unique constraint)
+
+### Code Audit Notes
+- `QuizAttempt.tsx` already queries `questions_for_students` view (line 81) — no code change needed
+- `score-quiz` Edge Function handles all scoring server-side with service_role key
+- `AdminRoute` wrapper enforces role-based access on all `/admin/*` routes
+
+### Manual Action Required
+> **Enable Leaked Password Protection**: Supabase Dashboard → Auth → Security → "Leaked Password Protection"
+
+---
+
+
 ## Date: 2026-03-08 (Session 10 – Downloads Section + PDF Tracking)
 
 ### Changes Applied
