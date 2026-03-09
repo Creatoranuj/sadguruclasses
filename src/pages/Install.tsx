@@ -80,6 +80,7 @@ const Install = () => {
   const [installed, setInstalled] = useState(false);
   const [promptUsed, setPromptUsed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedApk, setCopiedApk] = useState(false);
   const navigate = useNavigate();
   const appUrl = window.location.origin;
   const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(`${appUrl}/install`)}&choe=UTF-8`;
