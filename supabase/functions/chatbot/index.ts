@@ -285,7 +285,7 @@ Deno.serve(async (req) => {
 - Warm, encouraging, student-friendly
 - Concise but complete — never cut off mid-thought
 - For syllabus/topic questions: include weightage if known, difficulty level ⭐, priority order
-` + (queryInstructions[queryType] || '') + ragSection + faqContext + courseContext;
+` + (queryInstructions[queryType] || '') + ragSection + webSection + faqContext + courseContext;
 
     const model = (settings?.model && settings.model.includes('/')) ? settings.model : `google/${settings?.model || 'gemini-2.5-flash'}`;
     const temperature = settings?.temperature ?? 0.7;
@@ -327,7 +327,7 @@ Deno.serve(async (req) => {
       await supabase.from('chatbot_logs').insert({ user_id: userId, message, response, session_id: sessionId });
     }
 
-    return new Response(JSON.stringify({ response, queryType, ragUsed: ragContext.length > 0 }), {
+    return new Response(JSON.stringify({ response, queryType, ragUsed: ragContext.length > 0, webUsed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
