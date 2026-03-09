@@ -1,83 +1,102 @@
 
-## Root Cause: Missing `lovable.toml`
+## Goal
+Redesign the `/install` page to be a beautiful, highly intuitive, student-friendly installation guide that makes it dead easy for students to install the Sadguru Coaching Classes app — with direct APK download link, step-by-step visual guides per platform, and a one-tap PWA install button.
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+## What's Wrong With The Current Page
+1. **APK link is broken** — `https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/releases/latest` is a placeholder. Students clicking it go nowhere.
+2. **No one-tap install button** — The browser's `beforeinstallprompt` event is never captured. There's no "Install Now" button that triggers the native browser prompt.
+3. **Looks basic** — Plain cards with numbered lists. No visual icons showing the steps, no progress indicators, no screenshots/illustrations.
+4. **No QR code** — Students on desktop need to share the link to their phone. A QR code makes this effortless.
+5. **No "already installed" detection** — If the app is running in standalone mode, it should say "You're already using the app!" instead of showing install steps.
+6. **No APK version badge** — No way to know what version they're downloading.
+7. **Missing mascot/branding** — The page feels disconnected from the app's identity. The Sadguru mascot (`sadguru-mascot.png`) can be used.
 
----
+## New Page Design
 
-## Plan
-
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
-
-```toml
-[run]
-dev = "npm run dev"
+```text
+┌──────────────────────────────────────────────────────┐
+│  ← Back    [Logo] Sadguru Coaching Classes           │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│        [🎓 Sadguru Mascot Image]                     │
+│     "Install Sadguru Coaching Classes"               │
+│   "Get the full app experience on your device"       │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  ✅ Already Installed! (shown if standalone)   │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                      │
+│  [Android]  [iPhone/iPad]  [Desktop]                 │
+│  (auto-selected based on device)                     │
+│                                                      │
+│  ── ANDROID ──────────────────────────────────────   │
+│  ┌──────────────────┐  ┌──────────────────────────┐  │
+│  │ 📦 Option A      │  │ 🌐 Option B              │  │
+│  │ Download APK     │  │ Install from Browser     │  │
+│  │ (Recommended)    │  │ (Chrome)                 │  │
+│  │ [⬇ Download APK] │  │                          │  │
+│  │ v1.0 · Android 7+│  │ Step 1 ► Step 2 ► Step 3 │  │
+│  └──────────────────┘  └──────────────────────────┘  │
+│                                                      │
+│  ── iOS ──────────────────────────────────────────   │
+│  Visual step cards with icons:                       │
+│  [Safari icon] → [Share icon] → [+Home icon]        │
+│                                                      │
+│  ── DESKTOP ──────────────────────────────────────   │
+│  [Install Now button if prompt available]            │
+│  Or: look for ⊕ in address bar                      │
+│                                                      │
+│  ─────────────────────────────────────────────────   │
+│  📱 Share with Classmates                            │
+│  [QR Code] ← scan to open on phone                  │
+│  [Copy Link] [WhatsApp Share]                        │
+└──────────────────────────────────────────────────────┘
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+## Key New Features
 
----
+### 1. Live "Install Now" Button (PWA prompt capture)
+- On Android Chrome / Desktop Chrome: capture `beforeinstallprompt` event in a `useEffect`.
+- Show a prominent "⬇ Install App Now" button that calls `event.prompt()`.
+- This is the ONE-TAP install experience.
 
-### 2. Visual Polish — CSS & Theme Improvements
+### 2. APK Download Link Fixed
+- Link to: `https://github.com/naveen-bharatprism/sadguru-coaching-classes/releases/latest`  
+  (I'll use the generic GitHub releases URL pattern pointing to the real repo based on the workflow file which has `GITHUB_TOKEN` and the app named `SadguruCoachingClasses-*.apk`).
+- Actually — I cannot know the exact GitHub repo URL since it's not in the code. I'll make the APK link configurable via an `APK_DOWNLOAD_URL` constant at the top of the file, clearly documented, and default to `#` with a clear "Ask your teacher for the download link" fallback message shown to the student if the URL is not set.
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+### 3. Already-Installed Detection
+- Check `window.matchMedia('(display-mode: standalone)').matches`
+- If true: show a green success card "You're already using the Sadguru app! 🎉"
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+### 4. Visual Step Cards
+- Each step has a big numbered circle + icon + short description
+- Android PWA: Chrome icon → 3-dot menu → "Add to Home Screen"  
+- iOS: Safari icon → Share sheet icon → "Add to Home Screen"
+- Desktop: Chrome/Edge address bar → install icon
 
----
+### 5. QR Code Section
+- Use the current page URL to generate a QR code link via Google Charts API: `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=<URL>`
+- Display it so desktop users can scan with their phone
+- WhatsApp share button: `https://wa.me/?text=Download Sadguru Coaching Classes app: <URL>`
 
-### 3. Landing Page & Navigation Visual Fixes
+### 6. Visual Design Improvements
+- Full-bleed gradient header with the mascot image
+- Color-coded platform tabs (green = Android, black = iOS, blue = Desktop)
+- Step cards with large icons and numbered badges
+- Gradient "Download APK" button with download icon and version label
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
-
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+| `src/pages/Install.tsx` | Complete redesign — all features above |
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+No other files need to change. The APK constant at the top of the file is clearly marked so the admin can update it once the GitHub repo is connected.
 
----
-
-## Note on Visual Editor
-
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+## APK URL Handling
+Since the GitHub repo URL is not hardcoded anywhere in the codebase (the build-apk.yml uses `GITHUB_TOKEN` but doesn't store the repo URL), I will:
+- Add a `const APK_DOWNLOAD_URL = ""` constant at the top
+- If empty → show a card saying "APK not yet available — please ask your teacher for the download link or install via browser below"
+- When the admin connects GitHub and has the URL, they can update this constant
+- Default PWA install (Option B) always works regardless
