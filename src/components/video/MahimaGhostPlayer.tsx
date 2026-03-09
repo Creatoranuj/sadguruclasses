@@ -408,20 +408,13 @@ const MahimaGhostPlayer = memo(({
   const handleNextVideo = useCallback(() => { setShowEndScreen(false); onNextVideo?.(); }, [onNextVideo]);
 
   // Progress bar handlers
-  // When rotated 90°, the progress bar is physically vertical on screen.
-  // We must use clientY mapped to the bar's rendered height instead of clientX/width.
-  const calculateTimeFromPosition = useCallback((clientX: number, clientY?: number) => {
+  // The progress bar is OUTSIDE the rotated video container — it never rotates with the iframe.
+  // getBoundingClientRect() always returns horizontal screen coords, so we always use clientX/width.
+  const calculateTimeFromPosition = useCallback((clientX: number) => {
     if (!progressBarRef.current || duration <= 0) return 0;
     const rect = progressBarRef.current.getBoundingClientRect();
-    if (rotation === 90 && clientY !== undefined) {
-      // Bar is rotated: its visual bottom maps to time=0, visual top maps to time=duration
-      // rect is still reported in original (unrotated) screen coords by the browser
-      // In 90° rotation the bar becomes vertical: use clientY within rect.top/bottom
-      const ratio = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
-      return ratio * duration;
-    }
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * duration;
-  }, [duration, rotation]);
+  }, [duration]);
 
   const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
