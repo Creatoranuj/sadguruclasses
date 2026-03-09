@@ -55,6 +55,17 @@ interface KnowledgeEntry {
   created_at: string;
 }
 
+interface CrawlHistoryEntry {
+  id: string;
+  url: string;
+  status: 'pending' | 'completed' | 'failed';
+  knowledge_entries_created: number;
+  crawled_at: string;
+  error_message?: string;
+  title?: string;
+  content_preview?: string;
+}
+
 const CATEGORIES = [
   { value: 'platform_guide', label: '🖥️ Platform Guide', color: 'bg-blue-100 text-blue-700' },
   { value: 'courses', label: '📚 Courses', color: 'bg-green-100 text-green-700' },
