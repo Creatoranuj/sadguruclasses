@@ -212,22 +212,8 @@ const MahimaGhostPlayer = memo(({
     }
   }, [isMuted, volume, sendCommand]);
 
-  const toggleFullscreen = useCallback(async () => {
-    const el = containerRef.current;
-    if (!el) return;
-    try {
-      if (!document.fullscreenElement) {
-        if (el.requestFullscreen) await el.requestFullscreen();
-        else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
-        setIsFullscreen(true);
-      } else {
-        if (document.exitFullscreen) await document.exitFullscreen();
-        else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
-        setIsFullscreen(false);
-      }
-    } catch (err) {
-      console.error("Fullscreen error:", err);
-    }
+  const toggleFullscreen = useCallback(() => {
+    setIsFakeFullscreen(prev => !prev);
   }, []);
 
   const preventAll = useCallback((e: Event) => {
