@@ -546,6 +546,25 @@
   overflow: hidden !important;
 }
 
+/* Inner video container must fill the entire fake-fullscreen space */
+.mahima-ghost-player.mahima-fake-fullscreen .mahima-video-container {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* iframe must also fill container absolutely in fake fullscreen */
+.mahima-ghost-player.mahima-fake-fullscreen .mahima-video-container iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+}
+
 /* Double-tap ripple for video player */
 @keyframes dt-ripple {
   0%   { transform: scale(0.3); opacity: 0.7; }
