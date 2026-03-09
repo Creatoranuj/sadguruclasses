@@ -534,6 +534,18 @@
   }
 }
 
+/* Fake fullscreen for Capacitor Android WebView (document.requestFullscreen is not supported) */
+.mahima-ghost-player.mahima-fake-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  overflow: hidden !important;
+}
+
 /* Double-tap ripple for video player */
 @keyframes dt-ripple {
   0%   { transform: scale(0.3); opacity: 0.7; }
