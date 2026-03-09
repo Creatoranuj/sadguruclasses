@@ -778,9 +778,9 @@ const ChatbotSettings = () => {
                         <div key={entry.id} className="p-4">
                           <div className="flex items-start gap-3">
                             <div className="mt-0.5">
-                              {entry.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                              {entry.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-primary" />}
                               {entry.status === 'failed' && <AlertCircle className="h-4 w-4 text-destructive" />}
-                              {entry.status === 'pending' && <Loader2 className="h-4 w-4 text-amber-500 animate-spin" />}
+                              {entry.status === 'pending' && <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
