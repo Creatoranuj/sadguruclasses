@@ -523,22 +523,26 @@ const MahimaGhostPlayer = memo(({
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPercentage = duration > 0 ? (bufferedTime / duration) * 100 : 0;
 
-  // Rotation styles — supports 0, 90, 180, 270 degrees
+  // Rotation styles — ENTIRE player container rotates so all controls rotate with the video
   const isLandscapeRotation = rotation === 90 || rotation === 270;
-  const rotationStyle: React.CSSProperties = rotation !== 0 ? {
+  const playerContainerStyle: React.CSSProperties = isLandscapeRotation ? {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    width: '100vh',
+    height: '100vw',
+    marginLeft: '-50vh',
+    marginTop: '-50vw',
     transform: `rotate(${rotation}deg)`,
     transformOrigin: 'center center',
     transition: 'transform 0.3s ease',
-    ...(isLandscapeRotation ? {
-      width: '100vh',
-      height: '100vw',
-      position: 'absolute' as const,
-      top: '50%',
-      left: '50%',
-      marginLeft: '-50vh',
-      marginTop: '-50vw',
-    } : {}),
-  } : { transition: 'transform 0.3s ease' };
+    zIndex: 9999,
+    borderRadius: 0,
+    background: '#000',
+    overflow: 'hidden',
+  } : {
+    transition: 'transform 0.3s ease',
+  };
 
 
   return (
@@ -556,13 +560,13 @@ const MahimaGhostPlayer = memo(({
         onMouseMove={handleMouseMove}
         onMouseLeave={() => isPlaying && !showVolumeSlider && setShowControls(false)}
         tabIndex={0}
-        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}
+        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', ...playerContainerStyle }}
       >
-        {/* Video Container — rotationStyle applied here; brightness filter is on a sibling overlay
-             so it doesn't interfere with the CSS transform + dimension calculations */}
+        {/* Video Container — no rotation here; the entire outer player rotates together
+             so all controls (play/skip/progress/settings/watermark) move as one unit */}
         <div
           className={isFakeFullscreen ? 'mahima-video-container w-full h-full' : 'aspect-video relative'}
-          style={{ ...(isFakeFullscreen ? {} : { position: 'relative' }), ...rotationStyle }}
+          style={isFakeFullscreen ? {} : { position: 'relative' }}
         >
           {/* Thumbnail poster — shows before first play so there's no black screen */}
           {!isPlaying && !playerReady && youtubeId && (
