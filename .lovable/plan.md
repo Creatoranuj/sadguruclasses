@@ -1,83 +1,109 @@
 
-## Root Cause: Missing `lovable.toml`
+## Full Analysis
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+### What's Already Done (Good news!)
+The Crawl4AI integration is **already implemented** from the previous approved plan:
+1. `supabase/functions/crawl4ai-bridge/index.ts` - fully built (282 lines), handles `scrape` and `ingest` modes with polling
+2. `supabase/functions/chatbot/index.ts` - already has `fetchWebContext()` and web fallback logic
+3. `src/pages/AdminChatbotSettings.tsx` - already has a "Crawler" tab (lines 671-828) with crawl form + history
+4. `crawl_history` DB table - already migrated
+5. Secrets `CRAWL4AI_API_URL` and `CRAWL4AI_API_TOKEN` - already saved
 
----
+### What the User is NOW Asking
+1. **Read the Crawl4AI docs** (done — key findings below)
+2. **Improve/verify the integration against actual docs** — fix any API mismatches
+3. **"Applicable in my build release"** — add the setup guide to the APK release notes and/or admin panel
 
-## Plan
+### Key Findings from Crawl4AI Docs
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
-
-```toml
-[run]
-dev = "npm run dev"
+**Docker API (what we're using):**
+```bash
+docker run -p 11235:11235 unclecode/crawl4ai:basic
+# Endpoint: POST http://localhost:11235/crawl
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+**Current code issue #1:** The bridge uses `/crawl` POST with `urls` array + `crawler_params`. Per docs this is the correct REST API.
 
----
+**Current code issue #2:** The chatbot's `fetchWebContext` tries to crawl a Google search URL (`google.com/search?q=...`) — **Google blocks headless crawlers**. This will always return empty content. Should use a direct educational URL or a proper search API instead.
 
-### 2. Visual Polish — CSS & Theme Improvements
+**Current code issue #3:** The bridge sends `crawler_params: { headless: true }` and `extra: { only_text: true }` — the correct Crawl4AI v0.4+ REST API fields are `crawler_params` with `headless` (correct), but `extra` is not a standard field. Should use `extraction_config` or just rely on default markdown output.
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+**Current code issue #4:** The Crawler tab's "Setup Banner" says "Docker experimental" but the latest docs (v0.4+) have a stable Docker API at port 11235. Need to update copy to reflect this.
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+**Current code issue #5:** The setup guide in AdminChatbotSettings says:
+```
+docker run -p 11235:11235 -e CRAWL4AI_API_TOKEN=yourtoken unclecode/crawl4ai:latest
+```
+But per docs, the tag is `unclecode/crawl4ai:basic` for the API server. The `latest` tag may be the Python package, not the server.
 
----
+**"Applicable in build release"** means:
+- The GitHub Actions APK build workflow should embed a proper deployment guide 
+- The `src/pages/Install.tsx` should show Crawl4AI setup instructions for admins
+- OR, more likely: add a "Deployment Checklist" section to the admin panel that shows what needs to be set up including Crawl4AI
 
-### 3. Landing Page & Navigation Visual Fixes
+### What Needs to Be Fixed
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+**1. Fix `crawl4ai-bridge/index.ts`:**
+- Fix the API body to match actual Crawl4AI Docker REST API format
+- The correct POST body per docs: `{ urls: ["..."], priority: 8 }` — `crawler_params` is nested inside correctly
+- Remove `extra: { only_text: true }` which is not a valid field; markdown is returned by default
 
----
+**2. Fix `chatbot/index.ts` - `fetchWebContext()`:**
+- Don't crawl Google (it blocks bots)
+- Instead, use a direct educational URL approach — build a topic URL like `https://ncert.nic.in/textbook.php` or use a Wikipedia search URL which is crawlable
+- Better: use `https://en.wikipedia.org/wiki/Special:Search?search=QUERY` or directly `https://en.wikipedia.org/wiki/TOPIC`
 
-### 4. Global Component Polish in `src/index.css`
+**3. Update Admin Crawler Tab UI:**
+- Fix setup banner text to use correct Docker image tag (`basic` not `latest`)  
+- Add a "Test Connection" button to verify the Crawl4AI service is reachable
+- Add Railway deployment link with step-by-step
 
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
+**4. "Applicable in build release" — add to GitHub Actions release notes:**
+- Add a "Admin Setup Required" section to the release body in `build-apk.yml`
+- This tells whoever deploys the APK that they need Crawl4AI running
 
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
+### Files to Modify
 
 | File | Change |
 |------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+| `supabase/functions/crawl4ai-bridge/index.ts` | Fix API body format, remove invalid `extra` field, improve error messages |
+| `supabase/functions/chatbot/index.ts` | Fix `fetchWebContext` to not crawl Google; use Wikipedia/NCERT direct URLs instead |
+| `src/pages/AdminChatbotSettings.tsx` | Fix Docker image tag, add "Test Connection" button, improve setup guide |
+| `.github/workflows/build-apk.yml` | Add Admin Setup section to release notes mentioning Crawl4AI |
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+### Plan
+
+**1. Fix `crawl4ai-bridge` edge function:**
+- Remove `extra: { only_text: true }` (invalid field per docs)
+- Use correct request format matching Crawl4AI Docker REST API v0.4+
+- The response format: `result.results[0].markdown` is correct
+- Add a `GET /health` check endpoint support for the test button
+
+**2. Fix chatbot web fallback:**
+- Replace Google search URL (blocked by bots) with:
+  - Wikipedia search: `https://en.wikipedia.org/wiki/Special:Search?search=QUERY&ns0=1`
+  - Or NCERT for science/math: construct based on query classification
+- This makes web fallback actually work when Crawl4AI is deployed
+
+**3. Update Admin UI in `AdminChatbotSettings.tsx`:**
+- Fix Docker tag from `latest` → `basic`  
+- Add "Test Crawl4AI Connection" button (calls bridge with `mode: 'health'`)
+- Add step-by-step Railway deployment mini-guide with correct commands
+- Show connection status (green/red dot)
+
+**4. Update `build-apk.yml` release body:**
+- Add "Admin Deployment Checklist" section mentioning Crawl4AI Docker setup
+- This makes the APK release self-documenting for admins
 
 ---
 
-## Note on Visual Editor
+## Plan Summary
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+**4 files to change**, all focused on correctness vs the actual Crawl4AI docs:
+
+1. Fix the bridge edge function API format (remove invalid field, match actual Docker REST API)
+2. Fix chatbot fallback to use a crawlable URL instead of Google 
+3. Update Admin UI with correct Docker tag + connection test button
+4. Update APK release notes to include admin deployment steps
+
+The integration is architecturally sound — just needs these accuracy fixes based on reading the actual docs.
