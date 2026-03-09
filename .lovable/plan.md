@@ -1,83 +1,96 @@
 
-## Root Cause: Missing `lovable.toml`
+## What I found
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+Reading the full `Install.tsx` and `build-apk.yml`:
 
----
+**Current state of the install page:**
+- APK_DOWNLOAD_URL is set to `https://github.com/naveen-bharatprism/sadguru-coaching-classes/releases/latest/download/SadguruCoachingClasses.apk` — this is a static filename but the build workflow actually names the file `SadguruCoachingClasses-v1.0-YYYYMMDD-HHMM.apk` (versioned). So the APK direct download URL is wrong — it won't find the file.
+- The QR code on the page uses `appUrl` (the web app origin) — it generates a QR for the PWA install page, NOT for the APK download. The user wants a separate QR that directly downloads the APK.
+- The current QR section title says "Share with Classmates" and only has one QR (for the web app).
 
-## Plan
-
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
-
-```toml
-[run]
-dev = "npm run dev"
+**Build workflow APK naming:**
 ```
+SadguruCoachingClasses-${{ env.VERSION }}.apk
+```
+Where VERSION is either the git tag (`v1.0.0`) or for manual runs `v1.0-YYYYMMDD-HHMM`.
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+The GitHub Releases "latest" download URL format is:
+`https://github.com/USER/REPO/releases/latest/download/FILENAME.apk`
 
----
+But since the filename is versioned, the `latest` redirect won't work for a static filename. The correct approach for "always download latest APK" from GitHub Releases is to use a redirect service OR rename the APK to a consistent name.
 
-### 2. Visual Polish — CSS & Theme Improvements
+**Fix for APK URL**: Update the workflow to ALSO copy the APK with a fixed name `SadguruCoachingClasses.apk` so the static URL works. The workflow already renames it to versioned but doesn't produce a fixed-name copy. I need to add a step that copies to `SadguruCoachingClasses.apk` AND uploads BOTH files to the release.
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+**What needs to change:**
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+### 1. Fix the build-apk.yml to produce a fixed-name APK
+Add a step after "Rename APK" to also create `SadguruCoachingClasses.apk` (fixed name) alongside the versioned one. Then attach BOTH to the release. This makes the static `/releases/latest/download/SadguruCoachingClasses.apk` URL always work.
 
----
+### 2. Add a dedicated APK QR code section to Install.tsx
+Currently there's only one QR code pointing to the web app. The user wants a QR code that directly downloads the APK so students can just scan it with any QR scanner and the APK downloads instantly.
 
-### 3. Landing Page & Navigation Visual Fixes
+Changes:
+- Add a new dedicated section: **"📦 Scan to Download APK"** with a QR code pointing to `APK_DOWNLOAD_URL` directly.
+- Keep the existing web app QR/share section below it.
+- Make this APK QR section visible and prominent on the Android tab (and also available on all tabs since someone on desktop might want to share to phone).
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
+### 3. Fix the WhatsApp share message
+Currently it shares `${appUrl}/install` — better to include both the APK link AND the install page link.
 
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
-
+### Files changed:
 | File | Change |
 |------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+| `.github/workflows/build-apk.yml` | Add step to produce fixed-name `SadguruCoachingClasses.apk` + attach it to release |
+| `src/pages/Install.tsx` | Add dedicated APK QR code section; fix QR code rendering at 200×200 not 180×180 for better scannability; update WhatsApp message |
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+### The APK QR section design:
+```
+┌────────────────────────────────────────────────┐
+│  📦  Scan QR to Download APK                   │
+│  ─────────────────────────────────────────────  │
+│  ┌──────────┐   Scan this QR code with your    │
+│  │ QR CODE  │   phone camera to directly        │
+│  │ (200×200)│   download the Sadguru APK.        │
+│  └──────────┘                                   │
+│  ↓ Also shows: Direct APK link with copy btn   │
+│  [Copy APK Link]  [Share APK on WhatsApp]       │
+└────────────────────────────────────────────────┘
+```
 
----
+The QR for APK uses: `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(APK_DOWNLOAD_URL)}`
 
-## Note on Visual Editor
+This is placed:
+- On Android tab: between Option A and Option B sections (so it's immediately visible)
+- Also in the share section at the bottom (always visible regardless of tab)
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+Actually better: Add it as a NEW prominent card right after the platform tabs section (always visible, not tab-specific), labeled "📦 Direct APK Download QR" — students can always scan it regardless of which tab they're on. Then keep the existing share section for the web PWA.
+
+The APK QR section should only render if `APK_DOWNLOAD_URL` is set (which it is).
+
+### Standalone mode verification note:
+The `isStandalone()` function checks both `window.matchMedia('(display-mode: standalone)')` and `(window.navigator as any).standalone === true` (iOS). This is correct and will show the "Already Installed" card when accessed from the installed PWA. This is working code — no changes needed.
+
+### Summary of all changes:
+
+**`.github/workflows/build-apk.yml`** — Add step 13b:
+```yaml
+- name: 🏷️ Create fixed-name APK copy (for static download URL)
+  run: |
+    cp "${{ env.APK_FILE }}" "SadguruCoachingClasses.apk"
+    echo "APK_FIXED=SadguruCoachingClasses.apk" >> $GITHUB_ENV
+```
+And update the `files:` in the release step to include both:
+```yaml
+files: |
+  ${{ env.APK_FILE }}
+  ${{ env.APK_FIXED }}
+```
+
+**`src/pages/Install.tsx`** — Add APK QR code section:
+- Add a new card between the platform tabs and the platform-specific content
+- QR points to `APK_DOWNLOAD_URL`
+- "Copy APK Link" and "Share APK on WhatsApp" buttons
+- QR size 200×200 for better phone camera scanning
+- Only shown if `APK_DOWNLOAD_URL` is truthy
+
+This gives students a dead-simple experience: they see a QR code, scan it with their phone camera, and the APK downloads directly — no GitHub, no redirects.
