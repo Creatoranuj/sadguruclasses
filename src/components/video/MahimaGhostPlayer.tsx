@@ -95,26 +95,16 @@ const MahimaGhostPlayer = memo(({
   // Rotation state — supports 0, 90, 180, 270 degrees
   const [rotation, setRotation] = useState(0);
 
-  const rotateCW = useCallback(async () => {
+  const rotateCW = useCallback(() => {
     const next = rotation === 0 ? 90 : 0;
     setRotation(next);
-    const isLandscape = next === 90;
-    if (isLandscape && !document.fullscreenElement) {
-      try { await containerRef.current?.requestFullscreen(); setIsFullscreen(true); } catch {}
-    } else if (!isLandscape && document.fullscreenElement) {
-      try { await document.exitFullscreen(); setIsFullscreen(false); } catch {}
-    }
+    setIsFakeFullscreen(next === 90);
   }, [rotation]);
 
-  const rotateCCW = useCallback(async () => {
+  const rotateCCW = useCallback(() => {
     const next = (rotation - 90 + 360) % 360;
     setRotation(next);
-    const isLandscape = next === 90 || next === 270;
-    if (isLandscape && !document.fullscreenElement) {
-      try { await containerRef.current?.requestFullscreen(); setIsFullscreen(true); } catch {}
-    } else if (!isLandscape && document.fullscreenElement) {
-      try { await document.exitFullscreen(); setIsFullscreen(false); } catch {}
-    }
+    setIsFakeFullscreen(next === 90 || next === 270);
   }, [rotation]);
 
   // Discussion state
