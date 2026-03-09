@@ -800,7 +800,7 @@ const ChatbotSettings = () => {
                                   {entry.status}
                                 </Badge>
                                 {entry.status === 'completed' && (
-                                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                                  <Badge variant="outline" className="text-xs">
                                     +{entry.knowledge_entries_created} entries
                                   </Badge>
                                 )}
