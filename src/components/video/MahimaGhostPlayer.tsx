@@ -613,12 +613,23 @@ const MahimaGhostPlayer = memo(({
             }}
           />
 
-          {/* TOP OVERLAY - Title */}
+          {/* TOP OVERLAY - Title + Exit button in fake fullscreen */}
           <div className={cn(
-            "absolute top-0 left-0 right-0 z-[45] flex items-start justify-between p-3 md:p-4 transition-opacity duration-300",
+            "absolute top-0 left-0 right-0 z-[55] flex items-start justify-between p-3 md:p-4 transition-opacity duration-300",
             "bg-gradient-to-b from-black/70 via-black/30 to-transparent",
             showControls ? "opacity-100" : "opacity-0"
           )}>
+            {/* Exit button — visible only in fake fullscreen */}
+            {isFakeFullscreen ? (
+              <button
+                className="flex items-center justify-center bg-black/60 rounded-full p-2 mr-3 shrink-0 pointer-events-auto active:scale-90 transition-transform"
+                onClick={(e) => { e.stopPropagation(); setRotation(0); setIsFakeFullscreen(false); }}
+                title="Exit fullscreen"
+                aria-label="Exit fullscreen"
+              >
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+            ) : null}
             <div className="flex-1 min-w-0">
               {title && (
                 <h2 className="text-white text-sm md:text-base font-semibold line-clamp-1 drop-shadow-md">
