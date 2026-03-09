@@ -28,6 +28,11 @@ jobs:
         run: |
           git submodule deinit --all --force 2>/dev/null || true
           git config --remove-section submodule 2>/dev/null || true
+          if [ -f .gitmodules ]; then
+            git config -f .gitmodules --remove-section submodule.sadguruclasses 2>/dev/null || true
+            [ -s .gitmodules ] || rm -f .gitmodules
+          fi
+          git rm --cached sadguruclasses 2>/dev/null || true
 
       # ── 2. Set VERSION env variable ───────────────────────────────────
       - name: 🏷️ Set version name
