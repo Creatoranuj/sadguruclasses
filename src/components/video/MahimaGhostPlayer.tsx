@@ -609,6 +609,15 @@ const MahimaGhostPlayer = memo(({
         </div>
         {/* ─── VIDEO CONTAINER CLOSED — overlays below are NOT rotated ─── */}
 
+        {/* Brightness overlay — applied over the iframe but outside the rotated container
+             so it never interferes with the transform/dimension CSS cascade */}
+        {brightness !== 100 && (
+          <div
+            className="absolute inset-0 z-[1] pointer-events-none"
+            style={{ backgroundColor: brightness < 100 ? `rgba(0,0,0,${(100 - brightness) / 100})` : 'transparent' }}
+          />
+        )}
+
         {/* TOP OVERLAY - Title + Exit button — always axis-aligned in screen space */}
         <div className={cn(
           "absolute top-0 left-0 right-0 z-[55] flex items-start justify-between p-3 md:p-4 transition-opacity duration-300",
