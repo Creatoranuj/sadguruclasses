@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 import ReactMarkdown from "react-markdown";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { cn } from "@/lib/utils";
-import { X, Send, RotateCcw, ThumbsUp, ThumbsDown, Mic, MicOff, Paperclip, ImageIcon } from "lucide-react";
+import { X, Send, RotateCcw, ThumbsUp, ThumbsDown, Mic, MicOff, Paperclip, ImageIcon, Lock, LogIn } from "lucide-react";
 import logoIcon from "@/assets/sarthi-avatar.png"; // Sarthi guru avatar
 
 interface Message {
@@ -73,6 +74,7 @@ const MarkdownMessage = ({ content }: { content: string }) => (
 const ChatWidget = forwardRef<HTMLDivElement>(() => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [showLoginTip, setShowLoginTip] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: WELCOME_MSG, timestamp: new Date(), id: "welcome", feedbackGiven: null },
   ]);
@@ -320,6 +322,66 @@ const ChatWidget = forwardRef<HTMLDivElement>(() => {
       feedbackGiven: null,
     }]);
   };
+
+  // ─── LOGIN GATE: unauthenticated users see a locked button ───
+  if (!user) {
+    return (
+      <div className="fixed bottom-20 right-4 z-50 md:bottom-6 md:right-6 flex flex-col items-end gap-2">
+        {/* Login tooltip */}
+        {showLoginTip && (
+          <div
+            className={cn(
+              "bg-card border border-border rounded-2xl shadow-xl px-4 py-4 text-right",
+              "max-w-[230px] animate-in slide-in-from-bottom-3 fade-in duration-200",
+              "ring-1 ring-primary/20"
+            )}
+          >
+            {/* Header row */}
+            <div className="flex items-center justify-end gap-2 mb-2">
+              <p className="font-semibold text-sm text-foreground">Sadguru Sarthi 🎓</p>
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <img src={logoIcon} className="w-3.5 h-3.5 object-contain" alt="" />
+              </div>
+            </div>
+            {/* Body */}
+            <p className="text-muted-foreground text-xs leading-relaxed mb-3">
+              सीखने के लिए <strong className="text-foreground">Login करें</strong> और Sarthi से 24×7 बात करें।
+            </p>
+            {/* CTA */}
+            <Link
+              to="/login"
+              className={cn(
+                "inline-flex items-center gap-1.5 text-xs font-semibold",
+                "bg-primary text-primary-foreground px-3 py-1.5 rounded-full",
+                "hover:opacity-90 transition-opacity"
+              )}
+            >
+              <LogIn className="h-3 w-3" />
+              Login करें →
+            </Link>
+          </div>
+        )}
+
+        {/* Locked floating button */}
+        <button
+          onClick={() => setShowLoginTip(prev => !prev)}
+          className={cn(
+            "w-14 h-14 rounded-full shadow-lg flex items-center justify-center",
+            "bg-primary text-primary-foreground transition-all duration-200",
+            "hover:scale-110 active:scale-95 relative",
+            showLoginTip && "scale-105 shadow-xl ring-2 ring-primary/40"
+          )}
+          aria-label="Login to chat with Sadguru Sarthi"
+        >
+          <img src={logoIcon} className="w-8 h-8 object-contain" alt="Sadguru Sarthi" />
+          {/* Lock badge */}
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-card rounded-full border-2 border-border flex items-center justify-center shadow-sm">
+            <Lock className="h-2.5 w-2.5 text-muted-foreground" />
+          </span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
