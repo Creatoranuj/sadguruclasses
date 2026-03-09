@@ -998,17 +998,6 @@ const MyCourseDetail = () => {
                 })()}
               </div>
 
-              {/* Lesson meta */}
-              <div className="px-4 py-3 border-b bg-card">
-                <h2 className="font-semibold text-lg text-foreground mb-1">{selectedLesson.title}</h2>
-                {selectedLesson.duration && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{Math.floor(selectedLesson.duration / 60)}m</span>
-                  </div>
-                )}
-              </div>
-
               {/* Like / Doubts / PDF action bar */}
               <LessonActionBar
                 likeCount={likeCount}
