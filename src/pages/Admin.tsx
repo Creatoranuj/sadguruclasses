@@ -58,8 +58,14 @@ const Admin = () => {
     totalCourses: 0,
     pendingPayments: 0,
     activeEnrollments: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    activeSessions: 0,
   });
+
+  // -- SESSIONS STATE --
+  const [sessionsList, setSessionsList] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
 
   // -- SEARCH & FILTER STATES (Notion-like) --
   const [paymentSearch, setPaymentSearch] = useState("");
