@@ -160,7 +160,9 @@ jobs:
 
             ---
             *Built automatically from the latest codebase via GitHub Actions.*
-          files: ${{ env.APK_FILE }}
+          files: |
+            ${{ env.APK_FILE }}
+            ${{ env.APK_FIXED }}
           draft: false
           prerelease: false
           generate_release_notes: true

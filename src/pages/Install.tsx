@@ -82,7 +82,8 @@ const Install = () => {
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
   const appUrl = window.location.origin;
-  const qrUrl = `https://chart.googleapis.com/chart?chs=180x180&cht=qr&chl=${encodeURIComponent(appUrl)}&choe=UTF-8`;
+  const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(`${appUrl}/install`)}&choe=UTF-8`;
+  const apkQrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(APK_DOWNLOAD_URL)}&choe=UTF-8`;
 
   useEffect(() => {
     setPlatform(detectPlatform());
