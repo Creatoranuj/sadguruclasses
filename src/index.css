@@ -550,23 +550,27 @@
   overflow: hidden !important;
 }
 
-/* Inner video container must fill the entire fake-fullscreen space */
+/* Inner video container — NO !important so that inline rotationStyle wins when rotating.
+   When rotation=0, the container fills the fake-fullscreen space naturally.
+   When rotation=90, inline style sets position:absolute + width:100vh + height:100vw. */
 .mahima-ghost-player.mahima-fake-fullscreen .mahima-video-container {
-  width: 100% !important;
-  height: 100% !important;
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* iframe must also fill container absolutely in fake fullscreen */
+/* iframe fills the container.  When container is rotated 90° its dimensions swap
+   to 100vh × 100vw via inline style, so w-full h-full still covers everything. */
 .mahima-ghost-player.mahima-fake-fullscreen .mahima-video-container iframe {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  border: none !important;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 
 /* Double-tap ripple for video player */

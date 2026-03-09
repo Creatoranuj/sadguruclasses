@@ -558,10 +558,11 @@ const MahimaGhostPlayer = memo(({
         tabIndex={0}
         style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}
       >
-        {/* Video Container */}
+        {/* Video Container — rotationStyle applied here; brightness filter is on a sibling overlay
+             so it doesn't interfere with the CSS transform + dimension calculations */}
         <div
           className={isFakeFullscreen ? 'mahima-video-container w-full h-full' : 'aspect-video relative'}
-          style={{ ...(isFakeFullscreen ? {} : { position: 'relative' }), ...rotationStyle, filter: `brightness(${brightness}%)` }}
+          style={{ ...(isFakeFullscreen ? {} : { position: 'relative' }), ...rotationStyle }}
         >
           {/* Thumbnail poster — shows before first play so there's no black screen */}
           {!isPlaying && !playerReady && youtubeId && (
@@ -607,6 +608,15 @@ const MahimaGhostPlayer = memo(({
           />
         </div>
         {/* ─── VIDEO CONTAINER CLOSED — overlays below are NOT rotated ─── */}
+
+        {/* Brightness overlay — applied over the iframe but outside the rotated container
+             so it never interferes with the transform/dimension CSS cascade */}
+        {brightness !== 100 && (
+          <div
+            className="absolute inset-0 z-[1] pointer-events-none"
+            style={{ backgroundColor: brightness < 100 ? `rgba(0,0,0,${(100 - brightness) / 100})` : 'transparent' }}
+          />
+        )}
 
         {/* TOP OVERLAY - Title + Exit button — always axis-aligned in screen space */}
         <div className={cn(
