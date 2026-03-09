@@ -1,83 +1,146 @@
 
-## Root Cause: Missing `lovable.toml`
-
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+## Goal
+Integrate Crawl4AI into Sadguru Sarthi AI chatbot so that:
+1. Sarthi can **scrape live web content** (NCERT, study sites, current affairs, etc.) when a student asks a question that needs up-to-date or external information
+2. Admin can **trigger URL crawling** from the Chatbot Settings panel to auto-populate the `knowledge_base` table (RAG memory) with fresh content
 
 ---
 
-## Plan
+## Key Technical Understanding
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+### Why Crawl4AI Cannot Run Directly in Lovable
+Crawl4AI is a **Python library** that requires:
+- Playwright (headless browser)
+- Python runtime
+- Docker container
 
-```toml
-[run]
-dev = "npm run dev"
+Lovable runs TypeScript/Deno Edge Functions — Python cannot run here directly.
+
+### The Solution: Crawl4AI as an External Microservice
+```text
+[Student asks question]
+        ↓
+[Sarthi chatbot Edge Function]
+        ↓ (if web search needed)
+[crawl4ai-bridge Edge Function] ──────→ [Crawl4AI Docker API on Railway/Render]
+        ↓                                        (POST /crawl, port 11235)
+[Scraped markdown returned]
+        ↓
+[Injected into AI prompt as context]
+        ↓
+[AI gives grounded, up-to-date answer]
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+### Crawl4AI Docker API facts (confirmed from docs):
+- Runs on port `11235`
+- POST `/crawl` → returns `task_id`
+- GET `/task/{task_id}` → polls for result
+- `CRAWL4AI_API_TOKEN` env var enables bearer token auth
+- Returns markdown, links, HTML — perfect for RAG injection
+- **Free & open-source** — deploy once on Railway (free tier) or any VPS
 
 ---
 
-### 2. Visual Polish — CSS & Theme Improvements
+## What Will Be Built
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+### 1. New Supabase Secret: `CRAWL4AI_API_URL` + `CRAWL4AI_API_TOKEN`
+Stored securely as Supabase secrets → never exposed in frontend code.
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+### 2. New Edge Function: `supabase/functions/crawl4ai-bridge/index.ts`
+A Deno edge function that:
+- Accepts a `url` and `mode` (`scrape` or `ingest`)
+- Calls the self-hosted Crawl4AI Docker API
+- Polls for result (async job)
+- Returns cleaned markdown text
+- `ingest` mode also saves result directly to `knowledge_base` table
 
----
+### 3. Updated `chatbot` Edge Function
+Add a **web search trigger** — when query type is `technical` or `general` AND no RAG result is found, it:
+- Calls `crawl4ai-bridge` with a relevant URL
+- Injects the scraped content as additional context
+- Labels it clearly: "Live web content" in the prompt
 
-### 3. Landing Page & Navigation Visual Fixes
+### 4. Admin Panel Update: `AdminChatbotSettings.tsx` — "Web Crawler" Tab
+New 5th tab in the chatbot settings page:
+- **URL Input**: Admin pastes any URL (NCERT chapter, Sadguru website page, etc.)
+- **"Crawl & Add to Memory" button** — calls `crawl4ai-bridge` in `ingest` mode
+- Shows crawl status (pending → completed → saved)
+- **Crawl History**: Table showing last 10 crawled URLs, date, KB entries created
 
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
-
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+### 5. Database: New table `crawl_history`
+```sql
+id uuid, url text, status text, 
+knowledge_entries_created int, 
+crawled_at timestamptz, crawled_by uuid
+```
 
 ---
 
-## Files to Modify
+## Architecture Diagram
+```text
+Frontend (React)
+│
+├── /admin/chatbot-settings
+│   └── "Web Crawler" tab (NEW)
+│       ├── Input URL → crawl4ai-bridge → knowledge_base
+│       └── Crawl history log
+│
+└── Chat Widget (existing)
+    └── User message → chatbot edge fn
+                       └── (if needed) crawl4ai-bridge → scraped markdown
+                                                          → AI response with fresh context
+                                                          
+Supabase Edge Functions
+├── chatbot/index.ts (UPDATED — add web fallback)
+└── crawl4ai-bridge/index.ts (NEW)
 
-| File | Change |
+External Service (you deploy once)
+└── Crawl4AI Docker Container
+    └── Railway / Render / VPS
+        └── POST /crawl → returns task_id
+        └── GET /task/{id} → returns markdown
+```
+
+---
+
+## Files to Create/Modify
+
+| File | Action |
 |------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
-
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
+| `supabase/functions/crawl4ai-bridge/index.ts` | CREATE new edge function |
+| `supabase/functions/chatbot/index.ts` | UPDATE — add web fallback logic |
+| `src/pages/AdminChatbotSettings.tsx` | UPDATE — add Web Crawler tab |
+| `supabase/config.toml` | UPDATE — add crawl4ai-bridge function config |
+| Supabase secrets | ADD `CRAWL4AI_API_URL` and `CRAWL4AI_API_TOKEN` |
+| SQL migration | CREATE `crawl_history` table |
 
 ---
 
-## Note on Visual Editor
+## Security: How API Keys Are Hidden
+- `CRAWL4AI_API_URL` → Supabase secret (Deno.env.get) — never in frontend
+- `CRAWL4AI_API_TOKEN` → Supabase secret (Deno.env.get) — never in frontend  
+- Frontend only calls `supabase.functions.invoke('crawl4ai-bridge')` — no URL/token exposed
+- Crawl4AI Docker runs behind token auth — only our Edge Function can access it
 
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+---
+
+## Deployment Step for User (One-Time Manual)
+After code changes are deployed, user needs to:
+1. Deploy Crawl4AI Docker on **Railway** (free):
+   ```
+   docker run -p 11235:11235 -e CRAWL4AI_API_TOKEN=your_secret unclecode/crawl4ai:latest
+   ```
+2. Copy the Railway public URL → Add as `CRAWL4AI_API_URL` Supabase secret
+3. Add `CRAWL4AI_API_TOKEN` as Supabase secret
+
+This is a one-time setup. The plan includes step-by-step instructions on the admin panel.
+
+---
+
+## What the Crawl4AI Python file shows
+The uploaded `.py` notebook is a **Google Colab demo** showing:
+- `crawl4ai` v0.8.0 installation  
+- `playwright`, `AsyncWebCrawler` usage
+- This confirms the library capabilities we're integrating via its Docker REST API
+
+The Python code itself won't run in Lovable — we use the same library's **HTTP API** (Docker) instead, which is the production-recommended approach per crawl4ai docs.
