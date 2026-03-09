@@ -646,7 +646,7 @@ const MahimaGhostPlayer = memo(({
           {isFakeFullscreen ? (
             <button
               className="flex items-center justify-center bg-black/60 rounded-full p-2 mr-3 shrink-0 pointer-events-auto active:scale-90 transition-transform"
-              onClick={(e) => { e.stopPropagation(); setRotation(0); setIsFakeFullscreen(false); }}
+              onClick={(e) => { e.stopPropagation(); setRotation(0); setIsFakeFullscreen(false); document.body.style.overflow = ''; }}
               title="Exit fullscreen"
               aria-label="Exit fullscreen"
             >

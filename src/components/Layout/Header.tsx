@@ -18,7 +18,7 @@ const Header = ({ onMenuClick, userName }: HeaderProps) => {
   const displayName = profile?.fullName ?? userName;
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-card border-b border-border sticky top-0 z-40">
+    <header className="flex items-center justify-between px-4 bg-card border-b border-border sticky top-0 z-40" style={{ paddingTop: 'max(12px, calc(12px + env(safe-area-inset-top)))', paddingBottom: '12px' }}>
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
