@@ -828,7 +828,8 @@ const ChatbotSettings = () => {
 
           {/* ============ FAQ Tab ============ */}
           <TabsContent value="faq" className="space-y-4">
-
+            <Card>
+              <CardHeader><CardTitle>Add New FAQ</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
                   <Label>Question</Label>
