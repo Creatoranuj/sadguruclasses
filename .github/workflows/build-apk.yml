@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0   # needed for tag creation
+          submodules: false  # prevent fatal error from phantom submodule path
 
       # ── 2. Set VERSION env variable ───────────────────────────────────
       - name: 🏷️ Set version name
