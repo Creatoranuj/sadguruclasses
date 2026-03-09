@@ -1,83 +1,79 @@
 
-## Root Cause: Missing `lovable.toml`
+## Analysis of All 3 Issues from Screenshots
 
-The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
+### Issue 1: Video Completely Black When Rotated (Critical)
+**Root cause**: In `MahimaGhostPlayer.tsx` line 569:
+```jsx
+<div className={isFakeFullscreen ? 'mahima-video-container' : 'aspect-video'} style={...rotationStyle...}>
+```
+When `isFakeFullscreen` is true, the class `mahima-video-container` is applied — but this class has **NO CSS defined** anywhere in the codebase. So the video container collapses to 0px height → black screen.
 
----
+The `.mahima-fake-fullscreen` CSS class IS correctly defined in `src/index.css` (fixes the outer container to `position:fixed; inset:0; width:100vw; height:100vh`) — but the **inner video div** still needs to fill that space properly.
 
-## Plan
+### Issue 2: No Exit Button in Fullscreen Mode
+When the player goes into fake fullscreen (rotation), there is no "← Back" or "✕ Exit" button visible. In APK on Android, the back button is the only way out, and it may not be intuitive for students. A clear exit button in the top-left corner is needed.
 
-### 1. Create `lovable.toml` (Critical - fixes blank preview)
+### Issue 3: Rotation Behaviour
+`rotateCW()` only toggles between 0° and 90°. The visual rotation + fake fullscreen combo needs to work together so:
+- When `rotation=90°` + `isFakeFullscreen=true`: video fills the entire screen AND is rotated 90° clockwise (landscape orientation)
+- The `rotationStyle` uses `width: 100vh` and `height: 100vw` with absolute positioning — but this depends on the container already being fixed to the viewport via `.mahima-fake-fullscreen`
 
-```toml
-[run]
-dev = "npm run dev"
+## Fix Plan: 2 Files
+
+### File 1: `src/index.css`
+Add a `.mahima-video-container` CSS class that makes the inner video div fill 100% of the fake-fullscreen container:
+
+```css
+/* Video wrapper inside fake fullscreen — must fill the fixed container */
+.mahima-ghost-player.mahima-fake-fullscreen .mahima-video-container {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+}
 ```
 
-This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
+Also ensure `iframe` inside fills container when in fullscreen:
+```css
+.mahima-ghost-player.mahima-fake-fullscreen iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+```
 
----
+### File 2: `src/components/video/MahimaGhostPlayer.tsx`
 
-### 2. Visual Polish — CSS & Theme Improvements
+**Fix A — Inner video container** (line 569): Change:
+```jsx
+<div className={isFakeFullscreen ? 'mahima-video-container' : 'aspect-video'} style={...}>
+```
+To use proper combined classes so the inner div always has a defined height:
+```jsx
+<div 
+  className={isFakeFullscreen ? 'mahima-video-container w-full h-full' : 'aspect-video relative'} 
+  style={...rotationStyle, filter: ...}>
+```
 
-Update `src/index.css` to add:
-- Smooth card hover transitions (lift + shadow)
-- Consistent button focus rings
-- Course card polish (uniform border, shadow, hover transform)
-- Better form input focus styles
+**Fix B — Add Exit button** in the TOP OVERLAY section (line ~614) when `isFakeFullscreen` is true, add an `ArrowLeft` / X button at top-left that calls:
+```tsx
+() => { setRotation(0); setIsFakeFullscreen(false); }
+```
+Button styles: `absolute top-3 left-3 z-[60] bg-black/60 rounded-full p-2 text-white`
 
-Update `src/pages/Index.tsx` branding:
-- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
-- Hero title already uses `data?.title` which is dynamic, so it's fine
+**Fix C — Ensure rotation + fullscreen work together**: The current `rotateCW` correctly sets both `rotation=90` and `isFakeFullscreen=true`. The issue is purely that the inner container has no height. Fixing the CSS resolves this.
 
----
+**Fix D — Android back button**: The `popstate` handler already handles `setRotation(0); setIsFakeFullscreen(false)` — this is correct.
 
-### 3. Landing Page & Navigation Visual Fixes
-
-In `src/pages/Index.tsx`:
-- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
-- Add a subtle gradient shadow under the sticky nav for depth
-- Ensure mobile Sheet menu has proper styling
-
----
-
-### 4. Global Component Polish in `src/index.css`
-
-Add utility classes:
-- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
-- `.btn-primary` — consistent gradient button style
-- Improve the progress thumb hit area on mobile (larger touch target)
-- Ensure consistent border-radius across cards
-
----
-
-### 5. Branding Consistency
-
-In `src/components/video/MahimaGhostPlayer.tsx`:
-- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
-- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
-
-In `src/pages/AdminUpload.tsx`:
-- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
-
----
-
-## Files to Modify
+## Summary of Changes
 
 | File | Change |
 |------|--------|
-| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
-| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
-| `src/pages/Index.tsx` | Minor nav branding text update |
+| `src/index.css` | Add `.mahima-video-container` height fix + iframe fill rules |
+| `src/components/video/MahimaGhostPlayer.tsx` | Fix inner container class, add exit button in top overlay |
 
-## Files NOT Changed
-- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
-- `LessonView.tsx` — progress tracking logic untouched
-- `AdminUpload.tsx` — MIME validation untouched
-- All Supabase integration files — untouched
-
----
-
-## Note on Visual Editor
-
-The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.
+## Expected Result After Fix
+- Rotation button → video fills entire screen rotated 90° (landscape) ✅
+- Exit button (top-left ← arrow) visible in fullscreen mode → tap to exit ✅  
+- Android back button → exits fullscreen before navigating ✅
+- Normal (non-rotated) mode → unchanged, works as before ✅
