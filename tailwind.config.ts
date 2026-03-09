@@ -105,9 +105,9 @@ export default {
   			xs: 'var(--shadow-xs)',
   			'2xl': 'var(--shadow-2xl)'
   		},
-  		fontFamily: {
-  			sans: [
-  				'DM Sans',
+		fontFamily: {
+			sans: [
+				'Poppins',
   				'ui-sans-serif',
   				'system-ui',
   				'-apple-system',
