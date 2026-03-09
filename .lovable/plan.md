@@ -1,48 +1,83 @@
 
-## Problem Analysis
+## Root Cause: Missing `lovable.toml`
 
-APK (Capacitor Android WebView) mein `document.requestFullscreen()` API ya to kaam nahi karta ya silently fail ho jaata hai. Browser mein fullscreen CSS (`:fullscreen`) trigger hota hai, APK mein nahi.
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-3 issues hain:
-1. `rotateCW()` — `requestFullscreen()` call karta hai → silent fail in WebView
-2. `toggleFullscreen()` — same issue
-3. `:fullscreen` CSS selectors — APK mein kabhi trigger nahi hote, isliye video full screen layout nahi milta
+---
 
-## Solution: Capacitor-aware Fake Fullscreen
+## Plan
 
-Rotation button press hone par `requestFullscreen()` ke bajaye **CSS-based fake fullscreen** use karenge — player ko `position: fixed; inset: 0; z-index: 9999` pe set kar denge. Yeh WebView mein 100% kaam karta hai.
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-### Changes needed: 2 files
-
-#### 1. `src/components/video/MahimaGhostPlayer.tsx`
-
-- `isFullscreen` state → `isFakeFullscreen` state (CSS-based)
-- `toggleFullscreen()` — `requestFullscreen()` ki jagah `isFakeFullscreen` toggle karein
-- `rotateCW()` — rotation ke saath fake fullscreen bhi toggle karein
-- Player container: jab `isFakeFullscreen` ho to `position: fixed; inset: 0; z-index: 9999; background: black` apply karein
-- Back button / popstate handler — rotation reset ke saath fake fullscreen bhi exit karein
-- `document.fullscreenElement` checks remove karein
-
-#### 2. `src/index.css`
-
-- `:fullscreen` CSS rules ke saath `.mahima-fake-fullscreen` class-based rules bhi add karein taaki APK mein bhi same layout mile:
-```css
-.mahima-ghost-player.mahima-fake-fullscreen {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 9999 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  border-radius: 0 !important;
-  background: #000 !important;
-}
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-## Files to change
-1. `src/components/video/MahimaGhostPlayer.tsx` — fullscreen logic replace with CSS fake fullscreen
-2. `src/index.css` — `.mahima-fake-fullscreen` class add karein
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-## Expected Result
-- Rotation button dabaate hi video poora screen cover kar lega (APK mein bhi)  
-- Browser mein bhi same behavior (both approaches work together)
-- Back button press karne par fullscreen exit ho jaayega
+---
+
+### 2. Visual Polish — CSS & Theme Improvements
+
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
+
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
+
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
+
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

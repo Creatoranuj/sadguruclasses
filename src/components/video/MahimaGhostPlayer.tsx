@@ -60,7 +60,7 @@ const MahimaGhostPlayer = memo(({
   const [duration, setDuration] = useState(0);
   const [bufferedTime, setBufferedTime] = useState(0);
   const [showEndScreen, setShowEndScreen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFakeFullscreen, setIsFakeFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
@@ -95,26 +95,16 @@ const MahimaGhostPlayer = memo(({
   // Rotation state — supports 0, 90, 180, 270 degrees
   const [rotation, setRotation] = useState(0);
 
-  const rotateCW = useCallback(async () => {
+  const rotateCW = useCallback(() => {
     const next = rotation === 0 ? 90 : 0;
     setRotation(next);
-    const isLandscape = next === 90;
-    if (isLandscape && !document.fullscreenElement) {
-      try { await containerRef.current?.requestFullscreen(); setIsFullscreen(true); } catch {}
-    } else if (!isLandscape && document.fullscreenElement) {
-      try { await document.exitFullscreen(); setIsFullscreen(false); } catch {}
-    }
+    setIsFakeFullscreen(next === 90);
   }, [rotation]);
 
-  const rotateCCW = useCallback(async () => {
+  const rotateCCW = useCallback(() => {
     const next = (rotation - 90 + 360) % 360;
     setRotation(next);
-    const isLandscape = next === 90 || next === 270;
-    if (isLandscape && !document.fullscreenElement) {
-      try { await containerRef.current?.requestFullscreen(); setIsFullscreen(true); } catch {}
-    } else if (!isLandscape && document.fullscreenElement) {
-      try { await document.exitFullscreen(); setIsFullscreen(false); } catch {}
-    }
+    setIsFakeFullscreen(next === 90 || next === 270);
   }, [rotation]);
 
   // Discussion state
@@ -222,22 +212,8 @@ const MahimaGhostPlayer = memo(({
     }
   }, [isMuted, volume, sendCommand]);
 
-  const toggleFullscreen = useCallback(async () => {
-    const el = containerRef.current;
-    if (!el) return;
-    try {
-      if (!document.fullscreenElement) {
-        if (el.requestFullscreen) await el.requestFullscreen();
-        else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
-        setIsFullscreen(true);
-      } else {
-        if (document.exitFullscreen) await document.exitFullscreen();
-        else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
-        setIsFullscreen(false);
-      }
-    } catch (err) {
-      console.error("Fullscreen error:", err);
-    }
+  const toggleFullscreen = useCallback(() => {
+    setIsFakeFullscreen(prev => !prev);
   }, []);
 
   const preventAll = useCallback((e: Event) => {
@@ -326,13 +302,7 @@ const MahimaGhostPlayer = memo(({
     const handlePopState = (e: PopStateEvent) => {
       if (rotation !== 0) {
         setRotation(0);
-        // Exit fullscreen if still in it
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {});
-          setIsFullscreen(false);
-        }
-        // Re-push guard so a second back actually navigates
-        // (don't re-push — let the next back go through naturally)
+        setIsFakeFullscreen(false);
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -352,15 +322,12 @@ const MahimaGhostPlayer = memo(({
       if (target.tagName === 'A' || target.closest('a')) { e.preventDefault(); e.stopPropagation(); }
     };
     container.addEventListener('click', blockLinks, { capture: true });
-    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => {
       container.removeEventListener('contextmenu', preventAll);
       container.removeEventListener('copy', preventAll);
       container.removeEventListener('cut', preventAll);
       container.removeEventListener('dragstart', preventAll);
       container.removeEventListener('click', blockLinks);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     };
@@ -590,7 +557,7 @@ const MahimaGhostPlayer = memo(({
         ref={containerRef}
         className={cn(
           "mahima-ghost-player relative rounded-xl overflow-hidden bg-black select-none group",
-          isFullscreen && "mahima-fullscreen"
+          isFakeFullscreen && "mahima-fake-fullscreen"
         )}
         onContextMenu={(e) => e.preventDefault()}
         onMouseMove={handleMouseMove}
@@ -599,7 +566,7 @@ const MahimaGhostPlayer = memo(({
         style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}
       >
         {/* Video Container */}
-        <div className={isFullscreen ? 'mahima-video-container' : 'aspect-video'} style={{ position: 'relative', ...rotationStyle, filter: `brightness(${brightness}%)` }}>
+        <div className={isFakeFullscreen ? 'mahima-video-container' : 'aspect-video'} style={{ position: 'relative', ...rotationStyle, filter: `brightness(${brightness}%)` }}>
           {/* Thumbnail poster — shows before first play so there's no black screen */}
           {!isPlaying && !playerReady && youtubeId && (
             <div
@@ -961,7 +928,7 @@ const MahimaGhostPlayer = memo(({
             (showControls || !isPlaying) ? "opacity-100 transition-opacity duration-200" : "opacity-0 pointer-events-none transition-opacity duration-500",
             showEndScreen && "hidden"
           )}
-          style={{ paddingBottom: isFullscreen ? 'max(12px, env(safe-area-inset-bottom))' : undefined }}
+          style={{ paddingBottom: isFakeFullscreen ? 'max(12px, env(safe-area-inset-bottom))' : undefined }}
           onPointerDown={handleMouseMove}
           onMouseMove={handleMouseMove}
         >
