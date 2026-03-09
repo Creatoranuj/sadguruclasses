@@ -72,6 +72,16 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [quizAttempts, setQuizAttempts] = useState<QuizAttemptRow[]>([]);
   const [upcomingDoubts, setUpcomingDoubts] = useState<{ id: string; subject: string | null; scheduled_at: string | null; zoom_join_url: string | null; status: string }[]>([]);
+  const [showInstallBanner, setShowInstallBanner] = useState<boolean>(() => {
+    const dismissed = localStorage.getItem('install-banner-dismissed') === 'true';
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    return !dismissed && !standalone;
+  });
+
+  const handleDismissBanner = () => {
+    localStorage.setItem('install-banner-dismissed', 'true');
+    setShowInstallBanner(false);
+  };
 
   useEffect(() => {
     if (authLoading) return;
