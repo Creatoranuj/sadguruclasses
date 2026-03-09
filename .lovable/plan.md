@@ -1,93 +1,83 @@
 
-## What needs to change
+## Root Cause: Missing `lovable.toml`
 
-### 1. `src/pages/Dashboard.tsx` — Install App Banner
+The build error "no package.json found" and "no command found for task dev" is caused by a missing `lovable.toml` file. The project has `package.json` with `dev: "vite"` and `vite.config.ts` serving on port 5000 — all correct. Lovable's build system requires a `lovable.toml` to wire the dev command. This is the **critical fix** that restores the preview.
 
-Add a dismissible banner at the top of the student's main content area (inside the `!isTeacher` block, before `BatchSelector`). The banner:
-- Is hidden if `window.matchMedia('(display-mode: standalone)').matches` — already running as installed app
-- Is hidden if `localStorage.getItem('install-banner-dismissed') === 'true'`
-- Has an orange/saffron gradient matching the brand, text "Install the Sadguru app for a better experience", a "Install Now →" button linking to `/install`, and an X dismiss button
-- On dismiss: sets `localStorage.setItem('install-banner-dismissed', 'true')` and hides the banner
+---
 
-Changes in Dashboard.tsx:
-- Add `Download` and `X` to the lucide imports
-- Add `showInstallBanner` state (initialized from standalone check + localStorage)
-- Add `handleDismissBanner` function
-- Insert the banner JSX right before `<BatchSelector />` inside the student section
+## Plan
 
-### 2. `src/pages/Install.tsx` — APK URL
+### 1. Create `lovable.toml` (Critical - fixes blank preview)
 
-The user's message says `[paste your GitHub releases URL here]` — they have NOT provided an actual URL. The placeholder `[paste your GitHub releases URL here]` is the literal text they typed, meaning they want me to add the URL but didn't fill it in yet.
-
-Looking at the `.github/workflows/build-apk.yml` might reveal the repo name. Let me check that file to see if I can infer the actual GitHub repo URL.
-
-Actually, the user literally wrote "[paste your GitHub releases URL here]" — they forgot to fill in their actual URL. I should note this in the plan and keep the `APK_DOWNLOAD_URL = ""` as-is, but update the comment to give a clearer example/hint. I can mention in the plan that the URL wasn't provided and they need to update it.
-
-Wait — let me re-read: "My GitHub repo releases URL is: [paste your GitHub releases URL here]". This is the user's template message they forgot to fill in. I'll check the build workflow to see if the repo URL is mentioned anywhere.
-
-Plan:
-1. **Dashboard.tsx**: Add install banner with standalone + localStorage dismiss logic
-2. **Install.tsx**: Keep `APK_DOWNLOAD_URL = ""` since user didn't provide the actual URL, but note in plan that they need to update it
-
-## Exact file changes
-
-### `src/pages/Dashboard.tsx`
-
-**Imports** (line 11-14): Add `Download, X` to the lucide imports.
-
-**State** (after line 72 where other states are declared): Add:
-```tsx
-const [showInstallBanner, setShowInstallBanner] = useState<boolean>(() => {
-  if (typeof window !== 'undefined') {
-    const dismissed = localStorage.getItem('install-banner-dismissed') === 'true';
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
-    return !dismissed && !standalone;
-  }
-  return false;
-});
+```toml
+[run]
+dev = "npm run dev"
 ```
 
-**Handler**: Add `handleDismissBanner`:
-```tsx
-const handleDismissBanner = () => {
-  localStorage.setItem('install-banner-dismissed', 'true');
-  setShowInstallBanner(false);
-};
-```
+This tells Lovable's runner to use `npm run dev` (which invokes `vite` on port 5000).
 
-**JSX** (line 216, inside the student `!isTeacher` section, before `<BatchSelector />`):
-```tsx
-{showInstallBanner && (
-  <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl px-4 py-3 shadow-md">
-    <div className="flex items-center gap-3 min-w-0">
-      <Download className="h-5 w-5 flex-shrink-0" />
-      <span className="text-sm font-medium truncate">
-        Install the Sadguru app for a better experience
-      </span>
-    </div>
-    <div className="flex items-center gap-2 flex-shrink-0">
-      <Button size="sm" variant="secondary" className="text-xs h-8 bg-white text-orange-600 hover:bg-orange-50" onClick={() => navigate('/install')}>
-        Install Now →
-      </Button>
-      <button onClick={handleDismissBanner} className="p-1 rounded-full hover:bg-white/20 transition-colors">
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  </div>
-)}
-```
+---
 
-### `src/pages/Install.tsx`
+### 2. Visual Polish — CSS & Theme Improvements
 
-Since the user didn't provide their actual GitHub URL (they left the template placeholder), I'll leave `APK_DOWNLOAD_URL = ""` unchanged. I will mention this clearly in the plan so they know to update it manually.
+Update `src/index.css` to add:
+- Smooth card hover transitions (lift + shadow)
+- Consistent button focus rings
+- Course card polish (uniform border, shadow, hover transform)
+- Better form input focus styles
 
-Actually — I can still make both changes. The Dashboard banner is the main deliverable. For Install.tsx, since user forgot to provide URL, I'll update the comment to be clearer and keep the empty string.
+Update `src/pages/Index.tsx` branding:
+- The nav still shows "Sadguru Coaching Classes" — update text to match current brand direction
+- Hero title already uses `data?.title` which is dynamic, so it's fine
 
-## Summary of files
+---
+
+### 3. Landing Page & Navigation Visual Fixes
+
+In `src/pages/Index.tsx`:
+- The nav logo `alt` text and brand name span say "Sadguru Coaching Classes" — update to match
+- Add a subtle gradient shadow under the sticky nav for depth
+- Ensure mobile Sheet menu has proper styling
+
+---
+
+### 4. Global Component Polish in `src/index.css`
+
+Add utility classes:
+- `.card-hover` — `transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`
+- `.btn-primary` — consistent gradient button style
+- Improve the progress thumb hit area on mobile (larger touch target)
+- Ensure consistent border-radius across cards
+
+---
+
+### 5. Branding Consistency
+
+In `src/components/video/MahimaGhostPlayer.tsx`:
+- The watermark text currently references "Mahima Academy" (updated in prior session) — verify and keep
+- The `sadguru_player_volume` localStorage key should stay (internal, not visible to user)
+
+In `src/pages/AdminUpload.tsx`:
+- `watermarkText` default is "Sadguru Coaching Classes" — keep consistent with platform branding
+
+---
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/pages/Dashboard.tsx` | Add standalone-aware dismissible install banner before BatchSelector in student view |
-| `src/pages/Install.tsx` | Update comment only (user didn't provide actual URL) |
+| `lovable.toml` | **Create** — add `[run] dev = "npm run dev"` |
+| `src/index.css` | Add card hover, button, form, and progress bar visual improvements |
+| `src/pages/Index.tsx` | Minor nav branding text update |
 
-**Note for user**: The APK URL was not filled in — the message still had `[paste your GitHub releases URL here]` as a placeholder. Once you have your GitHub releases URL (format: `https://github.com/YOUR_USER/YOUR_REPO/releases/latest/download/SadguruCoachingClasses.apk`), update the `APK_DOWNLOAD_URL` constant at line 28 of `src/pages/Install.tsx`.
+## Files NOT Changed
+- `MahimaGhostPlayer.tsx` — video player watermark/timing logic untouched
+- `LessonView.tsx` — progress tracking logic untouched
+- `AdminUpload.tsx` — MIME validation untouched
+- All Supabase integration files — untouched
+
+---
+
+## Note on Visual Editor
+
+The prompt asks to use Lovable's Visual Editor mode. However, Visual Editor is a frontend browser tool for the user to use interactively — it cannot be operated by the AI programmatically. The AI makes CSS/code changes directly which achieves the same result. The improvements above are implemented through code, which is equivalent to (and more reliable than) manual Visual Editor use.

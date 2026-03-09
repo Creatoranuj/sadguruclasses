@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   PlayCircle, Zap, 
   ClipboardCheck, FileText, Users, Calendar, Trophy, CheckCircle2, XCircle,
+  Download, X,
 } from "lucide-react";
 import appLogo from "@/assets/branding/logo_icon_web.png";
 import BatchSelector from "@/components/dashboard/BatchSelector";
@@ -71,6 +72,16 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [quizAttempts, setQuizAttempts] = useState<QuizAttemptRow[]>([]);
   const [upcomingDoubts, setUpcomingDoubts] = useState<{ id: string; subject: string | null; scheduled_at: string | null; zoom_join_url: string | null; status: string }[]>([]);
+  const [showInstallBanner, setShowInstallBanner] = useState<boolean>(() => {
+    const dismissed = localStorage.getItem('install-banner-dismissed') === 'true';
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    return !dismissed && !standalone;
+  });
+
+  const handleDismissBanner = () => {
+    localStorage.setItem('install-banner-dismissed', 'true');
+    setShowInstallBanner(false);
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -214,6 +225,33 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="space-y-6">
+            {showInstallBanner && (
+              <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-primary to-accent rounded-xl px-4 py-3 shadow-md">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Download className="h-5 w-5 flex-shrink-0 text-primary-foreground" />
+                  <span className="text-sm font-medium truncate text-primary-foreground">
+                    Install the Sadguru app for a better experience
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="text-xs h-8"
+                    onClick={() => navigate('/install')}
+                  >
+                    Install Now →
+                  </Button>
+                  <button
+                    onClick={handleDismissBanner}
+                    className="p-1 rounded-full hover:bg-primary-foreground/20 transition-colors text-primary-foreground"
+                    aria-label="Dismiss"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           <BatchSelector />
           <HeroCarousel />
           <LiveBadge />
