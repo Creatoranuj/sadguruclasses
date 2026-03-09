@@ -1114,7 +1114,6 @@ const MahimaGhostPlayer = memo(({
             )}
           </div>
         )}
-        </div>
       </div>
     </>
   );
