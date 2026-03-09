@@ -566,7 +566,10 @@ const MahimaGhostPlayer = memo(({
         style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}
       >
         {/* Video Container */}
-        <div className={isFakeFullscreen ? 'mahima-video-container' : 'aspect-video'} style={{ position: 'relative', ...rotationStyle, filter: `brightness(${brightness}%)` }}>
+        <div
+          className={isFakeFullscreen ? 'mahima-video-container w-full h-full' : 'aspect-video relative'}
+          style={{ ...(isFakeFullscreen ? {} : { position: 'relative' }), ...rotationStyle, filter: `brightness(${brightness}%)` }}
+        >
           {/* Thumbnail poster — shows before first play so there's no black screen */}
           {!isPlaying && !playerReady && youtubeId && (
             <div
