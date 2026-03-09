@@ -105,10 +105,58 @@ const ChatbotSettings = () => {
   const [addingKb, setAddingKb] = useState(false);
   const [showAddKb, setShowAddKb] = useState(false);
 
+  // Web Crawler state
+  const [crawlUrl, setCrawlUrl] = useState('');
+  const [crawlCategory, setCrawlCategory] = useState('general');
+  const [crawling, setCrawling] = useState(false);
+  const [crawlHistory, setCrawlHistory] = useState<CrawlHistoryEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   useEffect(() => {
     if (!isAdmin) { navigate("/dashboard"); return; }
     fetchData();
+    fetchCrawlHistory();
   }, [isAdmin]);
+
+  const fetchCrawlHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const { data } = await supabase
+        .from('crawl_history' as any)
+        .select('*')
+        .order('crawled_at', { ascending: false })
+        .limit(20);
+      setCrawlHistory((data || []) as unknown as CrawlHistoryEntry[]);
+    } catch { /* silently fail */ } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const triggerCrawl = async () => {
+    if (!crawlUrl.trim()) { toast.error("URL daalo pehle!"); return; }
+    setCrawling(true);
+    toast.info("🕷️ Crawling started... Yeh 20-30 seconds le sakta hai");
+    try {
+      const { data, error } = await supabase.functions.invoke('crawl4ai-bridge', {
+        body: { url: crawlUrl.trim(), mode: 'ingest', category: crawlCategory },
+      });
+      if (error || data?.error) {
+        const msg = data?.error || error?.message || 'Crawl failed';
+        toast.error(`❌ ${msg}`);
+      } else {
+        toast.success(`✅ Crawl complete! ${data.entriesCreated} entries added to Sarthi's memory 🧠`);
+        setCrawlUrl('');
+        // Refresh both lists
+        fetchCrawlHistory();
+        const { data: kbData } = await supabase.from('knowledge_base').select('*').order('position', { ascending: true });
+        setKnowledge((kbData || []) as KnowledgeEntry[]);
+      }
+    } catch (e: any) {
+      toast.error(`❌ ${e.message || 'Network error'}`);
+    } finally {
+      setCrawling(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
