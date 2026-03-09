@@ -671,14 +671,14 @@ const ChatbotSettings = () => {
           {/* ============ Web Crawler (Crawl4AI) Tab ============ */}
           <TabsContent value="crawler" className="space-y-4">
             {/* Setup Banner */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 dark:bg-amber-950/20 dark:border-amber-800">
-              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="bg-secondary border border-border rounded-lg p-4 flex gap-3">
+              <AlertCircle className="h-5 w-5 text-foreground shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-semibold text-sm text-amber-800 dark:text-amber-300">🐳 Crawl4AI Setup Required (One-Time)</p>
-                <p className="text-xs text-amber-700 dark:text-amber-400">
-                  Deploy Crawl4AI Docker on Railway (free): <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">docker run -p 11235:11235 -e CRAWL4AI_API_TOKEN=yourtoken unclecode/crawl4ai:latest</code>
+                <p className="font-semibold text-sm text-foreground">🐳 Crawl4AI Setup Required (One-Time)</p>
+                <p className="text-xs text-muted-foreground">
+                  Deploy Crawl4AI Docker on Railway (free): <code className="bg-muted px-1 rounded text-foreground">docker run -p 11235:11235 -e CRAWL4AI_API_TOKEN=yourtoken unclecode/crawl4ai:latest</code>
                 </p>
-                <p className="text-xs text-amber-700 dark:text-amber-400">
+                <p className="text-xs text-muted-foreground">
                   Then set <strong>CRAWL4AI_API_URL</strong> and <strong>CRAWL4AI_API_TOKEN</strong> as Supabase secrets. Keys are already saved — just deploy the Docker container.
                 </p>
               </div>
