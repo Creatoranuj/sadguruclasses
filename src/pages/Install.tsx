@@ -80,9 +80,11 @@ const Install = () => {
   const [installed, setInstalled] = useState(false);
   const [promptUsed, setPromptUsed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedApk, setCopiedApk] = useState(false);
   const navigate = useNavigate();
   const appUrl = window.location.origin;
-  const qrUrl = `https://chart.googleapis.com/chart?chs=180x180&cht=qr&chl=${encodeURIComponent(appUrl)}&choe=UTF-8`;
+  const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(`${appUrl}/install`)}&choe=UTF-8`;
+  const apkQrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(APK_DOWNLOAD_URL)}&choe=UTF-8`;
 
   useEffect(() => {
     setPlatform(detectPlatform());
@@ -120,10 +122,17 @@ const Install = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const copyApkLink = () => {
+    navigator.clipboard.writeText(APK_DOWNLOAD_URL);
+    setCopiedApk(true);
+    toast.success("APK link copied!");
+    setTimeout(() => setCopiedApk(false), 2000);
+  };
+
   const shareWhatsApp = () => {
     window.open(
       `https://wa.me/?text=${encodeURIComponent(
-        `📚 Install Sadguru Coaching Classes app: ${appUrl}/install`
+        `📚 Install Sadguru Coaching Classes app!\n\n📦 Download APK (Android): ${APK_DOWNLOAD_URL}\n\n🌐 Or install via browser: ${appUrl}/install`
       )}`,
       "_blank"
     );
@@ -210,6 +219,73 @@ const Install = () => {
             </button>
           ))}
         </div>
+
+        {/* ── APK Direct Download QR Code card (always visible) ── */}
+        {APK_DOWNLOAD_URL && (
+          <div className="mb-5 rounded-2xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-3 bg-green-500/10 border-b border-green-500/20">
+              <QrCode className="h-5 w-5 text-green-600" />
+              <p className="font-bold text-sm text-foreground">📦 Scan QR to Download APK</p>
+              <span className="ml-auto text-[10px] font-bold bg-green-500/20 text-green-600 px-2 py-0.5 rounded-full">ANDROID</span>
+            </div>
+            <div className="p-5">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                {/* APK QR code */}
+                <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                  <div className="p-3 bg-white rounded-xl border border-border shadow-md">
+                    <img
+                      src={apkQrUrl}
+                      alt="QR Code — scan to download APK"
+                      className="w-[180px] h-[180px]"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).parentElement!.innerHTML =
+                          '<div class="w-[180px] h-[180px] flex items-center justify-center text-xs text-gray-400 text-center p-4">QR unavailable<br/>Use link below</div>';
+                      }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    Scan with phone camera<br />to download APK directly
+                  </p>
+                </div>
+
+                {/* Right: info + buttons */}
+                <div className="flex-1 space-y-3 w-full sm:w-auto">
+                  <p className="text-sm font-medium text-foreground">Direct APK Download</p>
+                  <p className="text-xs text-muted-foreground">
+                    Point your Android camera at this QR code — it downloads the APK straight to your phone without opening GitHub.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <a href={APK_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
+                      <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white">
+                        <Download className="h-4 w-4" />
+                        Download APK Directly
+                      </Button>
+                    </a>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 justify-start"
+                      onClick={copyApkLink}
+                    >
+                      {copiedApk ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      {copiedApk ? "APK Link Copied!" : "Copy APK Link"}
+                    </Button>
+                    <Button
+                      className="w-full gap-2 justify-start bg-green-600 hover:bg-green-700 text-white"
+                      onClick={shareWhatsApp}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Share APK on WhatsApp
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── ANDROID ── */}
         {platform === "android" && (
