@@ -736,13 +736,55 @@ const Admin = () => {
     else { toast.success("Updated!"); setEditingNoteId(null); fetchLibraryData(); }
   };
 
+  // Fetch all active sessions (admin view)
+  const fetchSessionsData = async () => {
+    setSessionsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("user_sessions")
+        .select("id, session_token, user_id, device_type, user_agent, last_active_at, logged_in_at, is_active")
+        .eq("is_active", true)
+        .order("last_active_at", { ascending: false });
+      if (!error && data) setSessionsList(data);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const handleForceLogout = async (sessionToken: string, targetUserId: string) => {
+    if (!confirm("Force logout this session?")) return;
+    setTerminatingSession(sessionToken);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/manage-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: "terminate", session_token: sessionToken }),
+      });
+      if (res.ok) {
+        toast.success("Session terminated");
+        setSessionsList(prev => prev.filter(s => s.session_token !== sessionToken));
+        setStatsData(prev => ({ ...prev, activeSessions: Math.max(0, prev.activeSessions - 1) }));
+      } else {
+        toast.error("Failed to terminate session");
+      }
+    } finally {
+      setTerminatingSession(null);
+    }
+  };
+
   // Stats UI Config with tab navigation targets
   const stats = [
     { label: "Total Students", value: statsData.totalStudents, icon: Users, color: "text-blue-600 bg-blue-100", tab: "users" },
     { label: "Total Revenue", value: `₹${statsData.totalRevenue.toLocaleString()}`, icon: IndianRupee, color: "text-emerald-600 bg-emerald-100", tab: "payments" },
     { label: "Total Courses", value: statsData.totalCourses, icon: BookOpen, color: "text-green-600 bg-green-100", tab: "courses" },
     { label: "Pending Payments", value: statsData.pendingPayments, icon: Clock, color: "text-orange-600 bg-orange-100", tab: "payments" },
-    { label: "Active Enrollments", value: statsData.activeEnrollments, icon: CheckCircle, color: "text-purple-600 bg-purple-100", tab: "" },
+    { label: "Active Sessions", value: statsData.activeSessions, icon: Monitor, color: "text-cyan-600 bg-cyan-100", tab: "sessions" },
   ];
 
 
