@@ -253,12 +253,19 @@ const Admin = () => {
       // G. Pre-fetch library data so it's ready when tab is opened
       fetchLibraryData();
 
+      // H. Count active sessions
+      const { count: sessionsCount } = await supabase
+        .from("user_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+
       setStatsData({
         totalStudents: studentCount || 0,
         totalCourses: coursesData?.length || 0,
         pendingPayments: pendingCount || 0,
         activeEnrollments: enrollCount || 0,
-        totalRevenue
+        totalRevenue,
+        activeSessions: sessionsCount || 0,
       });
 
     } catch (error) {
