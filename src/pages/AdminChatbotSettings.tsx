@@ -13,7 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Bot, Plus, Trash2, Save, Settings, MessageSquare, ToggleLeft, ToggleRight, Loader2,
-  BookOpen, RefreshCw, Brain, Edit2, Check, X, ChevronDown, ChevronUp, Search
+  BookOpen, RefreshCw, Brain, Edit2, Check, X, ChevronDown, ChevronUp, Search,
+  Globe, Link, Clock, AlertCircle, CheckCircle2, ExternalLink
 } from "lucide-react";
 
 interface FAQ {
