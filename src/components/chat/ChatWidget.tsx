@@ -70,7 +70,7 @@ const MarkdownMessage = ({ content }: { content: string }) => (
   </ReactMarkdown>
 );
 
-const ChatWidget = () => {
+const ChatWidget = forwardRef<HTMLDivElement>(() => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -569,6 +569,8 @@ const ChatWidget = () => {
       )}
     </>
   );
-};
+});
+
+ChatWidget.displayName = "ChatWidget";
 
 export default ChatWidget;
