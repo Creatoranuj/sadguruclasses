@@ -124,6 +124,12 @@ jobs:
              "SadguruCoachingClasses-${{ env.VERSION }}.apk"
           echo "APK_FILE=SadguruCoachingClasses-${{ env.VERSION }}.apk" >> $GITHUB_ENV
 
+      # ── 13b. Create fixed-name copy for static download URL ───────────
+      - name: 🏷️ Create fixed-name APK copy (for static URL)
+        run: |
+          cp "SadguruCoachingClasses-${{ env.VERSION }}.apk" "SadguruCoachingClasses.apk"
+          echo "APK_FIXED=SadguruCoachingClasses.apk" >> $GITHUB_ENV
+
       # ── 14. Upload APK as workflow artifact (backup) ──────────────────
       - name: 📤 Upload APK artifact
         uses: actions/upload-artifact@v4
