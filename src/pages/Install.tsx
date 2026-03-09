@@ -124,7 +124,7 @@ const Install = () => {
   const shareWhatsApp = () => {
     window.open(
       `https://wa.me/?text=${encodeURIComponent(
-        `📚 Install Sadguru Coaching Classes app: ${appUrl}/install`
+        `📚 Install Sadguru Coaching Classes app!\n\n📦 Download APK (Android): ${APK_DOWNLOAD_URL}\n\n🌐 Or install via browser: ${appUrl}/install`
       )}`,
       "_blank"
     );
