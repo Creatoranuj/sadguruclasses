@@ -215,9 +215,22 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Web fallback: if RAG returns nothing and query is technical/general, try live web scrape
+    let webContext = '';
+    let webUsed = false;
+    if (!ragContext && CRAWL4AI_API_URL && (queryType === 'technical' || queryType === 'general' || queryType === 'mock_test')) {
+      webContext = await fetchWebContext(message);
+      webUsed = webContext.length > 100;
+    }
+
     // Build RAG context section
     const ragSection = ragContext
       ? `\n\n## 📚 PLATFORM KNOWLEDGE BASE (RAG Memory – USE THIS FIRST):\nYe information Sadguru Coaching Classes ke baare mein specific hai. Jab bhi relevant ho, IS information ko priority do over general knowledge:\n\n${ragContext}\n\n---`
+      : '';
+
+    // Build web context section (only when RAG has no result)
+    const webSection = webUsed
+      ? `\n\n## 🌐 LIVE WEB CONTENT (Crawled just now – use as supplementary reference):\nThis is freshly scraped content from the web. Use it to provide up-to-date information but always frame answers in context of the student's learning at Sadguru Coaching Classes:\n\n${webContext}\n\n---`
       : '';
 
     // Build FAQ context
