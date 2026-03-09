@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 import ReactMarkdown from "react-markdown";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { cn } from "@/lib/utils";
-import { X, Send, RotateCcw, ThumbsUp, ThumbsDown, Mic, MicOff, Paperclip, ImageIcon } from "lucide-react";
+import { X, Send, RotateCcw, ThumbsUp, ThumbsDown, Mic, MicOff, Paperclip, ImageIcon, Lock, LogIn } from "lucide-react";
 import logoIcon from "@/assets/sarthi-avatar.png"; // Sarthi guru avatar
 
 interface Message {
