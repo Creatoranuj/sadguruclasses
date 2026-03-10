@@ -58,8 +58,16 @@ async function callManageSession(
   accessToken: string
 ): Promise<Record<string, unknown> | null> {
   try {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    const url = `https://${projectId}.supabase.co/functions/v1/manage-session`;
+    // Use VITE_SUPABASE_URL (always set) — never VITE_SUPABASE_PROJECT_ID which may be undefined in APK
+    const supabaseUrl =
+      import.meta.env.VITE_SUPABASE_URL ||
+      "https://wegamscqtvqhxowlskfm.supabase.co";
+    const url = `${supabaseUrl}/functions/v1/manage-session`;
+
+    // 5-second timeout so a slow/unreachable edge function never blocks login
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -67,7 +75,9 @@ async function callManageSession(
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -224,10 +234,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         const isSignup = _event === "SIGNED_IN" && !session.user.last_sign_in_at;
         await loadUser(session.user, isSignup);
+        // Unblock UI immediately — don't await background security tasks
         if (isMounted.current) setIsLoading(false);
 
-        // Validate our custom session & set up realtime
-        await validateStoredSession(session.access_token, session.user.id);
+        // Non-blocking background tasks (session validation, realtime, heartbeat)
+        validateStoredSession(session.access_token, session.user.id);
         setupRealtimeListener(session.user.id);
         startHeartbeat(session.access_token);
       } else {
@@ -244,8 +255,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!initialLoadDone) {
         if (session?.user) {
           await loadUser(session.user);
+          // Unblock UI immediately
           if (isMounted.current) setIsLoading(false);
-          await validateStoredSession(session.access_token, session.user.id);
+          // Non-blocking background tasks
+          validateStoredSession(session.access_token, session.user.id);
           setupRealtimeListener(session.user.id);
           startHeartbeat(session.access_token);
         } else {
