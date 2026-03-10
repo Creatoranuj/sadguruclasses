@@ -111,6 +111,8 @@ const ChatbotSettings = () => {
   const [crawling, setCrawling] = useState(false);
   const [crawlHistory, setCrawlHistory] = useState<CrawlHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [testingConn, setTestingConn] = useState(false);
+  const [connStatus, setConnStatus] = useState<'ok' | 'fail' | null>(null);
 
   useEffect(() => {
     if (!isAdmin) { navigate("/dashboard"); return; }

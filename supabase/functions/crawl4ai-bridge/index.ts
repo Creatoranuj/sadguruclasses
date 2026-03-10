@@ -83,7 +83,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { url, mode = 'scrape', category = 'general' } = await req.json();
+    const body = await req.json();
+    const { url, mode = 'scrape', category = 'general' } = body;
+
+    // ==========================================
+    // PING MODE: test connectivity to Crawl4AI
+    // ==========================================
+    if (mode === 'ping') {
+      if (!CRAWL4AI_API_URL) {
+        return new Response(JSON.stringify({ ok: false, error: 'CRAWL4AI_API_URL secret not set in Supabase' }), {
+          status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      try {
+        const pingHeaders: Record<string, string> = {};
+        if (CRAWL4AI_API_TOKEN) pingHeaders['Authorization'] = `Bearer ${CRAWL4AI_API_TOKEN}`;
+        const r = await fetch(`${CRAWL4AI_API_URL}/health`, {
+          headers: pingHeaders,
+          signal: AbortSignal.timeout(5000),
+        });
+        const text = await r.text();
+        return new Response(JSON.stringify({ ok: r.ok, status: r.status, url: CRAWL4AI_API_URL, body: text.slice(0, 200) }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: String(e), url: CRAWL4AI_API_URL }), {
+          status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     if (!url) {
       return new Response(JSON.stringify({ error: 'URL is required' }), {

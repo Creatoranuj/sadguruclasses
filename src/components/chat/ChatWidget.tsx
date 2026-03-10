@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -18,9 +19,6 @@ interface Message {
   queryType?: string;
   imageUrl?: string; // for image/doc preview in chat
 }
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://wegamscqtvqhxowlskfm.supabase.co";
-const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 const QUICK_PROMPTS = [
   "📚 Kaunsa course lun?",
