@@ -248,17 +248,12 @@ const ChatWidget = forwardRef<HTMLDivElement>(() => {
         fullMsg = `${msg ? msg + "\n\n" : ""}[Student ne ek PDF document upload kiya hai: ${filePublicUrl}]\nIs document ke baare mein help karein.`;
       }
 
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/chatbot`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${ANON_KEY}`,
-        },
-        body: JSON.stringify({ message: fullMsg, history, userId: user?.id, sessionId }),
+      const { data, error: fnError } = await supabase.functions.invoke('chatbot', {
+        body: { message: fullMsg, history, userId: user?.id, sessionId },
       });
 
-      const data = await response.json();
-      const botReply = data.response || "माफ़ करें, कुछ गड़बड़ हो गई। फिर try करें। 🙏";
+      if (fnError) throw fnError;
+      const botReply = data?.response || "माफ़ करें, कुछ गड़बड़ हो गई। फिर try करें। 🙏";
 
       setMessages(prev => [...prev, {
         role: "assistant",
@@ -266,7 +261,7 @@ const ChatWidget = forwardRef<HTMLDivElement>(() => {
         timestamp: new Date(),
         id: crypto.randomUUID(),
         feedbackGiven: null,
-        queryType: data.queryType,
+        queryType: data?.queryType,
       }]);
     } catch {
       setMessages(prev => [...prev, {
@@ -291,10 +286,8 @@ const ChatWidget = forwardRef<HTMLDivElement>(() => {
     setMessages(prev => prev.map(m => m.id === msgId ? { ...m, feedbackGiven: rating } : m));
 
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/chatbot`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${ANON_KEY}` },
-        body: JSON.stringify({
+      await supabase.functions.invoke('chatbot', {
+        body: {
           message: "_feedback_",
           feedback: {
             messageContent: userMsg?.content || "",
@@ -303,7 +296,7 @@ const ChatWidget = forwardRef<HTMLDivElement>(() => {
           },
           userId: user?.id,
           sessionId,
-        }),
+        },
       });
     } catch {
       // Silently fail on feedback errors

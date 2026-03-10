@@ -672,17 +672,63 @@ const ChatbotSettings = () => {
 
           {/* ============ Web Crawler (Crawl4AI) Tab ============ */}
           <TabsContent value="crawler" className="space-y-4">
-            {/* Setup Banner */}
+            {/* Setup Banner — updated for Crawl4AI v0.6+ */}
             <div className="bg-secondary border border-border rounded-lg p-4 flex gap-3">
               <AlertCircle className="h-5 w-5 text-foreground shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-semibold text-sm text-foreground">🐳 Crawl4AI Setup Required (One-Time)</p>
+              <div className="space-y-2 flex-1">
+                <p className="font-semibold text-sm text-foreground">🐳 Crawl4AI Setup (One-Time)</p>
                 <p className="text-xs text-muted-foreground">
-                  Deploy Crawl4AI Docker on Railway (free): <code className="bg-muted px-1 rounded text-foreground">docker run -p 11235:11235 -e CRAWL4AI_API_TOKEN=yourtoken unclecode/crawl4ai:latest</code>
+                  Deploy Crawl4AI v0.6+ Docker (Railway / VPS):
                 </p>
+                <pre className="bg-muted text-xs rounded p-2 overflow-x-auto whitespace-pre-wrap text-foreground leading-relaxed">{`docker run -d -p 11235:11235 \\
+  --memory=2g \\
+  -e CRAWL4AI_API_TOKEN=yourtoken \\
+  unclecode/crawl4ai:browser`}</pre>
                 <p className="text-xs text-muted-foreground">
-                  Then set <strong>CRAWL4AI_API_URL</strong> and <strong>CRAWL4AI_API_TOKEN</strong> as Supabase secrets. Keys are already saved — just deploy the Docker container.
+                  Then set <strong>CRAWL4AI_API_URL</strong> (e.g. <code className="bg-muted px-1 rounded">https://your-app.railway.app</code>) and <strong>CRAWL4AI_API_TOKEN</strong> as Supabase secrets. Both secrets are already saved — just deploy the container.
                 </p>
+                {/* Test Connection button */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={testingConn}
+                    onClick={async () => {
+                      setTestingConn(true);
+                      setConnStatus(null);
+                      try {
+                        const { data, error } = await supabase.functions.invoke('crawl4ai-bridge', {
+                          body: { url: 'https://example.com', mode: 'ping' },
+                        });
+                        if (error || !data?.ok) {
+                          setConnStatus('fail');
+                          toast.error(`❌ Connection failed: ${data?.error || error?.message || 'Unreachable'}`);
+                        } else {
+                          setConnStatus('ok');
+                          toast.success(`✅ Crawl4AI connected! (${data.url})`);
+                        }
+                      } catch (e: any) {
+                        setConnStatus('fail');
+                        toast.error(`❌ ${e.message}`);
+                      } finally {
+                        setTestingConn(false);
+                      }
+                    }}
+                  >
+                    {testingConn ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Globe className="h-3.5 w-3.5 mr-1.5" />}
+                    Test Connection
+                  </Button>
+                  {connStatus === 'ok' && (
+                    <span className="flex items-center gap-1 text-xs text-chart-2 font-medium">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Connected
+                    </span>
+                  )}
+                  {connStatus === 'fail' && (
+                    <span className="flex items-center gap-1 text-xs text-destructive font-medium">
+                      <AlertCircle className="h-3.5 w-3.5" /> Unreachable
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
