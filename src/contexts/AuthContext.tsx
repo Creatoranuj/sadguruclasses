@@ -234,10 +234,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         const isSignup = _event === "SIGNED_IN" && !session.user.last_sign_in_at;
         await loadUser(session.user, isSignup);
+        // Unblock UI immediately — don't await background security tasks
         if (isMounted.current) setIsLoading(false);
 
-        // Validate our custom session & set up realtime
-        await validateStoredSession(session.access_token, session.user.id);
+        // Non-blocking background tasks (session validation, realtime, heartbeat)
+        validateStoredSession(session.access_token, session.user.id);
         setupRealtimeListener(session.user.id);
         startHeartbeat(session.access_token);
       } else {
@@ -254,8 +255,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!initialLoadDone) {
         if (session?.user) {
           await loadUser(session.user);
+          // Unblock UI immediately
           if (isMounted.current) setIsLoading(false);
-          await validateStoredSession(session.access_token, session.user.id);
+          // Non-blocking background tasks
+          validateStoredSession(session.access_token, session.user.id);
           setupRealtimeListener(session.user.id);
           startHeartbeat(session.access_token);
         } else {
