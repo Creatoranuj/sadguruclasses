@@ -1,0 +1,194 @@
+name: Sadguru Classes
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build APK and Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: false
+          clean: false
+
+      - name: 🏷️ Set version name
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" ]]; then
+            VERSION="v1.0-$(date +%Y%m%d-%H%M)"
+            echo "VERSION=${VERSION}" >> $GITHUB_ENV
+            echo "IS_MANUAL=true" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+            echo "IS_MANUAL=false" >> $GITHUB_ENV
+          fi
+
+      - name: 🔖 Create git tag (manual runs only)
+        if: env.IS_MANUAL == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ env.VERSION }}
+          git push origin ${{ env.VERSION }}
+
+      - name: 🟢 Setup Node.js 22 LTS
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: 📦 Install npm dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: 🏗️ Build web app
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: ✅ Check android/ folder exists
+        run: |
+          if [ ! -d "android" ]; then
+            echo "❌ ERROR: The android/ folder does not exist in the repo."
+            exit 1
+          fi
+          echo "✅ android/ folder found"
+
+      - name: ☕ Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: 🔄 Sync Capacitor (dist → android)
+        run: npx cap sync android
+
+      - name: 🎨 Generate app icon from logo
+        run: |
+          sudo apt-get install -y imagemagick > /dev/null 2>&1
+          LOGO="src/assets/sadguru-logo.png"
+          if [ ! -f "$LOGO" ]; then
+            echo "⚠️ Logo not found, restoring defaults from git"
+            for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+              DIR="android/app/src/main/res/mipmap-${density}"
+              git checkout HEAD -- "${DIR}/ic_launcher.png" "${DIR}/ic_launcher_round.png" "${DIR}/ic_launcher_foreground.png" 2>/dev/null || true
+            done
+          else
+            declare -A SIZES=([mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192)
+            for density in "${!SIZES[@]}"; do
+              SIZE=${SIZES[$density]}
+              DIR="android/app/src/main/res/mipmap-${density}"
+              mkdir -p "$DIR"
+              convert "$LOGO" -resize ${SIZE}x${SIZE} -background none -gravity center -extent ${SIZE}x${SIZE} "$DIR/ic_launcher.png"
+              convert "$LOGO" -resize ${SIZE}x${SIZE} -background none -gravity center -extent ${SIZE}x${SIZE} \
+                \( +clone -threshold -1 -negate -fill white -draw "circle $((SIZE/2)),$((SIZE/2)) $((SIZE/2)),0" \) \
+                -alpha off -compose copy_opacity -composite "$DIR/ic_launcher_round.png"
+              convert "$LOGO" -resize ${SIZE}x${SIZE} -background none -gravity center -extent ${SIZE}x${SIZE} "$DIR/ic_launcher_foreground.png"
+            done
+            echo "✅ Sadguru Classes icons generated for all densities"
+          fi
+
+      - name: 🔧 Make Gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: 📲 Install Android SDK 35
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" || true
+
+      - name: 🤖 Build Debug APK
+        run: cd android && ./gradlew assembleDebug --no-daemon
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
+
+      - name: 🔑 Check keystore availability
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "HAS_KEYSTORE=true" >> $GITHUB_ENV
+          else
+            echo "HAS_KEYSTORE=false" >> $GITHUB_ENV
+          fi
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: 🔐 Build Signed Release APK
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+          cd android && ./gradlew assembleRelease --no-daemon
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
+          RELEASE_STORE_FILE: release.keystore
+          RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: 📋 List built APK
+        run: |
+          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ APK not found at expected path: $APK_PATH"
+            find android -name "*.apk" 2>/dev/null || echo "No APKs found anywhere"
+            exit 1
+          fi
+          SIZE=$(du -sh "$APK_PATH" | cut -f1)
+          echo "✅ APK built successfully: $APK_PATH ($SIZE)"
+
+      - name: 🏷️ Rename APK with version tag
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             "SadguruClasses-${{ env.VERSION }}.apk"
+          echo "APK_FILE=SadguruClasses-${{ env.VERSION }}.apk" >> $GITHUB_ENV
+
+      - name: 🏷️ Create fixed-name APK copy (for static URL)
+        run: |
+          cp "SadguruClasses-${{ env.VERSION }}.apk" "SadguruClasses.apk"
+          echo "APK_FIXED=SadguruClasses.apk" >> $GITHUB_ENV
+
+      - name: 📤 Upload APK artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: sadguru-classes-apk-${{ env.VERSION }}
+          path: ${{ env.APK_FILE }}
+          retention-days: 30
+
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: "Sadguru Classes ${{ env.VERSION }}"
+          body: |
+            ## 📱 Sadguru Classes ${{ env.VERSION }}
+
+            ### 📥 Installation Instructions
+
+            1. Download the APK file below (`SadguruClasses-${{ env.VERSION }}.apk`)
+            2. On your Android phone, open the downloaded file
+            3. If prompted, allow "Install from unknown sources" in Settings → Security
+            4. Tap **Install** and wait for it to complete
+            5. Open **Sadguru Classes** from your home screen
+
+            > ⚠️ This is a debug build intended for student distribution.
+            > It requires Android 7.0 (API 24) or higher.
+
+            ---
+            *Built automatically from the latest codebase via GitHub Actions.*
+          files: |
+            ${{ env.APK_FILE }}
+            ${{ env.APK_FIXED }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
