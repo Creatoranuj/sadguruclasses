@@ -1,0 +1,580 @@
+/* Sadguru Classes - Main Stylesheet */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Sadguru Brand: Blue + White ────────────────── */
+    --background: 210 40% 98%;           /* clean blue-white */
+    --foreground: 215 45% 12%;           /* deep navy text */
+
+    --card: 0 0% 100%;                   /* pure white cards */
+    --card-foreground: 215 45% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 45% 12%;
+
+    --primary: 215 90% 45%;              /* 🔵 Royal Blue #1565C0 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 60% 30%;            /* 🔵 Deep Navy */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 25% 93%;                /* light blue-grey */
+    --muted-foreground: 215 20% 48%;
+
+    --accent: 210 60% 94%;               /* soft blue tint */
+    --accent-foreground: 215 50% 20%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 85% 97%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 210 25% 88%;               /* light border */
+    --input: 210 25% 88%;
+    --ring: 215 90% 45%;                 /* blue ring */
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 215 65% 14%;  /* deep navy sidebar */
+    --sidebar-foreground: 210 60% 95%;
+    --sidebar-primary: 215 90% 50%;     /* blue accent */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 50% 24%;
+    --sidebar-accent-foreground: 210 60% 95%;
+    --sidebar-border: 215 40% 22%;
+    --sidebar-ring: 215 90% 50%;
+
+    --chart-1: 215 90% 45%;             /* blue */
+    --chart-2: 25 90% 55%;              /* orange accent */
+    --chart-3: 142 71% 45%;             /* green */
+    --chart-4: 38 95% 55%;              /* amber */
+    --chart-5: 190 80% 45%;             /* teal */
+
+    --shadow-sm: 0 1px 3px 0px hsl(215 45% 12% / 0.08), 0 1px 2px -1px hsl(215 45% 12% / 0.06);
+    --shadow-md: 0 4px 12px -2px hsl(215 45% 12% / 0.1), 0 2px 4px -1px hsl(215 45% 12% / 0.06);
+    --shadow-lg: 0 8px 24px -4px hsl(215 45% 12% / 0.12), 0 4px 8px -2px hsl(215 45% 12% / 0.07);
+    --shadow-xl: 0 16px 40px -6px hsl(215 45% 12% / 0.15), 0 8px 16px -4px hsl(215 45% 12% / 0.08);
+    --sidebar: 0 0% 100%;
+    --font-sans: 'Poppins', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-serif: 'Crimson Pro', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --shadow-2xs: 0 1px 2px 0px hsl(215 45% 12% / 0.04);
+    --shadow-xs: 0 1px 3px 0px hsl(215 45% 12% / 0.06);
+    --shadow: 0 4px 12px -2px hsl(215 45% 12% / 0.1), 0 2px 4px -1px hsl(215 45% 12% / 0.06);
+    --shadow-2xl: 0 24px 60px -8px hsl(215 45% 12% / 0.2);
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+  }
+
+  .dark {
+    /* ── Dark Mode: Deep Navy Night ──────────────────────── */
+    --background: 215 45% 7%;            /* deep navy-black */
+    --foreground: 210 40% 95%;           /* clean white text */
+
+    --card: 215 40% 12%;                 /* dark navy card */
+    --card-foreground: 210 40% 95%;
+
+    --popover: 215 40% 14%;
+    --popover-foreground: 210 40% 95%;
+
+    --primary: 215 85% 55%;              /* 🔵 brighter blue on dark */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 50% 40%;            /* medium blue */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 215 30% 18%;                /* dark muted */
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 215 35% 16%;               /* dark blue accent */
+    --accent-foreground: 210 40% 92%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 85% 97%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 215 30% 20%;               /* subtle navy border */
+    --input: 215 30% 20%;
+    --ring: 215 85% 55%;                 /* blue ring */
+
+    --sidebar-background: 215 55% 5%;   /* darkest navy sidebar */
+    --sidebar-foreground: 210 40% 93%;
+    --sidebar-primary: 215 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 40% 16%;
+    --sidebar-accent-foreground: 210 40% 93%;
+    --sidebar-border: 215 35% 18%;
+    --sidebar-ring: 215 85% 55%;
+
+    --chart-1: 215 85% 55%;
+    --chart-2: 25 90% 60%;
+    --chart-3: 142 71% 55%;
+    --chart-4: 38 95% 65%;
+    --chart-5: 190 80% 55%;
+
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.3), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
+    --shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 8px 24px -4px hsl(0 0% 0% / 0.5), 0 4px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 16px 40px -6px hsl(0 0% 0% / 0.6), 0 8px 16px -4px hsl(0 0% 0% / 0.3);
+    --sidebar: 215 40% 12%;
+    --shadow-2xs: 0 1px 2px 0px hsl(0 0% 0% / 0.2);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --shadow: 0 4px 12px -2px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-2xl: 0 24px 60px -8px hsl(0 0% 0% / 0.6);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    padding-top: max(env(safe-area-inset-top), 0px);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ========== SADGURU LOGO LOADER ANIMATION ========== */
+@keyframes sadguru-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+}
+
+@keyframes sadguru-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+}
+
+.sadguru-loader-logo {
+  animation: sadguru-pulse 1.8s ease-in-out infinite;
+}
+
+.sadguru-loader-ring {
+  animation: sadguru-ring 1.8s ease-in-out infinite;
+}
+
+.secure-video-player,
+.student-video-player,
+.sadguru-player,
+.white-label-player,
+.sadguru-ghost-player {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* ========== WHITE LABEL PLAYER ========== */
+.white-label-player {
+  position: relative;
+}
+
+.white-label-player iframe {
+  pointer-events: auto;
+}
+
+/* Hide YouTube UI elements */
+.white-label-player .ytp-chrome-top,
+.white-label-player .ytp-share-button,
+.white-label-player .ytp-watch-later-button,
+.white-label-player .ytp-watermark,
+.white-label-player .ytp-youtube-button,
+.white-label-player .ytp-title,
+.white-label-player .ytp-title-channel,
+.white-label-player .ytp-title-link,
+.white-label-player .ytp-show-cards-title {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ========== SADGURU GHOST PLAYER - COMPLETE YOUTUBE BYPASS ========== */
+.sadguru-ghost-player {
+  position: relative;
+}
+
+/* iframe receives no pointer events - ghost overlay handles everything */
+.sadguru-ghost-player iframe {
+  pointer-events: none !important;
+}
+
+/* Hide ALL YouTube UI elements - COMPREHENSIVE LIST */
+.sadguru-ghost-player .ytp-chrome-top,
+.sadguru-ghost-player .ytp-chrome-bottom,
+.sadguru-ghost-player .ytp-share-button,
+.sadguru-ghost-player .ytp-watch-later-button,
+.sadguru-ghost-player .ytp-watermark,
+.sadguru-ghost-player .ytp-youtube-button,
+.sadguru-ghost-player .ytp-title,
+.sadguru-ghost-player .ytp-title-channel,
+.sadguru-ghost-player .ytp-title-link,
+.sadguru-ghost-player .ytp-show-cards-title,
+.sadguru-ghost-player .ytp-menuitem[aria-label*="Share"],
+.sadguru-ghost-player .ytp-popup,
+.sadguru-ghost-player .ytp-contextmenu,
+.sadguru-ghost-player .ytp-ce-element,
+.sadguru-ghost-player .ytp-endscreen-content,
+.sadguru-ghost-player .ytp-pause-overlay,
+.sadguru-ghost-player .ytp-gradient-top,
+.sadguru-ghost-player .ytp-gradient-bottom,
+.sadguru-ghost-player .ytp-spinner,
+.sadguru-ghost-player .ytp-large-play-button,
+.sadguru-ghost-player .ytp-cued-thumbnail-overlay,
+.sadguru-ghost-player .ytp-error,
+.sadguru-ghost-player .annotation,
+.sadguru-ghost-player .iv-branding,
+.sadguru-ghost-player .ytp-impression-link,
+.sadguru-ghost-player .ytp-button[aria-label*="YouTube"],
+.sadguru-ghost-player .branding-img-container {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ADDITIONAL YouTube UI blocking - Cover link icon and recommendation thumbnails */
+.sadguru-ghost-player .ytp-ce-link-button,
+.sadguru-ghost-player .ytp-ce-video-title,
+.sadguru-ghost-player .ytp-ce-channel-title,
+.sadguru-ghost-player .ytp-ce-video-duration,
+.sadguru-ghost-player .ytp-ce-size-640,
+.sadguru-ghost-player .ytp-ce-size-1280,
+.sadguru-ghost-player [class*="ytp-ce"],
+.sadguru-ghost-player [class*="ytp-pause"],
+.sadguru-ghost-player .ytp-share-panel,
+.sadguru-ghost-player .ytp-sb-subscribe,
+.sadguru-ghost-player .ytp-iv-video-content,
+.sadguru-ghost-player .ytp-pause-overlay,
+.sadguru-ghost-player .ytp-pause-overlay-container,
+.sadguru-ghost-player .iv-promo,
+.sadguru-ghost-player .iv-promo-contents {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Complete YouTube link/logo blocker */
+.sadguru-ghost-player a[href*="youtube"],
+.sadguru-ghost-player a[href*="youtu.be"],
+.sadguru-ghost-player .ytp-logo,
+.sadguru-ghost-player .ytp-button[data-tooltip-target-id*="logo"],
+.sadguru-ghost-player img[src*="yt3.ggpht"],
+.sadguru-ghost-player img[src*="youtube"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Hide YouTube end screen completely */
+.sadguru-ghost-player .ytp-endscreen-content,
+.sadguru-ghost-player .ytp-endscreen-previous,
+.sadguru-ghost-player .ytp-endscreen-next,
+.sadguru-ghost-player .ytp-ce-element,
+.sadguru-ghost-player .ytp-ce-covering-overlay,
+.sadguru-ghost-player .ytp-ce-element-shadow,
+.sadguru-ghost-player .ytp-ce-covering-image,
+.sadguru-ghost-player .ytp-ce-expanding-image,
+.sadguru-ghost-player .ytp-ce-video,
+.sadguru-ghost-player .ytp-ce-playlist,
+.sadguru-ghost-player .ytp-ce-channel,
+.sadguru-ghost-player .ytp-ce-website,
+.sadguru-ghost-player .ytp-related-on-screen,
+.sadguru-ghost-player .ytp-share-button-visible,
+.sadguru-ghost-player .ytp-pause-overlay-container,
+.sadguru-ghost-player a[href*="youtube.com"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ========== FULLSCREEN LAYOUT - NO CROPPING, CONTROLS VISIBLE ========== */
+.sadguru-ghost-player:fullscreen,
+.sadguru-ghost-player:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  background: #000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Video container fills available space while maintaining aspect ratio */
+.sadguru-ghost-player:fullscreen .sadguru-video-container,
+.sadguru-ghost-player:-webkit-full-screen .sadguru-video-container,
+.sadguru-ghost-player:fullscreen .aspect-video,
+.sadguru-ghost-player:-webkit-full-screen .aspect-video {
+  flex: 1 !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: calc(100vh - 70px) !important;
+  min-height: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+}
+
+/* iframe fits container without cropping - proper aspect ratio */
+.sadguru-ghost-player:fullscreen iframe,
+.sadguru-ghost-player:-webkit-full-screen iframe {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: 16/9 !important;
+  object-fit: contain !important;
+}
+
+/* Controls bar fixed at bottom with safe-area support */
+.sadguru-ghost-player:fullscreen .sadguru-controls-bar,
+.sadguru-ghost-player:-webkit-full-screen .sadguru-controls-bar {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 2147483646 !important;
+  padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.6), transparent) !important;
+}
+
+/* Watermark position in fullscreen - above controls, extreme bottom-right */
+.sadguru-ghost-player:fullscreen .sadguru-watermark,
+.sadguru-ghost-player:-webkit-full-screen .sadguru-watermark {
+  position: fixed !important;
+  bottom: 90px !important;
+  right: 16px !important;
+  z-index: 2147483645 !important;
+  pointer-events: none !important;
+}
+
+/* End screen overlay - HIGHEST z-index to cover everything including YouTube UI */
+.sadguru-ghost-player:fullscreen .sadguru-end-screen,
+.sadguru-ghost-player:-webkit-full-screen .sadguru-end-screen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+}
+
+/* Ghost overlay z-index in fullscreen */
+.sadguru-ghost-player:fullscreen .z-40,
+.sadguru-ghost-player:-webkit-full-screen .z-40 {
+  z-index: 2147483644 !important;
+}
+
+/* Pause blocker overlay z-index in fullscreen */
+.sadguru-ghost-player:fullscreen .z-\\[39\\],
+.sadguru-ghost-player:-webkit-full-screen .z-\\[39\\] {
+  z-index: 2147483643 !important;
+}
+
+/* ========== WHITE LABEL PLAYER FULLSCREEN ========== */
+.white-label-player:fullscreen,
+.white-label-player:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000 !important;
+}
+
+.white-label-player:fullscreen iframe,
+.white-label-player:-webkit-full-screen iframe {
+  transform: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* Blue progress bar for custom controls */
+.sadguru-ghost-player .progress-bar {
+  background: #1E90FF;
+}
+
+/* Slider customization for volume */
+.sadguru-ghost-player [role="slider"] {
+  --slider-track: rgba(255, 255, 255, 0.3);
+  --slider-range: #1E90FF;
+  --slider-thumb: #1E90FF;
+}
+
+/* Progress bar thumb - prevent repaint flicker */
+.sadguru-ghost-player .progress-thumb {
+  will-change: transform;
+}
+
+/* Play button styling */
+.sadguru-play-button {
+  background: hsl(var(--primary));
+  transition: transform 0.3s ease;
+}
+
+.sadguru-play-button:hover {
+  transform: scale(1.1);
+}
+
+/* Pulsing border animation for last 10 seconds of video */
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 2px hsl(48 96% 53% / 0.6); }
+  50% { box-shadow: 0 0 12px 4px hsl(48 96% 53% / 0.9); }
+}
+
+/* ========== GLOBAL VISUAL POLISH ========== */
+@layer components {
+  /* Card hover lift effect */
+  .card-hover {
+    @apply transition-all duration-200 ease-out;
+  }
+  .card-hover:hover {
+    @apply -translate-y-1 shadow-lg;
+  }
+
+  /* Consistent button primary gradient */
+  .btn-primary-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    @apply text-primary-foreground font-semibold rounded-xl px-6 py-2.5 transition-all duration-200 hover:opacity-90 hover:shadow-md active:scale-95;
+  }
+
+  /* Form input polish */
+  .input-focus {
+    @apply focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:border-primary transition-all duration-150;
+  }
+
+  /* Progress track improved */
+  .progress-touch {
+    @apply h-1.5 cursor-pointer;
+    min-height: 12px;
+    touch-action: none;
+  }
+
+  /* Consistent card border */
+  .course-card {
+    @apply rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 overflow-hidden;
+  }
+  .course-card:hover {
+    @apply -translate-y-1 shadow-md border-primary/20;
+  }
+
+  /* Nav shadow on scroll */
+  .nav-shadow {
+    box-shadow: 0 4px 20px -4px hsl(var(--foreground) / 0.08);
+  }
+
+  /* Section spacing consistency */
+  .section-padding {
+    @apply py-16 md:py-24 px-4;
+  }
+
+  /* Admin panel card */
+  .admin-card {
+    @apply rounded-xl border border-border bg-card p-5 shadow-sm;
+  }
+
+  /* Badge pill */
+  .badge-pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
+
+/* Fake fullscreen for Capacitor Android WebView (document.requestFullscreen is not supported) */
+/* When rotation=0: CSS governs fixed positioning. When rotation=90: inline playerContainerStyle governs it. */
+.sadguru-ghost-player.sadguru-fake-fullscreen {
+  border-radius: 0 !important;
+  background: #000 !important;
+  overflow: hidden !important;
+}
+
+/* Non-rotated fake fullscreen (rotation=0 but isFakeFullscreen=true) */
+.sadguru-ghost-player.sadguru-fake-fullscreen:not([style*="rotate"]) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+/* Inner video container always fills its parent */
+.sadguru-ghost-player.sadguru-fake-fullscreen .sadguru-video-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* iframe fills the container fully */
+.sadguru-ghost-player.sadguru-fake-fullscreen .sadguru-video-container iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Double-tap ripple for video player */
+@keyframes dt-ripple {
+  0%   { transform: scale(0.3); opacity: 0.7; }
+  60%  { transform: scale(1.6); opacity: 0.25; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes dt-label {
+  0%   { opacity: 0; transform: translateY(-40%) scale(0.8); }
+  20%  { opacity: 1; transform: translateY(-50%) scale(1); }
+  70%  { opacity: 1; transform: translateY(-50%) scale(1); }
+  100% { opacity: 0; transform: translateY(-50%) scale(1); }
+}
